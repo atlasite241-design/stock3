@@ -1,0 +1,183 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+
+  /* Brand palette (themeable). Default = Tailwind amber / yellow.
+     Values are space-separated RGB channels so opacity utilities keep working. */
+  --c-amber-50: 255 251 235;
+  --c-amber-100: 254 243 199;
+  --c-amber-200: 253 230 138;
+  --c-amber-300: 252 211 77;
+  --c-amber-400: 251 191 36;
+  --c-amber-500: 245 158 11;
+  --c-amber-600: 217 119 6;
+  --c-amber-700: 180 83 9;
+  --c-amber-800: 146 64 14;
+  --c-amber-900: 120 53 15;
+
+  --c-yellow-50: 254 252 232;
+  --c-yellow-100: 254 249 195;
+  --c-yellow-200: 254 240 138;
+  --c-yellow-300: 253 224 71;
+  --c-yellow-400: 250 204 21;
+  --c-yellow-500: 234 179 8;
+  --c-yellow-600: 202 138 4;
+  --c-yellow-700: 161 98 7;
+  --c-yellow-800: 133 77 14;
+  --c-yellow-900: 113 63 18;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-[#fafaf7] text-gray-900 antialiased dark:bg-[#0a0a0f];
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  @apply bg-white/10;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  @apply bg-white/20;
+}
+
+::selection {
+  @apply bg-amber-200 text-gray-900;
+}
+
+/* Disable accidental text selection on all data tables (POS-friendly).
+   Form controls inside tables stay selectable/editable. */
+table {
+  -webkit-user-select: none;
+  user-select: none;
+}
+table input,
+table textarea,
+table [contenteditable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-gray-300;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
+@layer components {
+  .glass-card {
+    @apply rounded-2xl border border-gray-200/80 bg-white shadow-sm dark:border-white/10 dark:bg-[#12121a];
+  }
+
+  .glass-card-hover {
+    @apply transition-all duration-300 hover:-translate-y-0.5 hover:border-amber-300/70 hover:shadow-md dark:hover:border-amber-500/30;
+  }
+
+  .btn-primary {
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 px-4 text-sm font-bold text-gray-900 shadow-lg shadow-amber-400/30 transition hover:from-amber-300 hover:to-yellow-400 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:h-10;
+  }
+
+  .btn-secondary {
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm transition hover:border-amber-300 hover:bg-amber-50 active:scale-[0.98] dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:border-amber-500/30 dark:hover:bg-amber-500/10 sm:h-10;
+  }
+
+  .btn-danger {
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-600 transition hover:bg-rose-100 active:scale-[0.98] dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 sm:h-10;
+  }
+
+  .input-field {
+    @apply h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-base text-gray-900 placeholder-gray-400 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/25 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-zinc-500 dark:focus:bg-white/[0.08] sm:h-10 sm:text-sm;
+  }
+
+  .field-label {
+    @apply mb-1.5 block text-xs font-semibold text-gray-600 dark:text-zinc-400;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media print {
+  /* margin: 0 removes the browser's auto header (date/title) and footer (URL/page number). */
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  /* Give the invoice its own comfortable inner margin since the page margin is 0,
+     and stretch it to the full page height so the footer sits at the bottom. */
+  .invoice-print {
+    padding: 12mm !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 100vh;
+  }
+  /* Push the signature (and the footer that follows it) to the bottom of the page. */
+  .invoice-signature {
+    margin-top: auto !important;
+  }
+  /* Clip the residual app-page height so only the printable defines the page count
+     (prevents a trailing blank page). */
+  html,
+  body {
+    height: auto !important;
+    overflow: hidden !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .modal-root,
+  .modal-panel {
+    position: static !important;
+    inset: auto !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    transform: none !important;
+    display: block !important;
+  }
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white !important;
+  }
+  .print-area,
+  .print-area * {
+    background-color: white !important;
+    color: #111827 !important;
+    border-color: #d1d5db !important;
+  }
+}
