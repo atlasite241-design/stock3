@@ -156,7 +156,7 @@ function Content() {
           </section>
 
           {/* Lines */}
-          <section className={`${card} p-5`}>
+          <section className={`${card} relative z-30 p-5`}>
             <div className="mb-4 flex items-center gap-2 text-amber-600 dark:text-amber-400">
               <ShoppingBasket className="h-5 w-5" />
               <h3 className="text-lg font-semibold">{t('dvc_lines')}</h3>
@@ -214,7 +214,7 @@ function Content() {
                 <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('dvc_add_via')} className={`${input} border-2 border-dashed pl-9`} />
               </div>
               {results.length > 0 && (
-                <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-white/10 dark:bg-zinc-900">
+                <div className="absolute z-40 mt-1 w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-white/10 dark:bg-zinc-900">
                   {results.map((p) => (
                     <button key={p.id} onClick={() => addLine(p.id)} className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition hover:bg-gray-50 dark:hover:bg-white/5">
                       <span className="truncate text-gray-900 dark:text-white">{p.name}</span>
