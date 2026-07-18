@@ -11,6 +11,57 @@ export interface DocLine {
   tvaPct: number
 }
 
+// --- Montant en toutes lettres (français, dirhams + centimes) ---
+const U = ['zéro', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize', 'dix-sept', 'dix-huit', 'dix-neuf']
+const T = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante', '', 'quatre-vingt', '']
+
+function below100(n: number): string {
+  if (n < 20) return U[n]
+  const t = Math.floor(n / 10)
+  const u = n % 10
+  if (t === 7) return u === 1 ? 'soixante et onze' : 'soixante-' + U[10 + u]
+  if (t === 9) return 'quatre-vingt-' + U[10 + u]
+  let w = T[t]
+  if (t === 8 && u === 0) w = 'quatre-vingts'
+  if (u === 0) return w
+  if (u === 1 && t >= 2 && t <= 6) return w + ' et un'
+  return w + '-' + U[u]
+}
+
+function below1000(n: number): string {
+  if (n === 0) return ''
+  const h = Math.floor(n / 100)
+  const r = n % 100
+  let s = ''
+  if (h > 0) {
+    s = h === 1 ? 'cent' : U[h] + ' cent'
+    if (r === 0 && h > 1) s += 's'
+  }
+  if (r > 0) s = (s ? s + ' ' : '') + below100(r)
+  return s
+}
+
+function frenchWords(n: number): string {
+  if (n === 0) return 'zéro'
+  const mil = Math.floor(n / 1_000_000)
+  const th = Math.floor((n % 1_000_000) / 1000)
+  const rest = n % 1000
+  const parts: string[] = []
+  if (mil > 0) parts.push(mil === 1 ? 'un million' : below1000(mil) + ' millions')
+  if (th > 0) parts.push(th === 1 ? 'mille' : below1000(th) + ' mille')
+  if (rest > 0) parts.push(below1000(rest))
+  return parts.join(' ')
+}
+
+export function montantEnLettres(amount: number): string {
+  const safe = Math.max(0, amount || 0)
+  const dh = Math.floor(safe + 1e-9)
+  const cents = Math.round((safe - dh) * 100)
+  let s = `${frenchWords(dh)} ${dh <= 1 ? 'dirham' : 'dirhams'}`
+  if (cents > 0) s += ` et ${frenchWords(cents)} ${cents <= 1 ? 'centime' : 'centimes'}`
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
 export default function InvoiceDocument({
   title,
   number,
@@ -163,7 +214,11 @@ export default function InvoiceDocument({
       </table>
 
       {/* Totals */}
-      <div className="mt-4 flex justify-end">
+      <div className="mt-4 flex items-start justify-between gap-6">
+        <div className="max-w-[50%] pt-1 text-[12px] leading-snug text-gray-700">
+          <p className="font-semibold">{t('fdoc_amount_words')}</p>
+          <p className="mt-1 font-bold text-gray-900">{montantEnLettres(totalTTC)}.</p>
+        </div>
         <div className="w-64 space-y-1 text-[12px]">
           <div className="flex justify-between text-gray-600">
             <span className="font-semibold">{t('fdoc_total_ht')}</span>

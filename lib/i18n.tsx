@@ -1271,6 +1271,7 @@ const DICT = {
   fdoc_total_ttc: { fr: 'Total TTC', ar: 'المجموع شامل الضريبة' },
   fdoc_paid: { fr: 'Payé', ar: 'مدفوع' },
   fdoc_remaining: { fr: 'Reste dû', ar: 'المتبقي' },
+  fdoc_amount_words: { fr: 'Arrêté la présente facture à la somme de :', ar: 'حُررت هذه الفاتورة بمبلغ :' },
   fdoc_signature: { fr: 'Signature', ar: 'التوقيع' },
   fdoc_thanks: { fr: 'Merci de Votre Confiance', ar: 'شكراً لثقتكم' },
   fdoc_supplier_invoice: { fr: 'FACTURE FOURNISSEUR', ar: 'فاتورة المورد' },
