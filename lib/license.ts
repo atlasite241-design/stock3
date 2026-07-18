@@ -1,9 +1,9 @@
 'use client'
 
-import { turso, tursoConfigured } from './turso'
+// Licence — la validation et la gestion des clés passent désormais par des
+// routes serveur (/api/license/*) qui utilisent le token Turso SERVEUR
+// (jamais exposé au navigateur). Le client ne connaît plus la base des clés.
 
-// Clé locale (NON synchronisée avec Turso) → l'activation reste liée à cet
-// appareil/navigateur uniquement.
 const STORAGE_KEY = 'atlasstock_license'
 
 export interface LicenseState {
@@ -11,12 +11,6 @@ export interface LicenseState {
   months: number
   activatedAt: string
   expiresAt: string
-}
-
-function addMonths(date: Date, months: number): Date {
-  const d = new Date(date)
-  d.setMonth(d.getMonth() + months)
-  return d
 }
 
 export function getLicense(): LicenseState | null {
@@ -32,7 +26,6 @@ export function getLicense(): LicenseState | null {
 export function isLicensed(): boolean {
   const s = getLicense()
   if (!s) return false
-  // Licence expirée → il faut une nouvelle clé.
   if (s.expiresAt && new Date(s.expiresAt).getTime() < Date.now()) return false
   return true
 }
@@ -45,79 +38,58 @@ export function clearLicense(): void {
   }
 }
 
-// --- Administration des clés (réservé aux admins) ---
+export type ActivateResult =
+  | { ok: true; months: number; expiresAt: string }
+  | { ok: false; error: 'invalid' | 'network' | 'unconfigured' }
 
-const KEY_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789' // sans I, O, 0, 1, L
-
-function seg(n: number): string {
-  let s = ''
-  for (let i = 0; i < n; i++) s += KEY_CHARS[Math.floor(Math.random() * KEY_CHARS.length)]
-  return s
+export async function activateLicense(rawKey: string): Promise<ActivateResult> {
+  const key = rawKey.trim().toUpperCase()
+  if (!key) return { ok: false, error: 'invalid' }
+  try {
+    const res = await fetch('/api/license/activate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key }),
+    })
+    const data = (await res.json()) as { ok: boolean; months?: number; expiresAt?: string; error?: string }
+    if (!data.ok) {
+      const err = data.error === 'network' ? 'network' : 'invalid'
+      return { ok: false, error: err }
+    }
+    const state: LicenseState = {
+      key,
+      months: data.months ?? 1,
+      activatedAt: new Date().toISOString(),
+      expiresAt: data.expiresAt ?? new Date().toISOString(),
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    return { ok: true, months: state.months, expiresAt: state.expiresAt }
+  } catch {
+    return { ok: false, error: 'network' }
+  }
 }
 
-export function genKey(): string {
-  return `ATLS-${seg(5)}-${seg(5)}-${seg(5)}`
-}
+// --- Administration (l'écran admin appelle aussi les routes serveur) ---
 
 export interface LicenseStat {
   months: number
   count: number
 }
 
-/** Nombre de clés restantes, groupées par durée. */
 export async function getLicenseStats(): Promise<LicenseStat[]> {
-  const client = turso()
-  const r = await client.execute('SELECT months, count(*) AS n FROM license_keys GROUP BY months ORDER BY months')
-  return r.rows.map((row) => ({ months: Number(row.months) || 0, count: Number(row.n) || 0 }))
+  const res = await fetch('/api/license/stats', { cache: 'no-store' })
+  const data = (await res.json()) as { ok: boolean; stats?: LicenseStat[] }
+  if (!data.ok || !data.stats) throw new Error('stats_failed')
+  return data.stats
 }
 
-/** Génère `count` nouvelles clés d'une durée donnée et les insère en base. */
 export async function generateKeys(months: number, count: number): Promise<string[]> {
-  const n = Math.max(1, Math.min(500, Math.floor(count) || 0))
-  const client = turso()
-  const seen = new Set<string>()
-  const keys: string[] = []
-  while (keys.length < n) {
-    const k = genKey()
-    if (!seen.has(k)) {
-      seen.add(k)
-      keys.push(k)
-    }
-  }
-  const placeholders = keys.map(() => '(?, ?)').join(',')
-  const args = keys.flatMap((k) => [k, months])
-  await client.execute({ sql: `INSERT OR IGNORE INTO license_keys (key, months) VALUES ${placeholders}`, args })
-  return keys
-}
-
-export type ActivateResult =
-  | { ok: true; months: number; expiresAt: string }
-  | { ok: false; error: 'invalid' | 'network' | 'unconfigured' }
-
-/**
- * Valide une clé contre `license_keys` (Turso). Si valide : lit la durée
- * (mois), consomme la clé (suppression = usage unique), calcule la date
- * d'expiration et enregistre l'activation localement.
- */
-export async function activateLicense(rawKey: string): Promise<ActivateResult> {
-  const key = rawKey.trim().toUpperCase()
-  if (!key) return { ok: false, error: 'invalid' }
-  if (!tursoConfigured()) return { ok: false, error: 'unconfigured' }
-
-  try {
-    const client = turso()
-    const found = await client.execute({ sql: 'SELECT key, months FROM license_keys WHERE key = ? LIMIT 1', args: [key] })
-    if (found.rows.length === 0) return { ok: false, error: 'invalid' }
-
-    const months = Number(found.rows[0].months) || 1
-    await client.execute({ sql: 'DELETE FROM license_keys WHERE key = ?', args: [key] })
-
-    const now = new Date()
-    const expiresAt = addMonths(now, months).toISOString()
-    const state: LicenseState = { key, months, activatedAt: now.toISOString(), expiresAt }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-    return { ok: true, months, expiresAt }
-  } catch {
-    return { ok: false, error: 'network' }
-  }
+  const res = await fetch('/api/license/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ months, count }),
+  })
+  const data = (await res.json()) as { ok: boolean; keys?: string[] }
+  if (!data.ok || !data.keys) throw new Error('generate_failed')
+  return data.keys
 }
