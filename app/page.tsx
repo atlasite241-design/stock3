@@ -83,7 +83,7 @@ function TrendChip({ pct }: { pct: number | null }) {
 }
 
 export default function DashboardPage() {
-  const { ready, products: scopedProducts, sales: scopedSales, allProducts, allSales, stores, activeStore } = useDroguerie()
+  const { ready, products: scopedProducts, sales: scopedSales, allProducts, allSales, stores, activeStore, settings } = useDroguerie()
   const { t, lang } = useLanguage()
   const [dateStr, setDateStr] = useState('')
   const [scope, setScope] = useState('active')
@@ -91,7 +91,10 @@ export default function DashboardPage() {
   // Administrators can consolidate every store; otherwise the dashboard follows the active store.
   const consolidated = scope === 'all'
   const products = consolidated ? allProducts : scopedProducts
-  const sales = consolidated ? allSales : scopedSales
+  // Réinitialisation des statistiques : le tableau de bord ne compte que
+  // l'activité postérieure au début d'exercice (les données restent intactes).
+  const statsCutoff = settings.statsResetAt || ''
+  const sales = (consolidated ? allSales : scopedSales).filter((s) => !statsCutoff || s.date >= statsCutoff)
 
   useEffect(() => {
     setDateStr(

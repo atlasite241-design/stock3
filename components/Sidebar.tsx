@@ -188,6 +188,7 @@ const NAV: NavItem[] = [
       { href: '/parametres/import-excel', labelKey: 'nav_settings_import' },
       { href: '/parametres/export-excel', labelKey: 'nav_settings_export' },
       { href: '/parametres/theme', labelKey: 'nav_settings_theme' },
+      { href: '/parametres/reinitialisation', labelKey: 'nav_settings_reset' },
     ],
   },
 ]

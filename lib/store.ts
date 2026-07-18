@@ -376,6 +376,8 @@ export interface Settings {
   dateFormat: 'DD/MM/YYYY' | 'YYYY-MM-DD'
   invoiceTerms: string
   signatureDataUrl: string
+  /** Début d'exercice : le tableau de bord ne compte que l'activité postérieure à cette date ISO. */
+  statsResetAt?: string
 }
 
 export interface Expense {
@@ -1233,6 +1235,16 @@ export function useDroguerie() {
   const logActivity = (action: string, base?: ActivityLog[]) => {
     const entry: ActivityLog = { id: uid(), date: new Date().toISOString(), user: 'Yassir A.', action }
     persistActivity([entry, ...(base ?? activity)].slice(0, 200))
+  }
+
+  // Réinitialisation des statistiques : pose la date de début d'exercice
+  // (le tableau de bord repart de 0) et journalise l'opération. Ne supprime
+  // AUCUNE donnée.
+  const resetStats = (userName: string) => {
+    const next: Settings = { ...settings, statsResetAt: new Date().toISOString() }
+    setSettings(next)
+    save(K.settings, next)
+    logActivity(`Réinitialisation des statistiques du tableau de bord${userName ? ' par ' + userName : ''}`)
   }
 
   // ---- Products ----
@@ -2324,5 +2336,6 @@ export function useDroguerie() {
     brandActions: attrActions(brands, persistBrands),
     unitActions: attrActions(units, persistUnits),
     saveSettings,
+    resetStats,
   }
 }
