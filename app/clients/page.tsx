@@ -347,9 +347,14 @@ function ClientsContent() {
                   >
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 text-xs font-bold text-gray-900">
-                          {initials(c.name)}
-                        </div>
+                        {c.image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={c.image} alt={c.name} className="h-9 w-9 shrink-0 rounded-xl object-cover" />
+                        ) : (
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 text-xs font-bold text-gray-900">
+                            {initials(c.name)}
+                          </div>
+                        )}
                         <div>
                           <p className="text-sm font-semibold text-gray-900 dark:text-white">{c.name}</p>
                           <p className="text-xs text-gray-400 dark:text-zinc-500 tabular-nums">{c.phone || '—'}</p>
@@ -600,9 +605,14 @@ function ClientsContent() {
         {profileTarget && (
           <>
             <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-500 text-lg font-bold text-gray-900">
-                {initials(profileTarget.name)}
-              </div>
+              {profileTarget.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={profileTarget.image} alt={profileTarget.name} className="h-14 w-14 shrink-0 rounded-2xl object-cover" />
+              ) : (
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-500 text-lg font-bold text-gray-900">
+                  {initials(profileTarget.name)}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-lg font-bold text-gray-900 dark:text-white">{profileTarget.name}</p>
                 <p className="text-sm text-gray-500 dark:text-zinc-400 tabular-nums">{profileTarget.phone || '—'}</p>
