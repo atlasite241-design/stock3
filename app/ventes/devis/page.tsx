@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import { useToast } from '@/components/Toast'
-import { availableStock, fmtDH, useDroguerie, type Client, type SaleItem } from '@/lib/store'
+import { availableStock, docNumber, fmtDH, useDroguerie, type Client, type SaleItem } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 type Line = SaleItem & { discount: number }
@@ -24,7 +24,7 @@ type Line = SaleItem & { discount: number }
 const r2 = (n: number) => Math.round(n * 100) / 100
 
 function Content() {
-  const { ready, products, clients, quotes, settings, addQuote, deleteQuote, recordSale } = useDroguerie()
+  const { ready, products, clients, quotes, settings, activeStore, activeStoreId, addQuote, deleteQuote, recordSale } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
 
@@ -89,45 +89,76 @@ function Content() {
 
   const genPdf = () => {
     if (lines.length === 0) return toast(t('dvc_need_line'), 'error')
-    const esc = (s: string) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string))
+    const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string))
+    const ref = docNumber('DEV', activeStore, quotes.filter((x) => x.storeId === activeStoreId).length + 1, 4)
+    const accentRaw = (typeof window !== 'undefined' ? getComputedStyle(document.documentElement).getPropertyValue('--c-amber-500').trim() : '') || '245 158 11'
+    const accent = `rgb(${accentRaw})`
     const today = new Date().toLocaleDateString('fr-FR')
     const validTxt = validity ? new Date(validity).toLocaleDateString('fr-FR') : '—'
+    const cur = settings?.currency || 'MAD'
     const rows = lines
       .map((l) => {
         const lt = l.price * l.qty * (1 - (l.discount || 0) / 100)
         return `<tr><td>${esc(l.name)}</td><td class="c">${l.qty}</td><td class="r">${esc(fmtDH(l.price))}</td><td class="c">${l.discount || 0}%</td><td class="r">${esc(fmtDH(lt))}</td></tr>`
       })
       .join('')
-    const doc = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Devis</title>
+    const logo = settings?.logoDataUrl
+      ? `<img src="${esc(settings.logoDataUrl)}" style="max-height:60px;max-width:190px;object-fit:contain"/>`
+      : `<div style="font-size:20px;font-weight:800;color:${accent}">${esc(settings?.storeName || 'Droguerie')}</div>`
+    const coLines = [
+      settings?.legalForm && settings?.storeName ? `${esc(settings.storeName)} (${esc(settings.legalForm)})` : esc(settings?.storeName || ''),
+      [settings?.address, settings?.city].filter(Boolean).map(esc).join(', '),
+      [settings?.phone && `Tél : ${esc(settings.phone)}`, settings?.email && esc(settings.email)].filter(Boolean).join('  ·  '),
+      settings?.website ? esc(settings.website) : '',
+    ].filter(Boolean).join('<br>')
+    const legal = [
+      settings?.ice && `ICE : ${esc(settings.ice)}`,
+      settings?.idFiscal && `IF : ${esc(settings.idFiscal)}`,
+      settings?.rcNo && `RC : ${esc(settings.rcNo)}`,
+      settings?.cnss && `CNSS : ${esc(settings.cnss)}`,
+      settings?.taxePro && `Patente : ${esc(settings.taxePro)}`,
+    ].filter(Boolean).join('&nbsp;&nbsp;•&nbsp;&nbsp;')
+    const clientDetails = matchedClient
+      ? [matchedClient.phone && `Tél : ${esc(matchedClient.phone)}`, [matchedClient.address, matchedClient.city].filter(Boolean).map(esc).join(', '), matchedClient.cin && `CIN : ${esc(matchedClient.cin)}`].filter(Boolean).join('<br>')
+      : ''
+    const doc = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${esc(ref)}</title>
 <style>
-*{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
-body{margin:0;padding:32px;color:#111;font-size:13px}
-.hd{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:16px;margin-bottom:24px}
-.hd h1{margin:0;font-size:26px;letter-spacing:1px}
-.co{font-size:12px;color:#333;line-height:1.5}
-.meta{display:flex;justify-content:space-between;margin-bottom:20px;font-size:12px}
-.meta b{color:#000}
+*{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;padding:34px 38px;color:#1f2937;font-size:13px}
+.hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.co{font-size:11.5px;color:#4b5563;line-height:1.55;text-align:right}
+.bar{height:4px;background:${accent};border-radius:4px;margin:14px 0 22px}
+.title{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:22px}
+.title h1{margin:0;font-size:30px;letter-spacing:2px;color:${accent}}
+.title .ref{font-size:14px;font-weight:700}
+.title .date{font-size:11.5px;color:#6b7280}
+.parties{display:flex;gap:18px;margin-bottom:22px}
+.box{flex:1;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px}
+.box .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:${accent};font-weight:700;margin-bottom:4px}
+.box .nm{font-weight:700;font-size:14px;color:#111827}
+.box .dt{font-size:11.5px;color:#4b5563;line-height:1.5;margin-top:3px}
 table{width:100%;border-collapse:collapse;margin-bottom:16px}
-th{background:#f3f4f6;text-align:left;padding:8px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #ddd}
-td{padding:8px;border-bottom:1px solid #eee}
+th{background:${accent};color:#fff;text-align:left;padding:9px;font-size:10.5px;text-transform:uppercase;letter-spacing:.6px}
+th:first-child{border-radius:6px 0 0 6px}th:last-child{border-radius:0 6px 6px 0}
+td{padding:9px;border-bottom:1px solid #eee}
 .c{text-align:center}.r{text-align:right}
-.tot{width:280px;margin-left:auto;font-size:13px}
-.tot .row{display:flex;justify-content:space-between;padding:5px 0}
-.tot .ttc{border-top:2px solid #111;margin-top:6px;padding-top:10px;font-size:18px;font-weight:bold}
-.notes{margin-top:24px;font-size:12px;color:#333;border-top:1px solid #eee;padding-top:12px;white-space:pre-wrap}
-.foot{margin-top:40px;text-align:center;font-size:10px;color:#999}
+.tot{width:290px;margin-left:auto;font-size:13px}
+.tot .row{display:flex;justify-content:space-between;padding:5px 2px;color:#4b5563}
+.tot .ttc{border-top:2px solid ${accent};margin-top:6px;padding-top:10px;font-size:19px;font-weight:800;color:${accent}}
+.notes{margin-top:22px;font-size:12px;color:#374151;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;white-space:pre-wrap}
+.legal{margin-top:34px;border-top:1px solid #e5e7eb;padding-top:10px;text-align:center;font-size:10px;color:#6b7280;line-height:1.7}
 </style></head><body>
 <div class="hd">
-  <div><h1>DEVIS</h1><div style="color:#666;font-size:12px">${esc(today)}</div></div>
-  <div class="co" style="text-align:right">
-    <b style="font-size:15px">${esc(settings?.storeName || 'Droguerie')}</b><br>
-    ${esc(settings?.address || '')}<br>${esc(settings?.phone || '')}
-    ${settings?.ice ? `<br>ICE: ${esc(settings.ice)}` : ''}
-  </div>
+  <div>${logo}</div>
+  <div class="co">${coLines}</div>
 </div>
-<div class="meta">
-  <div><b>Client</b><br>${esc(clientName || '—')}</div>
-  <div style="text-align:right"><b>Validité</b><br>${esc(validTxt)}</div>
+<div class="bar"></div>
+<div class="title">
+  <div><h1>DEVIS</h1><div class="ref">N° ${esc(ref)}</div></div>
+  <div style="text-align:right"><div class="date">Date : ${esc(today)}</div><div class="date">Validité : ${esc(validTxt)}</div></div>
+</div>
+<div class="parties">
+  <div class="box"><div class="lbl">Client</div><div class="nm">${esc(clientName || '—')}</div>${clientDetails ? `<div class="dt">${clientDetails}</div>` : ''}</div>
 </div>
 <table>
   <thead><tr><th>Produit</th><th class="c">Qté</th><th class="r">Prix Unit.</th><th class="c">Remise</th><th class="r">Total HT</th></tr></thead>
@@ -137,10 +168,10 @@ td{padding:8px;border-bottom:1px solid #eee}
   <div class="row"><span>Sous-total HT</span><span>${esc(fmtDH(totals.subtotal))}</span></div>
   ${global > 0 ? `<div class="row"><span>Remise globale (${global}%)</span><span>-${esc(fmtDH(totals.subtotal - totals.afterGlobal))}</span></div>` : ''}
   <div class="row"><span>TVA (${tvaRate}%)</span><span>${esc(fmtDH(totals.tva))}</span></div>
-  <div class="row ttc"><span>TOTAL TTC</span><span>${esc(fmtDH(totals.ttc))}</span></div>
+  <div class="row ttc"><span>TOTAL TTC (${esc(cur)})</span><span>${esc(fmtDH(totals.ttc))}</span></div>
 </div>
-${notes.trim() ? `<div class="notes"><b>Conditions :</b><br>${esc(notes)}</div>` : ''}
-<div class="foot">Document généré par ${esc(settings?.storeName || 'Droguerie Pro')}</div>
+${notes.trim() ? `<div class="notes"><b>Conditions particulières :</b><br>${esc(notes)}</div>` : ''}
+<div class="legal">${legal ? legal + '<br>' : ''}${esc(settings?.storeName || 'Droguerie Pro')} — Devis généré le ${esc(today)}</div>
 </body></html>`
     const w = window.open('', '_blank', 'width=820,height=920')
     if (!w) return toast(t('dvc_popup_blocked'), 'error')
@@ -148,7 +179,7 @@ ${notes.trim() ? `<div class="notes"><b>Conditions :</b><br>${esc(notes)}</div>`
     w.document.write(doc)
     w.document.close()
     w.focus()
-    setTimeout(() => w.print(), 350)
+    setTimeout(() => w.print(), 400)
   }
   const sendEmail = () => {
     const email = matchedClient?.email || ''
