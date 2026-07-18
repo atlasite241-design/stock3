@@ -16,7 +16,6 @@ function Content() {
   const toast = useToast()
   const [form, setForm] = useState(settings)
   const logoInputRef = useRef<HTMLInputElement>(null)
-  const logoLightInputRef = useRef<HTMLInputElement>(null)
   const signatureInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -139,32 +138,14 @@ function Content() {
                   <input ref={logoInputRef} type="file" accept="image/png,image/jpeg" onChange={(e) => onLogoChange(e, 'logoDataUrl')} className="hidden" />
                 </div>
                 <div>
-                  <label className="field-label">{t('soc_logo_light')}</label>
-                  <button
-                    type="button"
-                    onClick={() => logoLightInputRef.current?.click()}
-                    className="group flex h-[132px] w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/15 bg-white p-3 transition-colors hover:border-amber-300"
-                  >
-                    {form.logoLightDataUrl ? (
-                      <img src={form.logoLightDataUrl} alt="logo clair" className="max-h-16 max-w-full object-contain" />
-                    ) : (
-                      <>
-                        <UploadCloud className="h-5 w-5 text-amber-500 transition-transform group-hover:scale-110" />
-                        <span className="text-center text-[11px] font-semibold text-gray-700">{initials}</span>
-                      </>
-                    )}
-                  </button>
-                  <input ref={logoLightInputRef} type="file" accept="image/png,image/jpeg" onChange={(e) => onLogoChange(e, 'logoLightDataUrl')} className="hidden" />
-                </div>
-                <div className="col-span-2">
                   <label className="field-label">{t('soc_signature')}</label>
                   <button
                     type="button"
                     onClick={() => signatureInputRef.current?.click()}
-                    className="group flex h-[120px] w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/15 bg-white p-3 transition-colors hover:border-amber-300"
+                    className="group flex h-[132px] w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/15 bg-white p-3 transition-colors hover:border-amber-300"
                   >
                     {form.signatureDataUrl ? (
-                      <img src={form.signatureDataUrl} alt="signature" className="max-h-20 max-w-full object-contain" />
+                      <img src={form.signatureDataUrl} alt="signature" className="max-h-16 max-w-full object-contain" />
                     ) : (
                       <>
                         <UploadCloud className="h-5 w-5 text-amber-500 transition-transform group-hover:scale-110" />
