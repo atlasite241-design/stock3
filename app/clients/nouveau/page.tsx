@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Save, UserPlus, X } from 'lucide-react'
+import { ImagePlus, Save, Scissors, User, UserPlus, X } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
 import { useDroguerie } from '@/lib/store'
+import { removeWhiteBackground } from '@/lib/image'
 import { useLanguage } from '@/lib/i18n'
 
 const EMPTY_FORM = {
@@ -22,6 +23,7 @@ const EMPTY_FORM = {
   creditAllowed: 'oui',
   paymentTermDays: '30',
   notes: '',
+  image: '',
 }
 
 function Content() {
@@ -30,6 +32,22 @@ function Content() {
   const toast = useToast()
   const router = useRouter()
   const [form, setForm] = useState(EMPTY_FORM)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+
+  const onImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => setForm((f) => ({ ...f, image: String(reader.result) }))
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+  const cutoutImage = async () => {
+    if (!form.image) return
+    const out = await removeWhiteBackground(form.image)
+    setForm((f) => ({ ...f, image: out }))
+    toast(`✓ ${t('prod_photo_cutout_done')}`)
+  }
 
   const validate = () => {
     if (!form.name.trim()) {
@@ -55,6 +73,7 @@ function Content() {
     creditAllowed: form.creditAllowed === 'oui',
     paymentTermDays: parseInt(form.paymentTermDays, 10) || 30,
     notes: form.notes.trim(),
+    image: form.image || undefined,
   })
 
   const save = (andNew: boolean) => {
@@ -82,6 +101,40 @@ function Content() {
         className="glass-card max-w-3xl p-6"
       >
         <div className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className="field-label">{t('clin_photo_label')}</label>
+            <div className="flex items-center gap-3">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-black">
+                {form.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={form.image} alt="client" className="h-full w-full object-cover" />
+                ) : (
+                  <User className="h-7 w-7 text-gray-400 dark:text-zinc-600" />
+                )}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => imageInputRef.current?.click()} className="btn-secondary !h-9 text-xs">
+                    <ImagePlus className="h-3.5 w-3.5" />
+                    {t('prod_photo_choose')}
+                  </button>
+                  {form.image && (
+                    <>
+                      <button type="button" onClick={cutoutImage} className="btn-secondary !h-9 text-xs">
+                        <Scissors className="h-3.5 w-3.5" />
+                        {t('prod_photo_cutout')}
+                      </button>
+                      <button type="button" onClick={() => setForm({ ...form, image: '' })} className="btn-secondary !h-9 text-xs">
+                        {t('prod_photo_remove')}
+                      </button>
+                    </>
+                  )}
+                </div>
+                <p className="text-[11px] text-gray-400 dark:text-zinc-500">{t('prod_photo_hint')}</p>
+              </div>
+              <input ref={imageInputRef} type="file" accept="image/png,image/jpeg" onChange={onImageChange} className="hidden" />
+            </div>
+          </div>
           <div>
             <label className="field-label">{t('clin_name')}</label>
             <input
@@ -183,6 +236,8 @@ function Content() {
               value={form.paymentTermDays}
               onChange={(v) => setForm({ ...form, paymentTermDays: v })}
               options={[
+                { value: '7', label: t('clin_term_7') },
+                { value: '15', label: t('clin_term_15') },
                 { value: '30', label: t('clin_term_30') },
                 { value: '60', label: t('clin_term_60') },
                 { value: '90', label: t('clin_term_90') },

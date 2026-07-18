@@ -92,6 +92,7 @@ export interface Client {
   points: number
   creditAllowed?: boolean
   paymentTermDays?: number
+  image?: string
 }
 
 export interface ClientPayment {
@@ -1552,6 +1553,7 @@ export function useDroguerie() {
       creditLimit: data.creditLimit ?? 0,
       notes: data.notes ?? '',
       creditDueDate: data.creditDueDate,
+      image: data.image,
       discountBalance: 0,
       credit: 0,
       totalSpent: 0,
