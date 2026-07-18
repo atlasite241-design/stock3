@@ -1977,6 +1977,11 @@ const DICT = {
   lic_unconfigured: { fr: 'Base de données non configurée.', ar: 'قاعدة البيانات غير مهيأة.' },
   lic_success: { fr: 'Licence activée', ar: 'تم تفعيل الترخيص' },
   lic_hint: { fr: 'Chaque clé n’est utilisable qu’une seule fois.', ar: 'كل مفتاح يُستعمل مرة واحدة فقط.' },
+  lic_success_title: { fr: 'Licence activée avec succès', ar: 'تم تفعيل الترخيص بنجاح' },
+  lic_plan: { fr: 'Abonnement', ar: 'الاشتراك' },
+  lic_months_unit: { fr: 'mois', ar: 'شهر' },
+  lic_expires: { fr: 'Valable jusqu’au', ar: 'صالح حتى' },
+  lic_continue: { fr: 'Commencer', ar: 'ابدأ' },
 
   psub_company_title: { fr: 'Société', ar: 'الشركة' },
   psub_company_subtitle: { fr: "Identité de l'entreprise affichée sur les documents.", ar: 'هوية الشركة الظاهرة على المستندات.' },

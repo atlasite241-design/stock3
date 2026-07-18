@@ -8,7 +8,15 @@ const STORAGE_KEY = 'atlasstock_license'
 
 export interface LicenseState {
   key: string
+  months: number
   activatedAt: string
+  expiresAt: string
+}
+
+function addMonths(date: Date, months: number): Date {
+  const d = new Date(date)
+  d.setMonth(d.getMonth() + months)
+  return d
 }
 
 export function getLicense(): LicenseState | null {
@@ -22,7 +30,11 @@ export function getLicense(): LicenseState | null {
 }
 
 export function isLicensed(): boolean {
-  return !!getLicense()
+  const s = getLicense()
+  if (!s) return false
+  // Licence expirée → il faut une nouvelle clé.
+  if (s.expiresAt && new Date(s.expiresAt).getTime() < Date.now()) return false
+  return true
 }
 
 export function clearLicense(): void {
@@ -33,12 +45,14 @@ export function clearLicense(): void {
   }
 }
 
-export type ActivateResult = { ok: true } | { ok: false; error: 'invalid' | 'network' | 'unconfigured' }
+export type ActivateResult =
+  | { ok: true; months: number; expiresAt: string }
+  | { ok: false; error: 'invalid' | 'network' | 'unconfigured' }
 
 /**
- * Valide une clé de licence contre la table `license_keys` de Turso.
- * Si la clé existe : elle est CONSOMMÉE (supprimée de la base, usage unique)
- * puis l'activation est enregistrée localement.
+ * Valide une clé contre `license_keys` (Turso). Si valide : lit la durée
+ * (mois), consomme la clé (suppression = usage unique), calcule la date
+ * d'expiration et enregistre l'activation localement.
  */
 export async function activateLicense(rawKey: string): Promise<ActivateResult> {
   const key = rawKey.trim().toUpperCase()
@@ -47,15 +61,17 @@ export async function activateLicense(rawKey: string): Promise<ActivateResult> {
 
   try {
     const client = turso()
-    const found = await client.execute({ sql: 'SELECT key FROM license_keys WHERE key = ? LIMIT 1', args: [key] })
+    const found = await client.execute({ sql: 'SELECT key, months FROM license_keys WHERE key = ? LIMIT 1', args: [key] })
     if (found.rows.length === 0) return { ok: false, error: 'invalid' }
 
-    // Usage unique : on supprime la clé pour qu'elle ne serve qu'une fois.
+    const months = Number(found.rows[0].months) || 1
     await client.execute({ sql: 'DELETE FROM license_keys WHERE key = ?', args: [key] })
 
-    const state: LicenseState = { key, activatedAt: new Date().toISOString() }
+    const now = new Date()
+    const expiresAt = addMonths(now, months).toISOString()
+    const state: LicenseState = { key, months, activatedAt: now.toISOString(), expiresAt }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-    return { ok: true }
+    return { ok: true, months, expiresAt }
   } catch {
     return { ok: false, error: 'network' }
   }
