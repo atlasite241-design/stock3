@@ -1829,7 +1829,7 @@ const DICT = {
   soc_ice_label: { fr: "ICE (Identifiant Commun de l'Entreprise)", ar: 'ICE (المعرف الموحد للمقاولة)' },
   soc_if_label: { fr: 'Identifiant Fiscal (IF)', ar: 'المعرف الجبائي (IF)' },
   soc_rc_label: { fr: 'Registre du Commerce (RC)', ar: 'السجل التجاري (RC)' },
-  soc_tp_label: { fr: 'Taxe Professionnelle', ar: 'الضريبة المهنية' },
+  soc_tp_label: { fr: 'Patente', ar: 'الرسم المهني (الباتيندا)' },
   soc_cnss_label: { fr: 'N° CNSS', ar: 'رقم CNSS' },
   soc_contact_title: { fr: 'Coordonnées', ar: 'معلومات الاتصال' },
   soc_phone_label: { fr: 'Téléphone', ar: 'الهاتف' },

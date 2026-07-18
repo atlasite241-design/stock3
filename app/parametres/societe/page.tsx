@@ -186,10 +186,6 @@ function Content() {
                 <label className="field-label">{t('soc_tp_label')}</label>
                 <input type="text" value={form.taxePro} onChange={(e) => setForm({ ...form, taxePro: e.target.value })} className="input-field" />
               </div>
-              <div>
-                <label className="field-label">{t('soc_cnss_label')}</label>
-                <input type="text" value={form.cnss} onChange={(e) => setForm({ ...form, cnss: e.target.value })} className="input-field" />
-              </div>
             </div>
           </motion.div>
 
