@@ -9,7 +9,7 @@ import { useLanguage } from '@/lib/i18n'
 
 const PAY_CHIP: Record<Sale['payment'], string> = {
   especes: 'bg-emerald-500/20 text-emerald-300',
-  carte: 'bg-sky-500/20 text-sky-300',
+  carte: 'bg-amber-500/20 text-amber-300',
   credit: 'bg-amber-500/20 text-amber-300',
   mixte: 'bg-violet-500/20 text-violet-300',
 }
@@ -44,11 +44,11 @@ function Content() {
       {/* Day totals */}
       <section className="grid grid-cols-2 gap-4">
         <div className="rounded-2xl m-card p-5 backdrop-blur-xl">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-sky-400/80">{t('mob_total_day')}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-amber-400/80">{t('mob_total_day')}</p>
           <p className="mt-1 text-xl font-bold text-slate-900 dark:text-white tabular-nums">{fmtDH(model.total)}</p>
         </div>
         <div className="rounded-2xl m-card p-5 backdrop-blur-xl">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-sky-400/80">{t('mob_count_day')}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-amber-400/80">{t('mob_count_day')}</p>
           <p className="mt-1 text-xl font-bold text-slate-900 dark:text-white tabular-nums">{model.count}</p>
         </div>
       </section>
@@ -74,7 +74,7 @@ function Content() {
         <div className="space-y-3">
           {model.recent.map((s) => (
             <div key={s.id} className="flex items-center gap-3 rounded-2xl m-card p-4 backdrop-blur-xl">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/10 text-sky-300">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-300">
                 <Receipt className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">

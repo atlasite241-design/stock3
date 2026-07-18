@@ -29,7 +29,7 @@ export default function BottomNav() {
 
   return (
     <nav className="fixed bottom-5 left-1/2 z-50 w-full max-w-md -translate-x-1/2 px-4">
-      <div className="mx-auto flex h-16 items-center justify-around rounded-full border border-slate-200 dark:border-sky-500/20 bg-white/85 dark:bg-slate-950/85 px-1.5 shadow-[0_-8px_30px_rgba(14,165,233,0.12)] backdrop-blur-3xl">
+      <div className="mx-auto flex h-16 items-center justify-around rounded-full border border-slate-200 dark:border-amber-500/20 bg-white/85 dark:bg-slate-950/85 px-1.5 shadow-[0_-8px_30px_rgb(var(--c-amber-500)/0.12)] backdrop-blur-3xl">
         {MOBILE_NAV.map((n) => {
           const active = isActive(n.href)
           return (
@@ -37,10 +37,10 @@ export default function BottomNav() {
               key={n.href}
               href={n.href}
               className={`flex flex-1 flex-col items-center justify-center rounded-full py-1.5 transition-all active:scale-90 ${
-                active ? 'text-sky-400' : 'text-slate-500 hover:text-sky-300'
+                active ? 'text-amber-400' : 'text-slate-500 hover:text-amber-300'
               }`}
             >
-              <span className={active ? 'drop-shadow-[0_0_8px_rgba(14,165,233,0.5)]' : ''}>{n.icon}</span>
+              <span className={active ? 'drop-shadow-[0_0_8px_rgb(var(--c-amber-500)/0.5)]' : ''}>{n.icon}</span>
               <span className="mt-0.5 text-[9px] font-semibold tracking-wide">{t(n.labelKey)}</span>
             </Link>
           )

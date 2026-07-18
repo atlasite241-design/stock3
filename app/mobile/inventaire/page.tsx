@@ -74,7 +74,7 @@ function Content() {
         <h2 className="mt-4 text-lg font-bold text-slate-900 dark:text-white">{t('mob_inv_applied')}</h2>
         <button
           onClick={() => { setDone(false); setCounts({}) }}
-          className="mt-8 h-12 w-full rounded-2xl bg-gradient-to-r from-sky-400 to-cyan-500 font-bold text-slate-900 transition active:scale-[0.98]"
+          className="mt-8 h-12 w-full rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 font-bold text-slate-900 transition active:scale-[0.98]"
         >
           {t('mob_done')}
         </button>
@@ -92,14 +92,14 @@ function Content() {
       {/* Scan CTA */}
       <button
         onClick={() => setScanOpen(true)}
-        className="flex h-16 w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-sky-400 to-cyan-500 text-lg font-bold text-slate-900 shadow-[0_8px_30px_rgba(14,165,233,0.4)] transition active:scale-[0.98]"
+        className="flex h-16 w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 text-lg font-bold text-slate-900 shadow-[0_8px_30px_rgb(var(--c-amber-500)/0.4)] transition active:scale-[0.98]"
       >
         <ScanLine className="h-6 w-6" strokeWidth={2.5} />
         {t('mob_inv_scan_cta')}
       </button>
 
       {flash && (
-        <p className="rounded-xl border border-sky-500/30 bg-sky-500/10 py-2 text-center text-sm font-semibold text-sky-200">{flash}</p>
+        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 py-2 text-center text-sm font-semibold text-amber-200">{flash}</p>
       )}
 
       {/* Manual search */}
@@ -109,10 +109,10 @@ function Content() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('mob_search')}
-          className="h-11 w-full rounded-2xl border border-slate-200 dark:border-sky-500/20 bg-slate-100 dark:bg-white/5 pl-10 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-sky-400/60"
+          className="h-11 w-full rounded-2xl border border-slate-200 dark:border-amber-500/20 bg-slate-100 dark:bg-white/5 pl-10 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-amber-400/60"
         />
         {searchResults.length > 0 && (
-          <div className="mt-2 overflow-hidden rounded-2xl border border-slate-200 dark:border-sky-500/20 bg-white dark:bg-slate-900">
+          <div className="mt-2 overflow-hidden rounded-2xl border border-slate-200 dark:border-amber-500/20 bg-white dark:bg-slate-900">
             {searchResults.map((p) => (
               <button
                 key={p.id}
@@ -120,7 +120,7 @@ function Content() {
                 className="flex w-full items-center justify-between px-4 py-2.5 text-left transition hover:bg-slate-100 dark:bg-white/5"
               >
                 <span className="truncate text-sm text-slate-900 dark:text-white">{p.name}</span>
-                <Plus className="h-4 w-4 shrink-0 text-sky-400" />
+                <Plus className="h-4 w-4 shrink-0 text-amber-400" />
               </button>
             ))}
           </div>
@@ -130,7 +130,7 @@ function Content() {
       {/* Counted list */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold uppercase tracking-widest text-sky-400/80">{t('mob_inv_counted')} · {rows.length}</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-widest text-amber-400/80">{t('mob_inv_counted')} · {rows.length}</h3>
           {rows.length > 0 && (
             <button onClick={() => setCounts({})} className="flex items-center gap-1 text-xs font-semibold text-rose-400">
               <RotateCcw className="h-3.5 w-3.5" />{t('mob_inv_reset')}

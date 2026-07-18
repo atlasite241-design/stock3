@@ -64,7 +64,7 @@ function Content() {
       <section className="grid grid-cols-2 gap-3">
         {kpis.map((k) => (
           <div key={k.label} className="rounded-2xl m-card p-4 backdrop-blur-xl">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-sky-400/80">{k.label}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-400/80">{k.label}</p>
             <p className="mt-1 truncate text-lg font-bold text-slate-900 dark:text-white tabular-nums">{k.value}</p>
           </div>
         ))}
@@ -77,7 +77,7 @@ function Content() {
           {model.days.map((d, i) => {
             const h = Math.max(4, Math.round((d.ca / model.maxCa) * 100))
             const isMax = d.ca === model.maxCa && d.ca > 0
-            return <div key={i} className={`flex-1 rounded-t-md ${isMax ? 'bg-sky-500 shadow-[0_0_10px_rgba(56,189,248,0.4)]' : 'bg-sky-500/30'}`} style={{ height: `${h}%` }} />
+            return <div key={i} className={`flex-1 rounded-t-md ${isMax ? 'bg-amber-500 shadow-[0_0_10px_rgb(var(--c-amber-400)/0.4)]' : 'bg-amber-500/30'}`} style={{ height: `${h}%` }} />
           })}
         </div>
         <div className="mt-2 flex justify-between gap-2">

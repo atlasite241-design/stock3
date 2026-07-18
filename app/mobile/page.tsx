@@ -92,7 +92,7 @@ function Content() {
           {t('mob_hello')}, {firstName}
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">{t('mob_subtitle')}</p>
-        {activeStore && <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-sky-400/70">{activeStore.name}</p>}
+        {activeStore && <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-amber-400/70">{activeStore.name}</p>}
       </motion.section>
 
       {/* KPI cards */}
@@ -100,28 +100,28 @@ function Content() {
         <div className="relative flex min-w-[260px] flex-col justify-between overflow-hidden rounded-2xl m-card p-6 backdrop-blur-xl">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-sky-400/80">{t('mob_kpi_ca')}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-amber-400/80">{t('mob_kpi_ca')}</p>
               <h2 className="mt-1 text-2xl font-bold text-slate-900 dark:text-white tabular-nums">{fmtDH(model.caToday)}</h2>
             </div>
-            <TrendingUp className="h-5 w-5 text-sky-400" />
+            <TrendingUp className="h-5 w-5 text-amber-400" />
           </div>
           <div className="mt-4 flex items-center gap-2">
             <MobTrend pct={model.caTrend} />
             <span className="text-xs text-slate-500 dark:text-slate-400">{t('mob_vs_yesterday')}</span>
           </div>
-          <div className="pointer-events-none absolute -bottom-4 -right-4 h-24 w-24 rounded-full bg-sky-500/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-4 -right-4 h-24 w-24 rounded-full bg-amber-500/10 blur-3xl" />
         </div>
 
         <div className="flex min-w-[200px] flex-col justify-between rounded-2xl m-card p-6 backdrop-blur-xl">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-sky-400/80">{t('mob_kpi_sales')}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-amber-400/80">{t('mob_kpi_sales')}</p>
             <h2 className="mt-1 text-2xl font-bold text-slate-900 dark:text-white tabular-nums">
               {model.salesCount} <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('mob_sales_unit')}</span>
             </h2>
           </div>
           <div className="mt-4">
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
-              <div className="h-full rounded-full bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.6)]" style={{ width: `${Math.min(100, model.objectivePct)}%` }} />
+              <div className="h-full rounded-full bg-amber-400 shadow-[0_0_8px_rgb(var(--c-amber-400)/0.6)]" style={{ width: `${Math.min(100, model.objectivePct)}%` }} />
             </div>
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{model.objectivePct}% {t('mob_of_objective')}</p>
           </div>
@@ -130,7 +130,7 @@ function Content() {
         <div className="flex min-w-[220px] flex-col justify-between rounded-2xl m-card p-6 backdrop-blur-xl">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-sky-400/80">{t('mob_kpi_profit')}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-amber-400/80">{t('mob_kpi_profit')}</p>
               <h2 className="mt-1 text-2xl font-bold text-slate-900 dark:text-white tabular-nums">{fmtDH(model.profitToday)}</h2>
             </div>
             {model.profitTrend !== null && model.profitTrend < 0 ? <ArrowDownRight className="h-5 w-5 text-rose-400" /> : <ArrowUpRight className="h-5 w-5 text-emerald-400" />}
@@ -152,7 +152,7 @@ function Content() {
           {model.buckets.map((b, i) => {
             const h = Math.max(6, Math.round((b / model.maxB) * 100))
             const isMax = b === model.maxB && b > 0
-            return <div key={i} className={`flex-1 rounded-t-sm ${isMax ? 'bg-sky-500 shadow-[0_0_10px_rgba(56,189,248,0.4)]' : 'bg-sky-500/30'}`} style={{ height: `${h}%` }} />
+            return <div key={i} className={`flex-1 rounded-t-sm ${isMax ? 'bg-amber-500 shadow-[0_0_10px_rgb(var(--c-amber-400)/0.4)]' : 'bg-amber-500/30'}`} style={{ height: `${h}%` }} />
           })}
         </div>
         <div className="mt-2 flex justify-between text-[11px] text-slate-500 dark:text-slate-400">
@@ -167,12 +167,12 @@ function Content() {
       <section>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{t('mob_top_products')}</h3>
-          <Link href="/mobile/analytics" className="text-sm font-medium text-sky-400">{t('mob_view_all')}</Link>
+          <Link href="/mobile/analytics" className="text-sm font-medium text-amber-400">{t('mob_view_all')}</Link>
         </div>
         <div className="space-y-4">
           {model.topProducts.map((p, i) => (
             <div key={p.name + i} className="flex items-center gap-4 rounded-2xl m-card p-4 backdrop-blur-xl">
-              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-sky-500/30">
+              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-amber-500/30">
                 <ProductImage image={p.image} category={p.category} alt={p.name} fit={p.image ? 'contain' : 'cover'} iconSize="h-6 w-6" />
               </div>
               <div className="min-w-0 flex-1">
@@ -181,7 +181,7 @@ function Content() {
               </div>
               <div className="text-right">
                 <p className="text-base font-bold text-slate-900 dark:text-white tabular-nums">{p.qty}</p>
-                <p className="text-xs text-sky-400">{t('mob_sales_word')}</p>
+                <p className="text-xs text-amber-400">{t('mob_sales_word')}</p>
               </div>
             </div>
           ))}
@@ -225,7 +225,7 @@ function MobTrend({ pct }: { pct: number | null }) {
   if (pct === null) return null
   const up = pct >= 0
   return (
-    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${up ? 'bg-sky-500/20 text-sky-300' : 'bg-rose-500/20 text-rose-300'}`}>
+    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${up ? 'bg-amber-500/20 text-amber-300' : 'bg-rose-500/20 text-rose-300'}`}>
       {up ? '+' : ''}
       {pct.toFixed(1)}%
     </span>

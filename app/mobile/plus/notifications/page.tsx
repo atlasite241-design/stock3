@@ -21,7 +21,7 @@ export default function MobileNotificationsPage() {
     <MobileSubShell title={t('mob_notif_title')} subtitle={t('mob_notif_subtitle')}>
       {notifs.length === 0 ? (
         <div className="mt-10 flex flex-col items-center gap-3 text-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-300"><Bell className="h-7 w-7" /></span>
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-300"><Bell className="h-7 w-7" /></span>
           <p className="text-sm text-slate-500 dark:text-slate-400">{t('mob_notif_none')}</p>
         </div>
       ) : (

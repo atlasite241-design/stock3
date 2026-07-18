@@ -63,7 +63,7 @@ export default function MobileReceptionPage() {
                     <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{po.ref}</p>
                     <p className="truncate text-xs text-slate-500 dark:text-slate-400">{po.supplierName}</p>
                   </div>
-                  <p className="shrink-0 text-sm font-bold text-sky-300 tabular-nums">{fmtDH(po.total)}</p>
+                  <p className="shrink-0 text-sm font-bold text-amber-300 tabular-nums">{fmtDH(po.total)}</p>
                 </div>
                 <div className="mt-3 flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
                   <span>{t('mob_recep_ordered')}: <b className="text-slate-700 dark:text-slate-200 tabular-nums">{ordered}</b></span>
@@ -81,13 +81,13 @@ export default function MobileReceptionPage() {
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setScanPoId(po.id)}
-                    className="flex items-center justify-center gap-2 rounded-xl border border-sky-500/40 bg-sky-500/10 py-2.5 text-sm font-bold text-sky-600 dark:text-sky-300 transition active:scale-[0.98]"
+                    className="flex items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 py-2.5 text-sm font-bold text-amber-600 dark:text-amber-300 transition active:scale-[0.98]"
                   >
                     <ScanLine className="h-4 w-4" />{t('mob_scan')}
                   </button>
                   <button
                     onClick={() => receiveAll(po.id)}
-                    className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-400 to-cyan-500 py-2.5 text-sm font-bold text-slate-900 transition active:scale-[0.98]"
+                    className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 py-2.5 text-sm font-bold text-slate-900 transition active:scale-[0.98]"
                   >
                     <PackageCheck className="h-4 w-4" />{t('mob_recep_all')}
                   </button>

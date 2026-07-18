@@ -26,7 +26,7 @@ export default function MobileProduitsPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('mob_search')}
-          className="h-11 w-full rounded-2xl border border-slate-200 dark:border-sky-500/20 bg-slate-100 dark:bg-white/5 pl-10 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-sky-400/60"
+          className="h-11 w-full rounded-2xl border border-slate-200 dark:border-amber-500/20 bg-slate-100 dark:bg-white/5 pl-10 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-amber-400/60"
         />
       </div>
 
@@ -36,7 +36,7 @@ export default function MobileProduitsPage() {
           const low = avail <= p.minStock
           return (
             <div key={p.id} className="flex items-center gap-3 rounded-2xl m-card p-3 backdrop-blur-xl">
-              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-slate-200 dark:border-sky-500/20 bg-white dark:bg-slate-900/60">
+              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-slate-200 dark:border-amber-500/20 bg-white dark:bg-slate-900/60">
                 <ProductImage image={p.image} category={p.category} alt={p.name} fit={p.image ? 'contain' : 'cover'} iconSize="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
@@ -44,7 +44,7 @@ export default function MobileProduitsPage() {
                 <p className="text-xs text-slate-500 dark:text-slate-400">{p.category}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm font-bold text-sky-300 tabular-nums">{fmtDH(p.price)}</p>
+                <p className="text-sm font-bold text-amber-300 tabular-nums">{fmtDH(p.price)}</p>
                 <p className={`text-xs tabular-nums ${low ? 'text-rose-400' : 'text-slate-500 dark:text-slate-400'}`}>{t('mob_prod_stock')}: {avail}</p>
               </div>
             </div>

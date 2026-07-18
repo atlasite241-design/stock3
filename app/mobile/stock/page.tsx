@@ -70,7 +70,7 @@ function Content() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('mob_search_product')}
-          className="h-11 w-full rounded-2xl border border-slate-200 dark:border-sky-500/20 bg-slate-100 dark:bg-white/5 pl-10 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-sky-400/60"
+          className="h-11 w-full rounded-2xl border border-slate-200 dark:border-amber-500/20 bg-slate-100 dark:bg-white/5 pl-10 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-amber-400/60"
         />
       </section>
 
@@ -81,7 +81,7 @@ function Content() {
             key={c.key}
             onClick={() => setFilter(c.key)}
             className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-              filter === c.key ? 'bg-sky-500/20 text-sky-300 shadow-[0_0_10px_rgba(14,165,233,0.15)]' : 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400'
+              filter === c.key ? 'bg-amber-500/20 text-amber-300 shadow-[0_0_10px_rgb(var(--c-amber-500)/0.15)]' : 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400'
             }`}
           >
             {c.label}
@@ -99,7 +99,7 @@ function Content() {
           const pct = Math.min(100, p.minStock > 0 ? (p.stock / (p.minStock * 2)) * 100 : p.stock > 0 ? 100 : 0)
           return (
             <div key={p.id} className="flex items-center gap-3 rounded-2xl m-card p-4 backdrop-blur-xl">
-              <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-slate-200 dark:border-sky-500/20">
+              <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-slate-200 dark:border-amber-500/20">
                 <ProductImage image={p.image} category={p.category} alt={p.name} fit={p.image ? 'contain' : 'cover'} iconSize="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">

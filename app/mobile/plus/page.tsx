@@ -82,15 +82,15 @@ function Content() {
 
       {sections.map((section) => (
         <section key={section.titleKey} className="space-y-2">
-          <h2 className="px-1 text-xs font-bold uppercase tracking-widest text-sky-600/80 dark:text-sky-400/70">{t(section.titleKey)}</h2>
+          <h2 className="px-1 text-xs font-bold uppercase tracking-widest text-amber-600/80 dark:text-amber-400/70">{t(section.titleKey)}</h2>
           <div className="overflow-hidden rounded-2xl m-card">
             {section.items.map((it, i) => (
               <Link
                 key={it.href}
                 href={it.href}
-                className={`flex items-center gap-3.5 px-4 py-3.5 transition active:bg-sky-500/10 ${i > 0 ? 'border-t border-slate-100 dark:border-white/5' : ''}`}
+                className={`flex items-center gap-3.5 px-4 py-3.5 transition active:bg-amber-500/10 ${i > 0 ? 'border-t border-slate-100 dark:border-white/5' : ''}`}
               >
-                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${it.tone ?? 'bg-sky-500/15 text-sky-600 dark:text-sky-300'}`}>
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${it.tone ?? 'bg-amber-500/15 text-amber-600 dark:text-amber-300'}`}>
                   {it.icon}
                 </span>
                 <span className="flex-1 text-[15px] font-semibold text-slate-900 dark:text-white">{t(it.labelKey)}</span>

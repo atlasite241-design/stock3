@@ -25,13 +25,13 @@ export default function MobileFournisseursPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('mob_search')}
-          className="h-11 w-full rounded-2xl border border-slate-200 dark:border-sky-500/20 bg-slate-100 dark:bg-white/5 pl-10 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-sky-400/60"
+          className="h-11 w-full rounded-2xl border border-slate-200 dark:border-amber-500/20 bg-slate-100 dark:bg-white/5 pl-10 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-amber-400/60"
         />
       </div>
       <div className="space-y-3">
         {list.map((s) => (
           <div key={s.id} className="flex items-center gap-3 rounded-2xl m-card p-4 backdrop-blur-xl">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-300"><Truck className="h-5 w-5" /></span>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-300"><Truck className="h-5 w-5" /></span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{s.name}</p>
               {s.phone && (
