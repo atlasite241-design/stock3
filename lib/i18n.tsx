@@ -1204,6 +1204,7 @@ const DICT = {
   dvc_need_line: { fr: 'Ajoutez au moins un produit', ar: 'أضف منتجًا واحدًا على الأقل' },
   dvc_converted: { fr: 'Devis converti en vente', ar: 'تم تحويل عرض السعر إلى بيع' },
   dvc_search_add: { fr: 'Rechercher un produit…', ar: 'ابحث عن منتج…' },
+  dvc_popup_blocked: { fr: 'Autorisez les fenêtres pop-up pour générer le PDF', ar: 'اسمح بالنوافذ المنبثقة لتوليد PDF' },
   quote_toast_insufficient_stock: { fr: 'Stock insuffisant pour', ar: 'المخزون غير كافٍ لـ' },
   quote_toast_converted: { fr: 'converti en vente', ar: 'تم تحويله إلى بيع' },
   quote_toast_refused: { fr: 'refusé', ar: 'تم الرفض' },

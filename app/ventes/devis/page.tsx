@@ -89,7 +89,66 @@ function Content() {
 
   const genPdf = () => {
     if (lines.length === 0) return toast(t('dvc_need_line'), 'error')
-    window.print()
+    const esc = (s: string) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string))
+    const today = new Date().toLocaleDateString('fr-FR')
+    const validTxt = validity ? new Date(validity).toLocaleDateString('fr-FR') : '—'
+    const rows = lines
+      .map((l) => {
+        const lt = l.price * l.qty * (1 - (l.discount || 0) / 100)
+        return `<tr><td>${esc(l.name)}</td><td class="c">${l.qty}</td><td class="r">${esc(fmtDH(l.price))}</td><td class="c">${l.discount || 0}%</td><td class="r">${esc(fmtDH(lt))}</td></tr>`
+      })
+      .join('')
+    const doc = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Devis</title>
+<style>
+*{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
+body{margin:0;padding:32px;color:#111;font-size:13px}
+.hd{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:16px;margin-bottom:24px}
+.hd h1{margin:0;font-size:26px;letter-spacing:1px}
+.co{font-size:12px;color:#333;line-height:1.5}
+.meta{display:flex;justify-content:space-between;margin-bottom:20px;font-size:12px}
+.meta b{color:#000}
+table{width:100%;border-collapse:collapse;margin-bottom:16px}
+th{background:#f3f4f6;text-align:left;padding:8px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #ddd}
+td{padding:8px;border-bottom:1px solid #eee}
+.c{text-align:center}.r{text-align:right}
+.tot{width:280px;margin-left:auto;font-size:13px}
+.tot .row{display:flex;justify-content:space-between;padding:5px 0}
+.tot .ttc{border-top:2px solid #111;margin-top:6px;padding-top:10px;font-size:18px;font-weight:bold}
+.notes{margin-top:24px;font-size:12px;color:#333;border-top:1px solid #eee;padding-top:12px;white-space:pre-wrap}
+.foot{margin-top:40px;text-align:center;font-size:10px;color:#999}
+</style></head><body>
+<div class="hd">
+  <div><h1>DEVIS</h1><div style="color:#666;font-size:12px">${esc(today)}</div></div>
+  <div class="co" style="text-align:right">
+    <b style="font-size:15px">${esc(settings?.storeName || 'Droguerie')}</b><br>
+    ${esc(settings?.address || '')}<br>${esc(settings?.phone || '')}
+    ${settings?.ice ? `<br>ICE: ${esc(settings.ice)}` : ''}
+  </div>
+</div>
+<div class="meta">
+  <div><b>Client</b><br>${esc(clientName || '—')}</div>
+  <div style="text-align:right"><b>Validité</b><br>${esc(validTxt)}</div>
+</div>
+<table>
+  <thead><tr><th>Produit</th><th class="c">Qté</th><th class="r">Prix Unit.</th><th class="c">Remise</th><th class="r">Total HT</th></tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div class="tot">
+  <div class="row"><span>Sous-total HT</span><span>${esc(fmtDH(totals.subtotal))}</span></div>
+  ${global > 0 ? `<div class="row"><span>Remise globale (${global}%)</span><span>-${esc(fmtDH(totals.subtotal - totals.afterGlobal))}</span></div>` : ''}
+  <div class="row"><span>TVA (${tvaRate}%)</span><span>${esc(fmtDH(totals.tva))}</span></div>
+  <div class="row ttc"><span>TOTAL TTC</span><span>${esc(fmtDH(totals.ttc))}</span></div>
+</div>
+${notes.trim() ? `<div class="notes"><b>Conditions :</b><br>${esc(notes)}</div>` : ''}
+<div class="foot">Document généré par ${esc(settings?.storeName || 'Droguerie Pro')}</div>
+</body></html>`
+    const w = window.open('', '_blank', 'width=820,height=920')
+    if (!w) return toast(t('dvc_popup_blocked'), 'error')
+    w.document.open()
+    w.document.write(doc)
+    w.document.close()
+    w.focus()
+    setTimeout(() => w.print(), 350)
   }
   const sendEmail = () => {
     const email = matchedClient?.email || ''
