@@ -45,6 +45,7 @@ const NAV: NavItem[] = [
     icon: Monitor,
     children: [
       { href: '/caisse', labelKey: 'nav_pos_new_sale' },
+      { href: '/caisse/vente-rapide', labelKey: 'nav_pos_quick_sale' },
       { href: '/caisse?suspend=1', labelKey: 'nav_pos_suspend' },
       { href: '/caisse?resume=1', labelKey: 'nav_pos_resume' },
     ],
