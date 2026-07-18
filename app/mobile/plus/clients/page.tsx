@@ -44,18 +44,18 @@ export default function MobileClientsPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('mob_search')}
-          className="h-11 w-full rounded-2xl border border-sky-500/20 bg-white/5 pl-10 pr-4 text-sm text-white placeholder-slate-500 outline-none focus:border-sky-400/60"
+          className="h-11 w-full rounded-2xl border border-slate-200 dark:border-sky-500/20 bg-slate-100 dark:bg-white/5 pl-10 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-sky-400/60"
         />
       </div>
 
       <div className="space-y-3">
         {list.map((c) => (
-          <div key={c.id} className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.08] p-4 backdrop-blur-xl">
+          <div key={c.id} className="rounded-2xl m-card p-4 backdrop-blur-xl">
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-300"><Users className="h-5 w-5" /></span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-white">{c.name}</p>
-                {c.phone && <a href={`tel:${c.phone}`} className="flex items-center gap-1 text-xs text-slate-400"><Phone className="h-3 w-3" />{c.phone}</a>}
+                <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{c.name}</p>
+                {c.phone && <a href={`tel:${c.phone}`} className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400"><Phone className="h-3 w-3" />{c.phone}</a>}
               </div>
               {c.credit > 0 && (
                 <div className="text-right">
@@ -74,18 +74,18 @@ export default function MobileClientsPage() {
             )}
           </div>
         ))}
-        {list.length === 0 && <p className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.06] p-6 text-center text-sm text-slate-400">{t('mob_empty')}</p>}
+        {list.length === 0 && <p className="rounded-2xl m-card p-6 text-center text-sm text-slate-500 dark:text-slate-400">{t('mob_empty')}</p>}
       </div>
 
       {/* Payment sheet */}
       {payFor && (
-        <div className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-950/70 backdrop-blur-sm" onClick={() => setPayFor(null)}>
-          <div className="w-full max-w-md rounded-t-3xl border border-sky-500/20 bg-slate-900 p-6 pb-10" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[90] flex items-end justify-center bg-white/80 dark:bg-slate-950/70 backdrop-blur-sm" onClick={() => setPayFor(null)}>
+          <div className="w-full max-w-md rounded-t-3xl border border-slate-200 dark:border-sky-500/20 bg-white dark:bg-slate-900 p-6 pb-10" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white">{t('mob_cli_pay_title')}</h3>
-              <button onClick={() => setPayFor(null)} className="text-slate-400"><X className="h-5 w-5" /></button>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('mob_cli_pay_title')}</h3>
+              <button onClick={() => setPayFor(null)} className="text-slate-500 dark:text-slate-400"><X className="h-5 w-5" /></button>
             </div>
-            <p className="text-sm text-slate-400">{payFor.name}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{payFor.name}</p>
             <p className="mb-4 text-xs text-amber-400">{t('mob_cli_credit')}: {fmtDH(payFor.credit)}</p>
             <label className="block">
               <span className="mb-1.5 block text-xs font-semibold text-sky-400/80">{t('mob_cli_amount')}</span>
@@ -94,7 +94,7 @@ export default function MobileClientsPage() {
                 inputMode="decimal"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="h-12 w-full rounded-2xl border border-sky-500/20 bg-white/5 px-4 text-lg font-bold text-white outline-none focus:border-sky-400/60"
+                className="h-12 w-full rounded-2xl border border-slate-200 dark:border-sky-500/20 bg-slate-100 dark:bg-white/5 px-4 text-lg font-bold text-slate-900 dark:text-white outline-none focus:border-sky-400/60"
               />
             </label>
             <button

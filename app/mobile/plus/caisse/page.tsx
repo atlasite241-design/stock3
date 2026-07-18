@@ -30,10 +30,10 @@ export default function MobileCaisseRegisterPage() {
       {flash && <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 py-2 text-center text-sm font-semibold text-emerald-300">{flash}</p>}
 
       {!currentSession ? (
-        <section className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.08] p-6 backdrop-blur-xl">
+        <section className="rounded-2xl m-card p-6 backdrop-blur-xl">
           <div className="flex flex-col items-center gap-3 text-center">
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-300"><Lock className="h-7 w-7" /></span>
-            <h2 className="text-lg font-bold text-white">{t('mob_reg_closed')}</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('mob_reg_closed')}</h2>
           </div>
           <label className="mt-6 block">
             <span className="mb-1.5 block text-xs font-semibold text-sky-400/80">{t('mob_reg_open_fund')}</span>
@@ -42,7 +42,7 @@ export default function MobileCaisseRegisterPage() {
               inputMode="decimal"
               value={openFund}
               onChange={(e) => setOpenFund(e.target.value)}
-              className="h-12 w-full rounded-2xl border border-sky-500/20 bg-white/5 px-4 text-lg font-bold text-white outline-none focus:border-sky-400/60"
+              className="h-12 w-full rounded-2xl border border-slate-200 dark:border-sky-500/20 bg-slate-100 dark:bg-white/5 px-4 text-lg font-bold text-slate-900 dark:text-white outline-none focus:border-sky-400/60"
             />
           </label>
           <button
@@ -54,23 +54,23 @@ export default function MobileCaisseRegisterPage() {
         </section>
       ) : (
         <>
-          <section className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.08] p-5 backdrop-blur-xl">
+          <section className="rounded-2xl m-card p-5 backdrop-blur-xl">
             <div className="flex items-center gap-3">
               <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300"><Wallet className="h-6 w-6" /></span>
               <div>
                 <p className="text-[11px] uppercase tracking-widest text-emerald-400/80">{t('mob_reg_opened_at')}</p>
-                <p className="text-sm font-semibold text-white">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">
                   {new Date(currentSession.openedAt).toLocaleDateString('fr-FR')} {new Date(currentSession.openedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
             </div>
             <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3">
-              <span className="text-sm text-slate-400">{t('mob_reg_expected')}</span>
-              <span className="text-lg font-bold text-white tabular-nums">{fmtDH(expected)}</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">{t('mob_reg_expected')}</span>
+              <span className="text-lg font-bold text-slate-900 dark:text-white tabular-nums">{fmtDH(expected)}</span>
             </div>
           </section>
 
-          <section className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.08] p-5 backdrop-blur-xl">
+          <section className="rounded-2xl m-card p-5 backdrop-blur-xl">
             <label className="block">
               <span className="mb-1.5 block text-xs font-semibold text-sky-400/80">{t('mob_reg_counted')}</span>
               <input
@@ -79,12 +79,12 @@ export default function MobileCaisseRegisterPage() {
                 value={counted}
                 onChange={(e) => setCounted(e.target.value)}
                 placeholder="0"
-                className="h-12 w-full rounded-2xl border border-sky-500/20 bg-white/5 px-4 text-lg font-bold text-white outline-none focus:border-sky-400/60"
+                className="h-12 w-full rounded-2xl border border-slate-200 dark:border-sky-500/20 bg-slate-100 dark:bg-white/5 px-4 text-lg font-bold text-slate-900 dark:text-white outline-none focus:border-sky-400/60"
               />
             </label>
             {counted !== '' && (
               <div className="mt-3 flex items-center justify-between">
-                <span className="text-sm text-slate-400">{t('mob_reg_diff')}</span>
+                <span className="text-sm text-slate-500 dark:text-slate-400">{t('mob_reg_diff')}</span>
                 <span className={`text-lg font-bold tabular-nums ${Math.abs(diff) < 0.01 ? 'text-emerald-400' : diff > 0 ? 'text-sky-400' : 'text-rose-400'}`}>
                   {diff > 0 ? '+' : ''}{fmtDH(diff)}
                 </span>

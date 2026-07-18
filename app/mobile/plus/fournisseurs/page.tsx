@@ -25,26 +25,26 @@ export default function MobileFournisseursPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('mob_search')}
-          className="h-11 w-full rounded-2xl border border-sky-500/20 bg-white/5 pl-10 pr-4 text-sm text-white placeholder-slate-500 outline-none focus:border-sky-400/60"
+          className="h-11 w-full rounded-2xl border border-slate-200 dark:border-sky-500/20 bg-slate-100 dark:bg-white/5 pl-10 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-sky-400/60"
         />
       </div>
       <div className="space-y-3">
         {list.map((s) => (
-          <div key={s.id} className="flex items-center gap-3 rounded-2xl border border-sky-500/20 bg-sky-500/[0.08] p-4 backdrop-blur-xl">
+          <div key={s.id} className="flex items-center gap-3 rounded-2xl m-card p-4 backdrop-blur-xl">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-300"><Truck className="h-5 w-5" /></span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-white">{s.name}</p>
+              <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{s.name}</p>
               {s.phone && (
-                <a href={`tel:${s.phone}`} className="flex items-center gap-1 text-xs text-slate-400"><Phone className="h-3 w-3" />{s.phone}</a>
+                <a href={`tel:${s.phone}`} className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400"><Phone className="h-3 w-3" />{s.phone}</a>
               )}
             </div>
             <div className="text-right">
-              <p className="text-[10px] uppercase tracking-widest text-slate-400">{t('mob_sup_balance')}</p>
+              <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400">{t('mob_sup_balance')}</p>
               <p className={`text-sm font-bold tabular-nums ${s.balance > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>{fmtDH(s.balance)}</p>
             </div>
           </div>
         ))}
-        {list.length === 0 && <p className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.06] p-6 text-center text-sm text-slate-400">{t('mob_empty')}</p>}
+        {list.length === 0 && <p className="rounded-2xl m-card p-6 text-center text-sm text-slate-500 dark:text-slate-400">{t('mob_empty')}</p>}
       </div>
     </MobileSubShell>
   )

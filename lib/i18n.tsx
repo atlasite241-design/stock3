@@ -154,6 +154,10 @@ const DICT = {
   mob_m_settings: { fr: 'Paramètres', ar: 'الإعدادات' },
   mob_m_logout: { fr: 'Déconnexion', ar: 'تسجيل الخروج' },
   mob_m_logout_confirm: { fr: 'Se déconnecter ?', ar: 'تسجيل الخروج؟' },
+  mob_sec_sales: { fr: 'Ventes & clients', ar: 'المبيعات والعملاء' },
+  mob_sec_stock: { fr: 'Stock & achats', ar: 'المخزون والمشتريات' },
+  mob_sec_register: { fr: 'Caisse', ar: 'الصندوق' },
+  mob_sec_system: { fr: 'Système', ar: 'النظام' },
   // Inventaire
   mob_inv_title: { fr: 'Inventaire', ar: 'الجرد' },
   mob_inv_subtitle: { fr: 'Comptez en scannant les produits', ar: 'قم بالجرد عبر مسح المنتجات' },

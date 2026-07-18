@@ -49,13 +49,13 @@ export default function MobileTransfertsPage() {
           {incoming.map((tr) => (
             <div key={tr.id} className="rounded-2xl border border-sky-500/30 bg-sky-500/[0.1] p-4 backdrop-blur-xl">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-bold text-white">{tr.ref}</p>
+                <p className="text-sm font-bold text-slate-900 dark:text-white">{tr.ref}</p>
                 <span className="rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-bold text-sky-300">{tr.items.length} réf.</span>
               </div>
-              <div className="mt-2 flex items-center gap-2 text-xs text-slate-300">
+              <div className="mt-2 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
                 <span className="truncate">{storeName(tr.sourceStoreId)}</span>
                 <ArrowRight className="h-3.5 w-3.5 shrink-0 text-sky-400" />
-                <span className="truncate font-semibold text-white">{storeName(tr.destStoreId)}</span>
+                <span className="truncate font-semibold text-slate-900 dark:text-white">{storeName(tr.destStoreId)}</span>
               </div>
               <button
                 onClick={() => receive(tr.id)}
@@ -70,22 +70,22 @@ export default function MobileTransfertsPage() {
 
       {others.length > 0 && (
         <section className="space-y-3">
-          <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-400">{t('mob_tr_title')}</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">{t('mob_tr_title')}</h3>
           {others.map((tr) => (
-            <div key={tr.id} className="flex items-center gap-3 rounded-2xl border border-sky-500/20 bg-sky-500/[0.08] p-4 backdrop-blur-xl">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5 text-slate-300"><ArrowLeftRight className="h-4 w-4" /></span>
+            <div key={tr.id} className="flex items-center gap-3 rounded-2xl m-card p-4 backdrop-blur-xl">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300"><ArrowLeftRight className="h-4 w-4" /></span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-white">{tr.ref}</p>
-                <p className="truncate text-xs text-slate-400">{storeName(tr.sourceStoreId)} → {storeName(tr.destStoreId)}</p>
+                <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{tr.ref}</p>
+                <p className="truncate text-xs text-slate-500 dark:text-slate-400">{storeName(tr.sourceStoreId)} → {storeName(tr.destStoreId)}</p>
               </div>
-              <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-300">{tr.status}</span>
+              <span className="shrink-0 rounded-full bg-slate-200 dark:bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-600 dark:text-slate-300">{tr.status}</span>
             </div>
           ))}
         </section>
       )}
 
       {incoming.length === 0 && others.length === 0 && (
-        <p className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.06] p-6 text-center text-sm text-slate-400">{t('mob_tr_none')}</p>
+        <p className="rounded-2xl m-card p-6 text-center text-sm text-slate-500 dark:text-slate-400">{t('mob_tr_none')}</p>
       )}
     </MobileSubShell>
   )

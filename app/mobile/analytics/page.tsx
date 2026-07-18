@@ -44,7 +44,7 @@ function Content() {
     return { days, maxCa, ca7, profit7, count7, avgBasket: count7 > 0 ? ca7 / count7 : 0, cats, catTotal }
   }, [sales, products])
 
-  if (!ready) return <div className="flex h-64 items-center justify-center text-sm text-slate-400">…</div>
+  if (!ready) return <div className="flex h-64 items-center justify-center text-sm text-slate-500 dark:text-slate-400">…</div>
 
   const kpis = [
     { label: t('mob_revenue_7d'), value: fmtDH(model.ca7) },
@@ -56,23 +56,23 @@ function Content() {
   return (
     <>
       <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <h1 className="text-2xl font-bold text-white">{t('mob_analytics_title')}</h1>
-        <p className="text-sm text-slate-400">{t('mob_analytics_subtitle')}</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('mob_analytics_title')}</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t('mob_analytics_subtitle')}</p>
       </motion.section>
 
       {/* KPI grid */}
       <section className="grid grid-cols-2 gap-3">
         {kpis.map((k) => (
-          <div key={k.label} className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.08] p-4 backdrop-blur-xl">
+          <div key={k.label} className="rounded-2xl m-card p-4 backdrop-blur-xl">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-sky-400/80">{k.label}</p>
-            <p className="mt-1 truncate text-lg font-bold text-white tabular-nums">{k.value}</p>
+            <p className="mt-1 truncate text-lg font-bold text-slate-900 dark:text-white tabular-nums">{k.value}</p>
           </div>
         ))}
       </section>
 
       {/* Revenue trend */}
-      <section className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.08] p-6 backdrop-blur-xl">
-        <h3 className="mb-6 text-lg font-semibold text-white">{t('mob_revenue_trend')}</h3>
+      <section className="rounded-2xl m-card p-6 backdrop-blur-xl">
+        <h3 className="mb-6 text-lg font-semibold text-slate-900 dark:text-white">{t('mob_revenue_trend')}</h3>
         <div className="flex h-32 items-end justify-between gap-2">
           {model.days.map((d, i) => {
             const h = Math.max(4, Math.round((d.ca / model.maxCa) * 100))
@@ -82,33 +82,33 @@ function Content() {
         </div>
         <div className="mt-2 flex justify-between gap-2">
           {model.days.map((d, i) => (
-            <span key={i} className="flex-1 text-center text-[10px] text-slate-400">{t(d.label)}</span>
+            <span key={i} className="flex-1 text-center text-[10px] text-slate-500 dark:text-slate-400">{t(d.label)}</span>
           ))}
         </div>
       </section>
 
       {/* Sales by category */}
-      <section className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.08] p-6 backdrop-blur-xl">
-        <h3 className="mb-5 text-lg font-semibold text-white">{t('mob_by_category')}</h3>
+      <section className="rounded-2xl m-card p-6 backdrop-blur-xl">
+        <h3 className="mb-5 text-lg font-semibold text-slate-900 dark:text-white">{t('mob_by_category')}</h3>
         <div className="space-y-4">
           {model.cats.map((c, i) => {
             const pct = Math.round((c.value / model.catTotal) * 100)
             return (
               <div key={c.name}>
                 <div className="mb-1.5 flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 text-slate-300">
+                  <span className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                     <span className="h-2.5 w-2.5 rounded-full" style={{ background: CAT_COLORS[i % CAT_COLORS.length] }} />
                     {c.name}
                   </span>
-                  <span className="font-semibold text-white tabular-nums">{fmtDH(c.value)}</span>
+                  <span className="font-semibold text-slate-900 dark:text-white tabular-nums">{fmtDH(c.value)}</span>
                 </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
                   <div className="h-full rounded-full" style={{ width: `${pct}%`, background: CAT_COLORS[i % CAT_COLORS.length] }} />
                 </div>
               </div>
             )
           })}
-          {model.cats.length === 0 && <p className="text-center text-sm text-slate-400">{t('mob_no_products')}</p>}
+          {model.cats.length === 0 && <p className="text-center text-sm text-slate-500 dark:text-slate-400">{t('mob_no_products')}</p>}
         </div>
       </section>
     </>

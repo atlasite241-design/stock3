@@ -4,6 +4,13 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  /* Carte "glass" mobile — s'adapte au thème clair/sombre. */
+  .m-card {
+    @apply border border-slate-200/80 bg-white/90 dark:border-sky-500/20 dark:bg-sky-500/[0.08];
+  }
+}
+
 :root {
   color-scheme: light;
 

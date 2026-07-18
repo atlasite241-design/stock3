@@ -63,7 +63,7 @@ function Content() {
     setDone(true)
   }
 
-  if (!ready) return <div className="flex h-64 items-center justify-center text-sm text-slate-400">…</div>
+  if (!ready) return <div className="flex h-64 items-center justify-center text-sm text-slate-500 dark:text-slate-400">…</div>
 
   if (done) {
     return (
@@ -71,7 +71,7 @@ function Content() {
         <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300">
           <Check className="h-9 w-9" strokeWidth={2.5} />
         </span>
-        <h2 className="mt-4 text-lg font-bold text-white">{t('mob_inv_applied')}</h2>
+        <h2 className="mt-4 text-lg font-bold text-slate-900 dark:text-white">{t('mob_inv_applied')}</h2>
         <button
           onClick={() => { setDone(false); setCounts({}) }}
           className="mt-8 h-12 w-full rounded-2xl bg-gradient-to-r from-sky-400 to-cyan-500 font-bold text-slate-900 transition active:scale-[0.98]"
@@ -85,8 +85,8 @@ function Content() {
   return (
     <>
       <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-        <h1 className="text-2xl font-bold text-white">{t('mob_inv_title')}</h1>
-        <p className="text-sm text-slate-400">{t('mob_inv_subtitle')}</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('mob_inv_title')}</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t('mob_inv_subtitle')}</p>
       </motion.section>
 
       {/* Scan CTA */}
@@ -109,17 +109,17 @@ function Content() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('mob_search')}
-          className="h-11 w-full rounded-2xl border border-sky-500/20 bg-white/5 pl-10 pr-4 text-sm text-white placeholder-slate-500 outline-none focus:border-sky-400/60"
+          className="h-11 w-full rounded-2xl border border-slate-200 dark:border-sky-500/20 bg-slate-100 dark:bg-white/5 pl-10 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-sky-400/60"
         />
         {searchResults.length > 0 && (
-          <div className="mt-2 overflow-hidden rounded-2xl border border-sky-500/20 bg-slate-900">
+          <div className="mt-2 overflow-hidden rounded-2xl border border-slate-200 dark:border-sky-500/20 bg-white dark:bg-slate-900">
             {searchResults.map((p) => (
               <button
                 key={p.id}
                 onClick={() => { bump(p.id, 1); setQuery('') }}
-                className="flex w-full items-center justify-between px-4 py-2.5 text-left transition hover:bg-white/5"
+                className="flex w-full items-center justify-between px-4 py-2.5 text-left transition hover:bg-slate-100 dark:bg-white/5"
               >
-                <span className="truncate text-sm text-white">{p.name}</span>
+                <span className="truncate text-sm text-slate-900 dark:text-white">{p.name}</span>
                 <Plus className="h-4 w-4 shrink-0 text-sky-400" />
               </button>
             ))}
@@ -139,30 +139,30 @@ function Content() {
         </div>
 
         {rows.length === 0 ? (
-          <p className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.06] p-6 text-center text-sm text-slate-400">{t('mob_empty')}</p>
+          <p className="rounded-2xl m-card p-6 text-center text-sm text-slate-500 dark:text-slate-400">{t('mob_empty')}</p>
         ) : (
           rows.map(({ p, counted, gap }) => (
-            <div key={p.id} className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.08] p-4 backdrop-blur-xl">
+            <div key={p.id} className="rounded-2xl m-card p-4 backdrop-blur-xl">
               <div className="flex items-center justify-between gap-3">
-                <p className="min-w-0 flex-1 truncate font-semibold text-white">{p.name}</p>
+                <p className="min-w-0 flex-1 truncate font-semibold text-slate-900 dark:text-white">{p.name}</p>
                 <button onClick={() => setCount(p.id, 0)} className="text-slate-500"><X className="h-4 w-4" /></button>
               </div>
               <div className="mt-3 flex items-center justify-between">
-                <div className="flex items-center gap-4 text-xs text-slate-400">
-                  <span>{t('mob_inv_theoretical')}: <b className="text-slate-200 tabular-nums">{p.stock}</b></span>
-                  <span className={gap === 0 ? 'text-slate-400' : gap > 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+                  <span>{t('mob_inv_theoretical')}: <b className="text-slate-700 dark:text-slate-200 tabular-nums">{p.stock}</b></span>
+                  <span className={gap === 0 ? 'text-slate-500 dark:text-slate-400' : gap > 0 ? 'text-emerald-400' : 'text-rose-400'}>
                     {t('mob_inv_gap')}: <b className="tabular-nums">{gap > 0 ? '+' : ''}{gap}</b>
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <button onClick={() => bump(p.id, -1)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white"><Minus className="h-4 w-4" /></button>
+                  <button onClick={() => bump(p.id, -1)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-200 dark:bg-white/10 text-slate-900 dark:text-white"><Minus className="h-4 w-4" /></button>
                   <input
                     inputMode="numeric"
                     value={counted}
                     onChange={(e) => setCount(p.id, parseInt(e.target.value || '0', 10) || 0)}
-                    className="h-8 w-12 rounded-lg bg-white/5 text-center text-sm font-bold text-white outline-none"
+                    className="h-8 w-12 rounded-lg bg-slate-100 dark:bg-white/5 text-center text-sm font-bold text-slate-900 dark:text-white outline-none"
                   />
-                  <button onClick={() => bump(p.id, 1)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white"><Plus className="h-4 w-4" /></button>
+                  <button onClick={() => bump(p.id, 1)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-200 dark:bg-white/10 text-slate-900 dark:text-white"><Plus className="h-4 w-4" /></button>
                 </div>
               </div>
             </div>

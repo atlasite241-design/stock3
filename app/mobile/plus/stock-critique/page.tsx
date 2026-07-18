@@ -21,9 +21,9 @@ export default function MobileStockCritiquePage() {
   }, [products])
 
   const Row = ({ p, critical }: { p: (typeof products)[number]; critical: boolean }) => (
-    <div className={`flex items-center justify-between rounded-2xl border border-sky-500/20 bg-sky-500/[0.08] p-4 backdrop-blur-xl ${critical ? 'border-l-4 border-l-rose-500' : 'border-l-4 border-l-amber-500'}`}>
+    <div className={`flex items-center justify-between rounded-2xl m-card p-4 backdrop-blur-xl ${critical ? 'border-l-4 border-l-rose-500' : 'border-l-4 border-l-amber-500'}`}>
       <div className="min-w-0">
-        <p className="truncate font-medium text-white">{p.name}</p>
+        <p className="truncate font-medium text-slate-900 dark:text-white">{p.name}</p>
         <p className={`mt-0.5 text-xs ${critical ? 'text-rose-400' : 'text-amber-400'}`}>Stock: {availableStock(p)} · Min: {p.minStock}</p>
       </div>
       <span className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold uppercase ${critical ? 'bg-rose-500/20 text-rose-400' : 'bg-amber-500/20 text-amber-400'}`}>

@@ -49,11 +49,11 @@ export default function MobileFacturesWhatsappPage() {
       ) : (
         <div className="space-y-3">
           {rows.map((row) => (
-            <div key={row.c.id} className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.08] p-4 backdrop-blur-xl">
+            <div key={row.c.id} className="rounded-2xl m-card p-4 backdrop-blur-xl">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-white">{row.c.clientName}</p>
-                  <p className="text-xs text-slate-400">{row.c.invoiceRef || row.c.ref}</p>
+                  <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{row.c.clientName}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{row.c.invoiceRef || row.c.ref}</p>
                 </div>
                 <p className="shrink-0 text-sm font-bold text-amber-400 tabular-nums">{fmtDH(row.remaining)}</p>
               </div>

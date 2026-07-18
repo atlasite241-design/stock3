@@ -23,7 +23,7 @@ function Content() {
     low: products.filter((p) => p.stock > 0 && p.stock <= p.minStock).length,
   }), [products])
 
-  if (!ready) return <div className="flex h-64 items-center justify-center text-sm text-slate-400">…</div>
+  if (!ready) return <div className="flex h-64 items-center justify-center text-sm text-slate-500 dark:text-slate-400">…</div>
 
   const q = query.trim().toLowerCase()
   const list = products
@@ -43,23 +43,23 @@ function Content() {
   return (
     <>
       <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <h1 className="text-2xl font-bold text-white">{t('mob_stock_title')}</h1>
-        <p className="text-sm text-slate-400">{t('mob_stock_subtitle')}</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('mob_stock_title')}</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t('mob_stock_subtitle')}</p>
       </motion.section>
 
       {/* Summary */}
       <section className="grid grid-cols-3 gap-3">
-        <div className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.08] p-4 backdrop-blur-xl">
-          <p className="text-lg font-bold text-white tabular-nums">{summary.refs}</p>
-          <p className="text-[10px] uppercase tracking-widest text-slate-400">{t('mob_refs')}</p>
+        <div className="rounded-2xl m-card p-4 backdrop-blur-xl">
+          <p className="text-lg font-bold text-slate-900 dark:text-white tabular-nums">{summary.refs}</p>
+          <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400">{t('mob_refs')}</p>
         </div>
-        <div className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.08] p-4 backdrop-blur-xl">
-          <p className="truncate text-lg font-bold text-white tabular-nums">{fmtDH(summary.value)}</p>
-          <p className="text-[10px] uppercase tracking-widest text-slate-400">{t('mob_stock_value_label')}</p>
+        <div className="rounded-2xl m-card p-4 backdrop-blur-xl">
+          <p className="truncate text-lg font-bold text-slate-900 dark:text-white tabular-nums">{fmtDH(summary.value)}</p>
+          <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400">{t('mob_stock_value_label')}</p>
         </div>
-        <div className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.08] p-4 backdrop-blur-xl">
-          <p className={`text-lg font-bold tabular-nums ${summary.out > 0 ? 'text-rose-400' : 'text-white'}`}>{summary.out}</p>
-          <p className="text-[10px] uppercase tracking-widest text-slate-400">{t('mob_ruptures')}</p>
+        <div className="rounded-2xl m-card p-4 backdrop-blur-xl">
+          <p className={`text-lg font-bold tabular-nums ${summary.out > 0 ? 'text-rose-400' : 'text-slate-900 dark:text-white'}`}>{summary.out}</p>
+          <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400">{t('mob_ruptures')}</p>
         </div>
       </section>
 
@@ -70,7 +70,7 @@ function Content() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('mob_search_product')}
-          className="h-11 w-full rounded-2xl border border-sky-500/20 bg-white/5 pl-10 pr-4 text-sm text-white placeholder-slate-500 outline-none focus:border-sky-400/60"
+          className="h-11 w-full rounded-2xl border border-slate-200 dark:border-sky-500/20 bg-slate-100 dark:bg-white/5 pl-10 pr-4 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-sky-400/60"
         />
       </section>
 
@@ -81,7 +81,7 @@ function Content() {
             key={c.key}
             onClick={() => setFilter(c.key)}
             className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-              filter === c.key ? 'bg-sky-500/20 text-sky-300 shadow-[0_0_10px_rgba(14,165,233,0.15)]' : 'bg-white/5 text-slate-400'
+              filter === c.key ? 'bg-sky-500/20 text-sky-300 shadow-[0_0_10px_rgba(14,165,233,0.15)]' : 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400'
             }`}
           >
             {c.label}
@@ -98,28 +98,28 @@ function Content() {
           const st = statusOf(p.stock, p.minStock)
           const pct = Math.min(100, p.minStock > 0 ? (p.stock / (p.minStock * 2)) * 100 : p.stock > 0 ? 100 : 0)
           return (
-            <div key={p.id} className="flex items-center gap-3 rounded-2xl border border-sky-500/20 bg-sky-500/[0.08] p-4 backdrop-blur-xl">
-              <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-sky-500/20">
+            <div key={p.id} className="flex items-center gap-3 rounded-2xl m-card p-4 backdrop-blur-xl">
+              <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-slate-200 dark:border-sky-500/20">
                 <ProductImage image={p.image} category={p.category} alt={p.name} fit={p.image ? 'contain' : 'cover'} iconSize="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold text-white">{p.name}</p>
+                <p className="truncate font-semibold text-slate-900 dark:text-white">{p.name}</p>
                 <div className="mt-1.5 flex items-center gap-2">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
                     <div className={`h-full rounded-full ${st.bar}`} style={{ width: `${pct}%` }} />
                   </div>
-                  <span className="shrink-0 text-[10px] text-slate-400">{t('mob_min')} {p.minStock}</span>
+                  <span className="shrink-0 text-[10px] text-slate-500 dark:text-slate-400">{t('mob_min')} {p.minStock}</span>
                 </div>
               </div>
               <div className="shrink-0 text-right">
-                <p className="text-base font-bold text-white tabular-nums">{p.stock}</p>
+                <p className="text-base font-bold text-slate-900 dark:text-white tabular-nums">{p.stock}</p>
                 <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${st.cls}`}>{st.key}</span>
               </div>
             </div>
           )
         })}
         {list.length === 0 && (
-          <p className="rounded-2xl border border-sky-500/20 bg-sky-500/[0.06] p-6 text-center text-sm text-slate-400">{t('mob_no_products_found')}</p>
+          <p className="rounded-2xl m-card p-6 text-center text-sm text-slate-500 dark:text-slate-400">{t('mob_no_products_found')}</p>
         )}
       </section>
     </>
