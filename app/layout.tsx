@@ -1,12 +1,35 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 import './globals.css'
 import { LanguageProvider } from '@/lib/i18n'
 import { AuthProvider } from '@/lib/auth-context'
+import PwaRegister from '@/components/PwaRegister'
 
 export const metadata: Metadata = {
   title: 'Droguerie Pro — Gestion & Caisse',
   description: 'Application de gestion pour droguerie : caisse, produits, stock, ventes et clients.',
+  manifest: '/manifest.json',
+  applicationName: 'Droguerie Pro',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Droguerie Pro',
+  },
+  icons: {
+    icon: [
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#f59e0b',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
 }
 
 // App 100 % client (localStorage + synchro navigateur) : pas de pré-rendu statique
@@ -44,6 +67,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="font-sans">
+        <PwaRegister />
         <LanguageProvider>
           <AuthProvider>{children}</AuthProvider>
         </LanguageProvider>
