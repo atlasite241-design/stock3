@@ -5,11 +5,13 @@ import { Building2, Check, Languages, Monitor, Moon, Sun } from 'lucide-react'
 import MobileSubShell from '@/components/MobileSubShell'
 import { useDroguerie } from '@/lib/store'
 import { useTheme } from '@/lib/theme'
+import { usePrimary, PRESETS } from '@/lib/primary'
 import { useLanguage } from '@/lib/i18n'
 
 export default function MobileParametresPage() {
   const { stores, activeStoreId, switchStore } = useDroguerie()
   const { theme, toggleTheme } = useTheme()
+  const { primary, setPrimary } = usePrimary()
   const { t, lang, toggleLang } = useLanguage()
 
   return (
@@ -29,6 +31,44 @@ export default function MobileParametresPage() {
             <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${theme === 'dark' ? 'left-[22px]' : 'left-0.5'}`} />
           </span>
         </button>
+      </section>
+
+      {/* Couleur du thème */}
+      <section className="rounded-2xl m-card p-4">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-sky-600/80 dark:text-sky-400/80">{t('mob_set_color')}</p>
+        <div className="flex flex-wrap items-center gap-3">
+          {PRESETS.map((p) => {
+            const active = primary.id === p.id
+            return (
+              <button
+                key={p.id}
+                onClick={() => setPrimary({ id: p.id })}
+                className={`flex h-11 w-11 items-center justify-center rounded-full transition active:scale-90 ${active ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-900' : ''}`}
+                style={{ backgroundColor: p.swatch, boxShadow: active ? `0 0 0 2px ${p.swatch}` : 'none' }}
+                aria-label={p.id}
+              >
+                {active && <Check className="h-5 w-5 text-white" strokeWidth={3} />}
+              </button>
+            )
+          })}
+          {/* Couleur personnalisée */}
+          <label
+            className="relative flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-slate-300 dark:border-slate-600"
+            style={primary.id === 'custom' && primary.hex ? { backgroundColor: primary.hex, borderStyle: 'solid' } : undefined}
+          >
+            <input
+              type="color"
+              value={primary.hex ?? '#f59e0b'}
+              onChange={(e) => setPrimary({ id: 'custom', hex: e.target.value })}
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            />
+            {primary.id === 'custom' ? (
+              <Check className="h-5 w-5 text-white" strokeWidth={3} />
+            ) : (
+              <span className="text-xs font-bold text-slate-400">+</span>
+            )}
+          </label>
+        </div>
       </section>
 
       {/* Langue */}

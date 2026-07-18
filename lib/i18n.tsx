@@ -246,6 +246,8 @@ const DICT = {
   mob_set_theme: { fr: 'Thème', ar: 'المظهر' },
   mob_set_theme_light: { fr: 'Clair', ar: 'فاتح' },
   mob_set_theme_dark: { fr: 'Sombre', ar: 'داكن' },
+  mob_set_color: { fr: 'Couleur du thème', ar: 'لون المظهر' },
+  mob_set_color_custom: { fr: 'Personnalisée', ar: 'مخصص' },
   mob_set_lang: { fr: 'Langue', ar: 'اللغة' },
   mob_set_store: { fr: 'Magasin actif', ar: 'المتجر النشط' },
   mob_set_full: { fr: 'Version complète (bureau)', ar: 'النسخة الكاملة (المكتب)' },
