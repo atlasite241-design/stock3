@@ -1966,6 +1966,17 @@ const DICT = {
   rst_done: { fr: 'Statistiques réinitialisées', ar: 'تمت إعادة تعيين الإحصائيات' },
   rst_wrong_password: { fr: 'Mot de passe incorrect', ar: 'كلمة المرور غير صحيحة' },
   rst_forbidden: { fr: 'Accès réservé aux administrateurs.', ar: 'الوصول مخصص للمسؤولين.' },
+  // Activation de licence
+  lic_title: { fr: 'Activation de licence', ar: 'تفعيل الترخيص' },
+  lic_subtitle: { fr: 'Entrez votre clé de licence pour activer l’application sur cet appareil.', ar: 'أدخل مفتاح الترخيص لتفعيل التطبيق على هذا الجهاز.' },
+  lic_placeholder: { fr: 'ATLS-XXXXX-XXXXX-XXXXX', ar: 'ATLS-XXXXX-XXXXX-XXXXX' },
+  lic_activate: { fr: 'Activer', ar: 'تفعيل' },
+  lic_activating: { fr: 'Activation…', ar: 'جارٍ التفعيل…' },
+  lic_invalid: { fr: 'Clé invalide ou déjà utilisée.', ar: 'مفتاح غير صالح أو مستعمَل.' },
+  lic_network: { fr: 'Erreur de connexion. Réessayez.', ar: 'خطأ في الاتصال. أعد المحاولة.' },
+  lic_unconfigured: { fr: 'Base de données non configurée.', ar: 'قاعدة البيانات غير مهيأة.' },
+  lic_success: { fr: 'Licence activée', ar: 'تم تفعيل الترخيص' },
+  lic_hint: { fr: 'Chaque clé n’est utilisable qu’une seule fois.', ar: 'كل مفتاح يُستعمل مرة واحدة فقط.' },
 
   psub_company_title: { fr: 'Société', ar: 'الشركة' },
   psub_company_subtitle: { fr: "Identité de l'entreprise affichée sur les documents.", ar: 'هوية الشركة الظاهرة على المستندات.' },
