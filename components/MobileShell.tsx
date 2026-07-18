@@ -2,25 +2,15 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { BarChart3, Bell, Boxes, Building2, Check, ChevronDown, LayoutDashboard, Plus, Wallet } from 'lucide-react'
+import { Bell, Building2, Check, ChevronDown } from 'lucide-react'
 import AuthGate from './AuthGate'
+import BottomNav from './MobileNav'
 import { useDroguerie } from '@/lib/store'
 import { useAuth } from '@/lib/auth-context'
-import { useLanguage, type TKey } from '@/lib/i18n'
-
-const NAV: { href: string; icon: React.ReactNode; labelKey: TKey }[] = [
-  { href: '/mobile', icon: <LayoutDashboard className="h-5 w-5" />, labelKey: 'mob_nav_home' },
-  { href: '/mobile/ventes', icon: <Wallet className="h-5 w-5" />, labelKey: 'mob_nav_sales' },
-  { href: '/mobile/stock', icon: <Boxes className="h-5 w-5" />, labelKey: 'mob_nav_stock' },
-  { href: '/mobile/analytics', icon: <BarChart3 className="h-5 w-5" />, labelKey: 'mob_nav_analytics' },
-]
 
 export default function MobileShell({ children }: { children: React.ReactNode }) {
   const { products, stores, activeStore, activeStoreId, switchStore } = useDroguerie()
   const { currentUser, session } = useAuth()
-  const { t } = useLanguage()
-  const pathname = usePathname()
   const [storeOpen, setStoreOpen] = useState(false)
 
   const who = currentUser?.name ?? session?.name ?? activeStore?.manager ?? 'Gérant'
@@ -29,7 +19,6 @@ export default function MobileShell({ children }: { children: React.ReactNode })
   // Magasins autorisés selon le rôle.
   const allowedStores = !session || session.role === 'Administrateur' ? stores : stores.filter((s) => session.storeIds.includes(s.id))
   const canSwitch = allowedStores.length > 1
-  const onCaisse = pathname.startsWith('/mobile/caisse')
 
   // Force le magasin actif dans les magasins autorisés.
   useEffect(() => {
@@ -37,8 +26,6 @@ export default function MobileShell({ children }: { children: React.ReactNode })
     if (!allowedStores.some((s) => s.id === activeStoreId)) switchStore(allowedStores[0].id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, stores, activeStoreId])
-
-  const isActive = (href: string) => (href === '/mobile' ? pathname === '/mobile' : pathname.startsWith(href))
 
   return (
     <AuthGate>
@@ -94,7 +81,7 @@ export default function MobileShell({ children }: { children: React.ReactNode })
             </div>
           )}
 
-          <Link href="/mobile/stock" className="relative flex h-9 w-9 items-center justify-center rounded-full text-sky-400 transition-colors hover:bg-sky-500/10">
+          <Link href="/mobile/plus/notifications" className="relative flex h-9 w-9 items-center justify-center rounded-full text-sky-400 transition-colors hover:bg-sky-500/10">
             <Bell className="h-5 w-5" />
             {lowCount > 0 && (
               <span className="absolute right-0.5 top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">{lowCount}</span>
@@ -105,42 +92,7 @@ export default function MobileShell({ children }: { children: React.ReactNode })
 
       <main className="relative z-10 mt-20 space-y-8 px-6">{children}</main>
 
-      {/* Floating "Encaisser" action */}
-      {!onCaisse && (
-        <div className="pointer-events-none fixed bottom-28 left-1/2 z-50 w-full max-w-md -translate-x-1/2 px-6">
-          <div className="flex justify-end">
-            <Link
-              href="/mobile/caisse"
-              className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-cyan-500 text-slate-900 shadow-[0_8px_30px_rgba(14,165,233,0.5)] transition active:scale-90"
-              title={t('mob_pos_checkout')}
-              aria-label={t('mob_pos_checkout')}
-            >
-              <Plus className="h-7 w-7" strokeWidth={2.5} />
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* Bottom navigation */}
-      <nav className="fixed bottom-6 left-1/2 z-50 w-full max-w-md -translate-x-1/2 px-4">
-        <div className="mx-auto flex h-16 items-center justify-around rounded-full border border-sky-500/20 bg-slate-950/80 px-2 shadow-[0_-8px_30px_rgba(14,165,233,0.1)] backdrop-blur-3xl">
-          {NAV.map((n) => {
-            const active = isActive(n.href)
-            return (
-              <Link
-                key={n.href}
-                href={n.href}
-                className={`flex flex-col items-center justify-center rounded-full px-4 py-1 transition-all active:scale-90 ${
-                  active ? 'bg-sky-500/10 text-sky-400 shadow-[0_0_10px_rgba(14,165,233,0.2)]' : 'text-slate-500 hover:text-sky-300'
-                }`}
-              >
-                {n.icon}
-                <span className="mt-1 text-[10px] font-medium uppercase tracking-widest">{t(n.labelKey)}</span>
-              </Link>
-            )
-          })}
-        </div>
-      </nav>
+      <BottomNav />
     </div>
     </AuthGate>
   )
