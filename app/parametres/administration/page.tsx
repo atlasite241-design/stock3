@@ -1,14 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Ban, Check, Mail, Search, ShieldAlert, ShieldCheck, UserCheck, UserPlus, Users, X } from 'lucide-react'
+import { Ban, Check, KeyRound, Lock, Mail, Search, ShieldAlert, ShieldCheck, UserCheck, UserPlus, Users, X } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
 import { useToast } from '@/components/Toast'
 import { useDroguerie, type AppUser } from '@/lib/store'
 import { useAuth } from '@/lib/auth-context'
-import { hashSecret } from '@/lib/auth'
+import { hashSecret, verifySecret } from '@/lib/auth'
 import { useLanguage, type TKey } from '@/lib/i18n'
 
 const ROLE_KEY: Record<AppUser['role'], TKey> = {
@@ -42,17 +43,87 @@ function Digital({ label, value, tone, icon }: { label: string; value: number; t
 
 function Content() {
   const { ready, users, updateUser, deleteUser } = useDroguerie()
-  const { session } = useAuth()
+  const { session, currentUser } = useAuth()
   const { t } = useLanguage()
   const toast = useToast()
+  const router = useRouter()
 
   const [tab, setTab] = useState<'ops' | 'requests'>('ops')
   const [query, setQuery] = useState('')
   const [approval, setApproval] = useState<{ user: AppUser; temp: string; emailSent: boolean } | null>(null)
 
+  // Porte d'authentification : mot de passe administrateur exigé à l'ouverture.
+  const [unlocked, setUnlocked] = useState(false)
+  const [gatePw, setGatePw] = useState('')
+  const [gateError, setGateError] = useState('')
+
   if (!ready) return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
 
   const isAdmin = session?.role === 'Administrateur'
+
+  const confirmGate = () => {
+    setGateError('')
+    if (!verifySecret(gatePw, currentUser?.passwordHash)) {
+      setGateError(t('rst_wrong_password'))
+      setGatePw('')
+      return
+    }
+    setUnlocked(true)
+  }
+
+  if (isAdmin && !unlocked && currentUser?.passwordHash) {
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.94, y: 12 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#12121a]"
+        >
+          <div className="mb-4 flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                <Lock className="h-5 w-5" />
+              </span>
+              <div>
+                <h2 className="text-base font-black uppercase tracking-wide text-gray-900 dark:text-white">{t('adm_auth_title')}</h2>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-zinc-500">{t('adm_auth_sub')}</p>
+              </div>
+            </div>
+            <button onClick={() => router.back()} className="text-gray-400 transition hover:text-gray-600 dark:hover:text-zinc-200" aria-label="close">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <p className="mb-4 text-sm leading-relaxed text-gray-600 dark:text-zinc-300">{t('adm_auth_msg')}</p>
+
+          <div className="relative">
+            <KeyRound className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-500" />
+            <input
+              type="password"
+              value={gatePw}
+              onChange={(e) => setGatePw(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && confirmGate()}
+              placeholder={t('adm_auth_ph')}
+              autoFocus
+              className="input-field pl-10"
+            />
+          </div>
+          {gateError && <p className="mt-2 text-sm font-medium text-rose-500">{gateError}</p>}
+
+          <div className="mt-6 flex items-center justify-end gap-3">
+            <button onClick={() => router.back()} className="px-3 py-2 text-xs font-black uppercase tracking-widest text-gray-500 transition hover:text-gray-800 dark:text-zinc-400 dark:hover:text-white">
+              {t('rst_cancel')}
+            </button>
+            <button onClick={confirmGate} className="rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-gray-900 shadow-lg transition hover:brightness-110 active:scale-95">
+              {t('adm_auth_confirm')}
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    )
+  }
+
   if (!isAdmin) {
     return (
       <div className="mx-auto max-w-xl">
