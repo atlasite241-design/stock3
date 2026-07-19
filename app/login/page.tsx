@@ -12,7 +12,7 @@ import { useLanguage } from '@/lib/i18n'
 
 export default function LoginPage() {
   const { ready, session, needsSetup, loginIdentifier, loginPin, establishSession, logout } = useAuth()
-  const { users, updateUser } = useDroguerie()
+  const { users, updateUser, addUser } = useDroguerie()
   const { t } = useLanguage()
   const router = useRouter()
 
@@ -84,7 +84,7 @@ export default function LoginPage() {
         {needsSetup ? (
           <SetupForm users={users} updateUser={updateUser} establishSession={establishSession} />
         ) : (
-          <LoginForm users={users} loginIdentifier={loginIdentifier} loginPin={loginPin} onForgot={resetAccess} />
+          <LoginForm users={users} addUser={addUser} loginIdentifier={loginIdentifier} loginPin={loginPin} onForgot={resetAccess} />
         )}
       </motion.div>
     </div>
@@ -114,23 +114,25 @@ const inputCls =
 
 function LoginForm({
   users,
+  addUser,
   loginIdentifier,
   loginPin,
   onForgot,
 }: {
   users: Users
+  addUser: ReturnType<typeof useDroguerie>['addUser']
   loginIdentifier: (id: string, p: string) => { ok: boolean }
   loginPin: (id: string, pin: string) => { ok: boolean }
   onForgot: () => void
 }) {
   const { t } = useLanguage()
-  const [mode, setMode] = useState<'password' | 'pin'>('password')
+  const [mode, setMode] = useState<'password' | 'pin' | 'signup'>('password')
   const [identifier, setIdentifier] = useState('')
   const [pw, setPw] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [remember, setRemember] = useState(true)
   const [error, setError] = useState('')
-  const [showAccountNote, setShowAccountNote] = useState(false)
+  const [notice, setNotice] = useState('')
 
   const pinUsers = users.filter((u) => u.active && u.pinHash)
   const [pinUserId, setPinUserId] = useState('')
@@ -187,8 +189,26 @@ function LoginForm({
     )
   }
 
+  if (mode === 'signup') {
+    return (
+      <SignupForm
+        users={users}
+        addUser={addUser}
+        onDone={(name) => {
+          setMode('password')
+          setIdentifier(name)
+          setPw('')
+          setError('')
+          setNotice(t('auth_ca_success'))
+        }}
+        onBack={() => { setMode('password'); setError('') }}
+      />
+    )
+  }
+
   return (
     <div className="space-y-5">
+      {notice && <p className="rounded-xl border border-emerald-400/25 bg-emerald-500/10 p-3 text-center text-sm font-semibold text-emerald-300">{notice}</p>}
       <DarkField label={t('auth_identifier')} icon={<User className="h-4 w-4" />}>
         <input className={inputCls} value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder={t('auth_identifier_ph')} autoFocus onKeyDown={(e) => e.key === 'Enter' && submitPassword()} />
       </DarkField>
@@ -218,13 +238,78 @@ function LoginForm({
 
       <div className="pt-1 text-center text-sm text-slate-500">
         {t('auth_no_account')}{' '}
-        <button onClick={() => setShowAccountNote((v) => !v)} className="font-bold text-white transition hover:text-blue-400">{t('auth_create_account')}</button>
+        <button onClick={() => { setMode('signup'); setError(''); setNotice('') }} className="font-bold text-white transition hover:text-blue-400">{t('auth_create_account')}</button>
       </div>
-      {showAccountNote && <p className="rounded-xl border border-white/10 bg-white/5 p-3 text-center text-xs text-slate-400">{t('auth_account_admin_note')}</p>}
 
       <button onClick={() => { setMode('pin'); setError('') }} className="w-full text-center text-xs font-semibold text-slate-500 transition hover:text-blue-400">
         {t('auth_pin_link')}
       </button>
+    </div>
+  )
+}
+
+function SignupForm({
+  users,
+  addUser,
+  onDone,
+  onBack,
+}: {
+  users: Users
+  addUser: ReturnType<typeof useDroguerie>['addUser']
+  onDone: (name: string) => void
+  onBack: () => void
+}) {
+  const { t } = useLanguage()
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [pw, setPw] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [error, setError] = useState('')
+
+  const norm = (s: string) => s.trim().toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ')
+
+  const submit = () => {
+    setError('')
+    const n = name.trim()
+    if (!n) return setError(t('auth_ca_name'))
+    if (pw.length < 4) return setError(t('auth_pw_short'))
+    if (pw !== confirm) return setError(t('auth_pw_mismatch'))
+    const taken = users.some(
+      (u) => norm(u.name) === norm(n) || (email.trim() && u.email && norm(u.email) === norm(email))
+    )
+    if (taken) return setError(t('auth_ca_taken'))
+    addUser({
+      name: n,
+      phone: '',
+      role: 'Vendeur',
+      active: true,
+      email: email.trim(),
+      passwordHash: hashSecret(pw),
+    })
+    onDone(n)
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-center text-lg font-semibold text-white">{t('auth_create_account')}</p>
+      <DarkField label={t('auth_ca_name')} icon={<User className="h-4 w-4" />}>
+        <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('auth_ca_name_ph')} autoFocus />
+      </DarkField>
+      <DarkField label={t('auth_email')} icon={<Mail className="h-4 w-4" />}>
+        <input className={inputCls} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemple.com" />
+      </DarkField>
+      <DarkField label={t('auth_password')} icon={<Lock className="h-4 w-4" />}>
+        <input className={inputCls} type="password" value={pw} onChange={(e) => setPw(e.target.value)} />
+      </DarkField>
+      <DarkField label={t('auth_setup_confirm')} icon={<Lock className="h-4 w-4" />}>
+        <input className={inputCls} type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} />
+      </DarkField>
+      {error && <p className="text-sm font-medium text-rose-400">{error}</p>}
+      <button onClick={submit} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 py-3.5 text-sm font-bold text-white transition hover:brightness-110 active:scale-[0.98]">
+        <User className="h-4 w-4" />{t('auth_ca_submit')}
+      </button>
+      <p className="text-center text-xs text-slate-500">{t('auth_ca_role_note')}</p>
+      <button onClick={onBack} className="w-full text-center text-xs font-semibold text-slate-400 transition hover:text-blue-400">{t('auth_back')}</button>
     </div>
   )
 }

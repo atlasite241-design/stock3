@@ -52,10 +52,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Connexion par identifiant : email OU nom d'utilisateur.
+  // Comparaison tolérante : casse, points et espaces multiples ignorés
+  // (« yassir a » ≡ « Yassir A. »).
   const loginIdentifier = (identifier: string, password: string) => {
-    const id = identifier.trim().toLowerCase()
+    const norm = (s: string) => s.trim().toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ')
+    const id = norm(identifier)
     const u = users.find(
-      (x) => x.active && ((x.email && x.email.toLowerCase() === id) || (x.name && x.name.toLowerCase() === id))
+      (x) => x.active && ((x.email && norm(x.email) === id) || (x.name && norm(x.name) === id))
     )
     return loginWith(u, password, u?.passwordHash)
   }
