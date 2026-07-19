@@ -10,6 +10,7 @@ interface AuthValue {
   currentUser: AppUser | null
   needsSetup: boolean
   loginPassword: (email: string, password: string) => { ok: boolean }
+  loginIdentifier: (identifier: string, password: string) => { ok: boolean }
   loginPin: (userId: string, pin: string) => { ok: boolean }
   establishSession: (user: AppUser) => void
   logout: () => void
@@ -21,6 +22,7 @@ const AuthContext = createContext<AuthValue>({
   currentUser: null,
   needsSetup: false,
   loginPassword: () => ({ ok: false }),
+  loginIdentifier: () => ({ ok: false }),
   loginPin: () => ({ ok: false }),
   establishSession: () => {},
   logout: () => {},
@@ -49,6 +51,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return loginWith(u, password, u?.passwordHash)
   }
 
+  // Connexion par identifiant : email OU nom d'utilisateur.
+  const loginIdentifier = (identifier: string, password: string) => {
+    const id = identifier.trim().toLowerCase()
+    const u = users.find(
+      (x) => x.active && ((x.email && x.email.toLowerCase() === id) || (x.name && x.name.toLowerCase() === id))
+    )
+    return loginWith(u, password, u?.passwordHash)
+  }
+
   const loginPin = (userId: string, pin: string) => {
     const u = users.find((x) => x.id === userId)
     return loginWith(u, pin, u?.pinHash)
@@ -72,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const needsSetup = dataReady && activeUsers.length > 0 && activeUsers.every((u) => !u.passwordHash && !u.pinHash)
 
   return (
-    <AuthContext.Provider value={{ ready: dataReady && checked, session, currentUser, needsSetup, loginPassword, loginPin, establishSession, logout }}>
+    <AuthContext.Provider value={{ ready: dataReady && checked, session, currentUser, needsSetup, loginPassword, loginIdentifier, loginPin, establishSession, logout }}>
       {children}
     </AuthContext.Provider>
   )
