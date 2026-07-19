@@ -92,7 +92,7 @@ export default function LoginPage() {
         {needsSetup ? (
           <SetupForm users={users} updateUser={updateUser} establishSession={establishSession} />
         ) : (
-          <LoginForm users={users} addUser={addUser} establishSession={establishSession} loginIdentifier={loginIdentifier} loginPin={loginPin} onForgot={resetAccess} />
+          <LoginForm users={users} addUser={addUser} loginIdentifier={loginIdentifier} loginPin={loginPin} onForgot={resetAccess} />
         )}
       </motion.div>
     </div>
@@ -123,14 +123,12 @@ const inputCls =
 function LoginForm({
   users,
   addUser,
-  establishSession,
   loginIdentifier,
   loginPin,
   onForgot,
 }: {
   users: Users
   addUser: ReturnType<typeof useDroguerie>['addUser']
-  establishSession: (u: Users[number]) => void
   loginIdentifier: (id: string, p: string) => { ok: boolean }
   loginPin: (id: string, pin: string) => { ok: boolean }
   onForgot: () => void
@@ -150,6 +148,11 @@ function LoginForm({
 
   const submitPassword = () => {
     setError('')
+    setNotice('')
+    const norm = (s: string) => s.trim().toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ')
+    const id = norm(identifier)
+    const match = users.find((u) => (u.email && norm(u.email) === id) || norm(u.name) === id)
+    if (match?.pendingApproval) return setError(t('auth_req_pending_login'))
     if (!loginIdentifier(identifier, pw).ok) setError(t('auth_bad_credentials'))
   }
   const submitPin = () => {
@@ -204,7 +207,7 @@ function LoginForm({
       <SignupForm
         users={users}
         addUser={addUser}
-        establishSession={establishSession}
+        onDone={() => { setMode('password'); setError(''); setNotice(t('auth_req_sent')) }}
         onBack={() => { setMode('password'); setError('') }}
       />
     )
@@ -255,19 +258,17 @@ function LoginForm({
 function SignupForm({
   users,
   addUser,
-  establishSession,
+  onDone,
   onBack,
 }: {
   users: Users
   addUser: ReturnType<typeof useDroguerie>['addUser']
-  establishSession: (u: Users[number]) => void
+  onDone: () => void
   onBack: () => void
 }) {
   const { t } = useLanguage()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [pw, setPw] = useState('')
-  const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
 
   const norm = (s: string) => s.trim().toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ')
@@ -276,46 +277,40 @@ function SignupForm({
     setError('')
     const n = name.trim()
     if (!n) return setError(t('auth_ca_name'))
-    if (pw.length < 4) return setError(t('auth_pw_short'))
-    if (pw !== confirm) return setError(t('auth_pw_mismatch'))
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setError(t('auth_req_email_required'))
     const taken = users.some(
-      (u) => norm(u.name) === norm(n) || (email.trim() && u.email && norm(u.email) === norm(email))
+      (u) => norm(u.name) === norm(n) || (u.email && norm(u.email) === norm(email))
     )
     if (taken) return setError(t('auth_ca_taken'))
-    const u = addUser({
+    // Demande de compte : inactif, en attente d'approbation, sans mot de passe.
+    // L'administrateur approuvera et un mot de passe temporaire sera envoyé par email.
+    addUser({
       name: n,
       phone: '',
       role: 'Vendeur',
-      active: true,
+      active: false,
       email: email.trim(),
-      passwordHash: hashSecret(pw),
+      pendingApproval: true,
     })
     // Recharge la liste des utilisateurs partout (instances useDroguerie séparées).
     window.dispatchEvent(new CustomEvent('droguerie-sync-pull'))
-    // Connexion immédiate avec le compte fraîchement créé — aucune course possible.
-    establishSession(u)
+    onDone()
   }
 
   return (
     <div className="space-y-4">
-      <p className="text-center text-lg font-semibold text-white">{t('auth_create_account')}</p>
+      <p className="text-center text-lg font-semibold text-white">{t('auth_req_title')}</p>
+      <p className="rounded-xl border border-blue-400/20 bg-blue-500/10 p-3 text-center text-xs text-blue-300">{t('auth_req_note')}</p>
       <DarkField label={t('auth_ca_name')} icon={<User className="h-4 w-4" />}>
         <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('auth_ca_name_ph')} autoFocus />
       </DarkField>
       <DarkField label={t('auth_email')} icon={<Mail className="h-4 w-4" />}>
-        <input className={inputCls} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemple.com" />
-      </DarkField>
-      <DarkField label={t('auth_password')} icon={<Lock className="h-4 w-4" />}>
-        <input className={inputCls} type="password" value={pw} onChange={(e) => setPw(e.target.value)} />
-      </DarkField>
-      <DarkField label={t('auth_setup_confirm')} icon={<Lock className="h-4 w-4" />}>
-        <input className={inputCls} type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} />
+        <input className={inputCls} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemple.com" onKeyDown={(e) => e.key === 'Enter' && submit()} />
       </DarkField>
       {error && <p className="text-sm font-medium text-rose-400">{error}</p>}
       <button onClick={submit} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 py-3.5 text-sm font-bold text-white transition hover:brightness-110 active:scale-[0.98]">
-        <User className="h-4 w-4" />{t('auth_ca_submit')}
+        <User className="h-4 w-4" />{t('auth_req_submit')}
       </button>
-      <p className="text-center text-xs text-slate-500">{t('auth_ca_role_note')}</p>
       <button onClick={onBack} className="w-full text-center text-xs font-semibold text-slate-400 transition hover:text-blue-400">{t('auth_back')}</button>
     </div>
   )

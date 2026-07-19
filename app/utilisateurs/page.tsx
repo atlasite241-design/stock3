@@ -2,13 +2,22 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Check, Pencil, Plus, ShieldCheck, Trash2, UserCog, X } from 'lucide-react'
+import { Check, Mail, Pencil, Plus, ShieldCheck, Trash2, UserCog, UserPlus, X } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
 import { useDroguerie, type AppUser } from '@/lib/store'
+import { hashSecret } from '@/lib/auth'
 import { useLanguage, type TKey } from '@/lib/i18n'
+
+// Mot de passe temporaire lisible (sans caractères ambigus).
+const TEMP_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+function genTempPassword(): string {
+  let s = ''
+  for (let i = 0; i < 8; i++) s += TEMP_CHARS[Math.floor(Math.random() * TEMP_CHARS.length)]
+  return s
+}
 
 const ROLES: AppUser['role'][] = ['Administrateur', 'Gérant', 'Caissier', 'Vendeur']
 const ROLE_LABEL_KEY: Record<AppUser['role'], TKey> = {
@@ -58,6 +67,38 @@ function Content() {
     active: true,
   })
   const [deleteTarget, setDeleteTarget] = useState<AppUser | null>(null)
+  const [approval, setApproval] = useState<{ user: AppUser; temp: string; emailSent: boolean } | null>(null)
+
+  const pending = users.filter((u) => u.pendingApproval)
+
+  // Approbation : active le compte avec un mot de passe temporaire (changement
+  // obligatoire à la 1ʳᵉ connexion) puis envoie l'email de bienvenue.
+  const approve = async (u: AppUser) => {
+    const temp = genTempPassword()
+    updateUser(u.id, { active: true, pendingApproval: false, passwordHash: hashSecret(temp), mustChangePassword: true })
+    window.dispatchEvent(new CustomEvent('droguerie-sync-pull'))
+    let emailSent = false
+    if (u.email) {
+      try {
+        const res = await fetch('/api/send-credentials', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: u.email, name: u.name, password: temp }),
+        })
+        const d = (await res.json()) as { ok?: boolean }
+        emailSent = !!d.ok
+      } catch {
+        emailSent = false
+      }
+    }
+    setApproval({ user: u, temp, emailSent })
+    toast(`✓ ${t('usr_pending_approved')}`)
+  }
+
+  const reject = (u: AppUser) => {
+    deleteUser(u.id)
+    window.dispatchEvent(new CustomEvent('droguerie-sync-pull'))
+  }
 
   if (!ready) {
     return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
@@ -131,6 +172,51 @@ function Content() {
           </button>
         ))}
       </div>
+
+      {/* Demandes de compte en attente d'approbation */}
+      {pending.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass-card border-l-4 border-l-amber-400 p-5">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+            <UserPlus className="h-4 w-4" />
+            {t('usr_pending_title')} · {pending.length}
+          </h3>
+          <div className="space-y-2.5">
+            {pending.map((u) => (
+              <div key={u.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-100 bg-gray-50/60 p-3 dark:border-white/5 dark:bg-white/[0.03]">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{u.name}</p>
+                  <p className="flex items-center gap-1 truncate text-xs text-gray-500 dark:text-zinc-400"><Mail className="h-3 w-3" />{u.email || '—'}</p>
+                </div>
+                <button onClick={() => approve(u)} className="flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3.5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95">
+                  <Check className="h-3.5 w-3.5" />{t('usr_pending_approve')}
+                </button>
+                <button onClick={() => reject(u)} className="flex items-center gap-1.5 rounded-lg border border-rose-300 px-3.5 py-2 text-xs font-bold text-rose-600 transition hover:bg-rose-50 active:scale-95 dark:border-rose-500/40 dark:text-rose-400 dark:hover:bg-rose-500/10">
+                  <X className="h-3.5 w-3.5" />{t('usr_pending_reject')}
+                </button>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Résultat d'approbation : mot de passe temporaire + statut email */}
+      <Modal open={!!approval} onClose={() => setApproval(null)} title={t('usr_pending_approved')}>
+        {approval && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-700 dark:text-zinc-200">
+              <b>{approval.user.name}</b> · {approval.user.email}
+            </p>
+            <div className={`rounded-xl border p-3 text-sm ${approval.emailSent ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300'}`}>
+              {approval.emailSent ? `✓ ${t('usr_pending_email_sent')}` : t('usr_pending_email_failed')}
+            </div>
+            <div>
+              <p className="field-label">{t('usr_pending_temp_pw')}</p>
+              <p className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-center font-mono text-lg font-bold tracking-widest text-gray-900 dark:border-white/10 dark:bg-white/5 dark:text-white">{approval.temp}</p>
+            </div>
+            <button onClick={() => setApproval(null)} className="btn-primary w-full">{t('usr_pending_close')}</button>
+          </div>
+        )}
+      </Modal>
 
       {/* Team */}
       {tab === 'equipe' && (

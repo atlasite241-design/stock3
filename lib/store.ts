@@ -321,6 +321,10 @@ export interface AppUser {
   email?: string
   passwordHash?: string
   pinHash?: string
+  /** Demande de compte en attente d'approbation par un administrateur. */
+  pendingApproval?: boolean
+  /** Mot de passe temporaire : changement obligatoire à la prochaine connexion. */
+  mustChangePassword?: boolean
 }
 
 export const USER_ROLES: AppUser['role'][] = ['Administrateur', 'Gérant', 'Caissier', 'Vendeur']

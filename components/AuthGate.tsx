@@ -4,6 +4,7 @@ import React, { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import LicenseGate from './LicenseGate'
+import PasswordChangeGate from './PasswordChangeGate'
 
 /**
  * Empêche l'accès aux pages protégées tant que l'utilisateur n'est pas connecté.
@@ -29,6 +30,10 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   }
   if (!session) return null // redirection en cours
 
-  // Connecté → exige une licence active sur cet appareil.
-  return <LicenseGate>{children}</LicenseGate>
+  // Connecté → mot de passe définitif requis, puis licence active sur cet appareil.
+  return (
+    <PasswordChangeGate>
+      <LicenseGate>{children}</LicenseGate>
+    </PasswordChangeGate>
+  )
 }
