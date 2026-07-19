@@ -7,6 +7,7 @@ import { Eye, EyeOff, KeyRound, Lock, LogIn, Mail, ShieldCheck, User } from 'luc
 import { useAuth } from '@/lib/auth-context'
 import { hashSecret } from '@/lib/auth'
 import { useDroguerie } from '@/lib/store'
+import { turso, tursoConfigured } from '@/lib/turso'
 import { useLanguage } from '@/lib/i18n'
 
 export default function LoginPage() {
@@ -18,6 +19,32 @@ export default function LoginPage() {
   useEffect(() => {
     if (session) router.replace('/')
   }, [session, router])
+
+  // La page de connexion rafraîchit TOUJOURS les comptes depuis Turso :
+  // évite les utilisateurs locaux périmés (ancien seed de démo, autre appareil…)
+  // qui empêchent la connexion alors que les vrais comptes sont dans le cloud.
+  useEffect(() => {
+    if (!tursoConfigured()) return
+    ;(async () => {
+      try {
+        const db = turso()
+        const res = await db.execute("SELECT data FROM records WHERE collection='users' AND deleted=0")
+        if (res.rows.length === 0) return
+        const arr: unknown[] = []
+        for (const row of res.rows) {
+          try {
+            arr.push(JSON.parse(String(row.data)))
+          } catch {}
+        }
+        if (arr.length > 0) {
+          localStorage.setItem('dp_users', JSON.stringify(arr))
+          window.dispatchEvent(new CustomEvent('droguerie-sync-pull'))
+        }
+      } catch {
+        /* hors-ligne : on garde les comptes locaux */
+      }
+    })()
+  }, [])
 
   const resetAccess = () => {
     if (!window.confirm(t('auth_reset_confirm'))) return
