@@ -1132,6 +1132,11 @@ export function useDroguerie() {
   const activeStoreRef = useRef('')
   activeStoreRef.current = activeStoreId
 
+  // Ref miroir de `users` : les mutations consécutives (ex. réinitialisation de
+  // tous les comptes en boucle) se composent au lieu de repartir d'une liste périmée.
+  const usersRef = useRef<AppUser[]>([])
+  usersRef.current = users
+
   useEffect(() => {
     // Lit tout le localStorage dans l'état React. Rejoué quand la synchro
     // rapatrie des changements d'un autre appareil (événement 'droguerie-sync-pull').
@@ -1971,14 +1976,29 @@ export function useDroguerie() {
   }
 
   // ---- Users ----
+  // Toutes les mutations utilisateurs passent par la ref (compositions sûres)
+  // puis notifient les autres instances useDroguerie (AuthProvider, pages…)
+  // pour qu'elles rechargent la liste immédiatement.
+  const commitUsers = (next: AppUser[]) => {
+    usersRef.current = next
+    persistUsers(next)
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('droguerie-sync-pull'))
+  }
+
   const addUser = (data: Omit<AppUser, 'id'>): AppUser => {
     const u: AppUser = { ...data, id: uid() }
-    persistUsers([u, ...users])
+    commitUsers([u, ...usersRef.current])
     return u
   }
+
+  // Réinitialise TOUS les identifiants en une seule écriture.
+  const resetAllCredentials = () => {
+    commitUsers(usersRef.current.map((u) => ({ ...u, passwordHash: '', pinHash: '', mustChangePassword: false })))
+    logActivity('Réinitialisation de tous les identifiants')
+  }
   const updateUser = (id: string, data: Partial<AppUser>) =>
-    persistUsers(users.map((u) => (u.id === id ? { ...u, ...data } : u)))
-  const deleteUser = (id: string) => persistUsers(users.filter((u) => u.id !== id))
+    commitUsers(usersRef.current.map((u) => (u.id === id ? { ...u, ...data } : u)))
+  const deleteUser = (id: string) => commitUsers(usersRef.current.filter((u) => u.id !== id))
 
   // ---- Attributes ----
   const attrActions = (list: Attribute[], persist: (v: Attribute[]) => void) => ({
@@ -2337,6 +2357,7 @@ export function useDroguerie() {
     addUser,
     updateUser,
     deleteUser,
+    resetAllCredentials,
     addExpense,
     markExpensePaid,
     deleteExpense,
