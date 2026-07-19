@@ -71,9 +71,17 @@ function Content() {
 
   const pending = users.filter((u) => u.pendingApproval)
 
-  // Approbation : active le compte avec un mot de passe temporaire (changement
-  // obligatoire à la 1ʳᵉ connexion) puis envoie l'email de bienvenue.
+  // Approbation. Deux cas :
+  //  - Le compte a déjà un mot de passe (inscription complète) → simple activation.
+  //  - Sinon → mot de passe temporaire (changement obligatoire) + email de bienvenue.
   const approve = async (u: AppUser) => {
+    if (u.passwordHash) {
+      updateUser(u.id, { active: true, pendingApproval: false })
+      window.dispatchEvent(new CustomEvent('droguerie-sync-pull'))
+      setApproval({ user: u, temp: '', emailSent: false })
+      toast(`✓ ${t('usr_pending_approved')}`)
+      return
+    }
     const temp = genTempPassword()
     updateUser(u.id, { active: true, pendingApproval: false, passwordHash: hashSecret(temp), mustChangePassword: true })
     window.dispatchEvent(new CustomEvent('droguerie-sync-pull'))
@@ -206,13 +214,21 @@ function Content() {
             <p className="text-sm text-gray-700 dark:text-zinc-200">
               <b>{approval.user.name}</b> · {approval.user.email}
             </p>
-            <div className={`rounded-xl border p-3 text-sm ${approval.emailSent ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300'}`}>
-              {approval.emailSent ? `✓ ${t('usr_pending_email_sent')}` : t('usr_pending_email_failed')}
-            </div>
-            <div>
-              <p className="field-label">{t('usr_pending_temp_pw')}</p>
-              <p className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-center font-mono text-lg font-bold tracking-widest text-gray-900 dark:border-white/10 dark:bg-white/5 dark:text-white">{approval.temp}</p>
-            </div>
+            {approval.temp ? (
+              <>
+                <div className={`rounded-xl border p-3 text-sm ${approval.emailSent ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300'}`}>
+                  {approval.emailSent ? `✓ ${t('usr_pending_email_sent')}` : t('usr_pending_email_failed')}
+                </div>
+                <div>
+                  <p className="field-label">{t('usr_pending_temp_pw')}</p>
+                  <p className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-center font-mono text-lg font-bold tracking-widest text-gray-900 dark:border-white/10 dark:bg-white/5 dark:text-white">{approval.temp}</p>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+                ✓ {t('usr_pending_pw_ok')}
+              </div>
+            )}
             <button onClick={() => setApproval(null)} className="btn-primary w-full">{t('usr_pending_close')}</button>
           </div>
         )}

@@ -325,6 +325,10 @@ export interface AppUser {
   pendingApproval?: boolean
   /** Mot de passe temporaire : changement obligatoire à la prochaine connexion. */
   mustChangePassword?: boolean
+  /** Clé de la question de sécurité choisie à l'inscription (q1…q5). */
+  securityQuestion?: string
+  /** Hash de la réponse de sécurité (récupération de mot de passe). */
+  securityAnswerHash?: string
 }
 
 export const USER_ROLES: AppUser['role'][] = ['Administrateur', 'Gérant', 'Caissier', 'Vendeur']
