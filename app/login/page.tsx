@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, KeyRound, Lock, LogIn, Mail, ShieldCheck, User } from 'lucide-react'
+import { Eye, EyeOff, KeyRound, Lock, LogIn, Mail, ShieldCheck, TriangleAlert, User } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { hashSecret } from '@/lib/auth'
 import { useDroguerie } from '@/lib/store'
@@ -15,6 +15,7 @@ export default function LoginPage() {
   const { users, updateUser, addUser } = useDroguerie()
   const { t } = useLanguage()
   const router = useRouter()
+  const [resetOpen, setResetOpen] = useState(false)
 
   useEffect(() => {
     if (session) router.replace('/')
@@ -55,7 +56,7 @@ export default function LoginPage() {
   }, [])
 
   const resetAccess = () => {
-    if (!window.confirm(t('auth_reset_confirm'))) return
+    setResetOpen(false)
     users.forEach((u) => updateUser(u.id, { passwordHash: '', pinHash: '' }))
     logout()
   }
@@ -92,9 +93,38 @@ export default function LoginPage() {
         {needsSetup ? (
           <SetupForm users={users} updateUser={updateUser} establishSession={establishSession} />
         ) : (
-          <LoginForm users={users} addUser={addUser} loginIdentifier={loginIdentifier} loginPin={loginPin} onForgot={resetAccess} />
+          <LoginForm users={users} addUser={addUser} loginIdentifier={loginIdentifier} loginPin={loginPin} onForgot={() => setResetOpen(true)} />
         )}
       </motion.div>
+
+      {/* Boîte de dialogue de réinitialisation (remplace le confirm natif) */}
+      {resetOpen && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm" onClick={() => setResetOpen(false)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.94, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+            className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#101a30] p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
+                <TriangleAlert className="h-5 w-5" />
+              </span>
+              <h2 className="text-base font-bold text-white">{t('auth_reset_title')}</h2>
+            </div>
+            <p className="text-sm leading-relaxed text-slate-300">{t('auth_reset_confirm')}</p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button onClick={() => setResetOpen(false)} className="rounded-xl border border-white/15 bg-white/5 py-2.5 text-sm font-bold text-slate-200 transition hover:bg-white/10 active:scale-[0.98]">
+                {t('rst_cancel')}
+              </button>
+              <button onClick={resetAccess} className="rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 py-2.5 text-sm font-bold text-white transition hover:brightness-110 active:scale-[0.98]">
+                {t('auth_reset_ok')}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

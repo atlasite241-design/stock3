@@ -316,6 +316,8 @@ const DICT = {
   auth_no_account: { fr: "Vous n'avez pas de compte ?", ar: 'ليس لديك حساب؟' },
   auth_create_account: { fr: 'Créer un compte', ar: 'إنشاء حساب' },
   auth_account_admin_note: { fr: "Les comptes sont créés par l'administrateur (Paramètres → Utilisateurs).", ar: 'يتم إنشاء الحسابات من طرف المسؤول (الإعدادات → المستخدمون).' },
+  auth_reset_title: { fr: 'Réinitialisation des identifiants', ar: 'إعادة تعيين معلومات الدخول' },
+  auth_reset_ok: { fr: 'OK', ar: 'موافق' },
   auth_ca_name: { fr: "Nom d'utilisateur", ar: 'اسم المستخدم' },
   auth_ca_name_ph: { fr: 'ex: Ahmed Bennani', ar: 'مثال: أحمد بناني' },
   auth_ca_taken: { fr: 'Ce nom ou cet email est déjà utilisé.', ar: 'هذا الاسم أو البريد مستعمل مسبقاً.' },
