@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, Bell, Languages, LogOut, Menu, Moon, Search, Settings, Sun, Volume2, VolumeX } from 'lucide-react'
+import { AlertTriangle, Bell, Languages, LogOut, Menu, Moon, Search, Settings, Sun, Volume2, VolumeX, Wifi, WifiOff } from 'lucide-react'
 import { getActiveStoreId, loadProducts, type Product } from '@/lib/store'
 import type { Theme } from '@/lib/theme'
 import { playSound, setSoundEnabled, soundEnabled } from '@/lib/sound'
@@ -25,6 +25,25 @@ export default function Topbar({
   const { lang, toggleLang, t } = useLanguage()
   const { currentUser, session, logout } = useAuth()
   const [logoutOpen, setLogoutOpen] = useState(false)
+
+  // État de la connexion internet. L'app fonctionne en local hors-ligne
+  // (localStorage) et se resynchronise automatiquement au retour du réseau.
+  const [online, setOnline] = useState(true)
+  const [offlineDialog, setOfflineDialog] = useState(false)
+  useEffect(() => {
+    setOnline(navigator.onLine)
+    const goOffline = () => {
+      setOnline(false)
+      setOfflineDialog(true)
+    }
+    const goOnline = () => setOnline(true)
+    window.addEventListener('offline', goOffline)
+    window.addEventListener('online', goOnline)
+    return () => {
+      window.removeEventListener('offline', goOffline)
+      window.removeEventListener('online', goOnline)
+    }
+  }, [])
   const [query, setQuery] = useState('')
   const [bellOpen, setBellOpen] = useState(false)
   const [lowStock, setLowStock] = useState<Product[]>([])
@@ -77,6 +96,20 @@ export default function Topbar({
       </div>
 
       <div className="ml-auto flex items-center gap-1.5">
+        {/* Indicateur de connexion */}
+        <span
+          className={`mr-1 hidden items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide sm:flex ${
+            online
+              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-500'
+              : 'border-rose-500/40 bg-rose-500/10 text-rose-500'
+          }`}
+          title={online ? t('net_online') : t('net_offline')}
+        >
+          {online ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
+          {online ? t('net_online') : t('net_offline')}
+          <span className={`h-1.5 w-1.5 rounded-full ${online ? 'bg-emerald-500' : 'animate-pulse bg-rose-500'}`} />
+        </span>
+
         {/* Language toggle */}
         <button
           onClick={toggleLang}
@@ -220,6 +253,29 @@ export default function Topbar({
                 {t('logout_confirm_btn')}
               </button>
             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Passage en mode déconnecté — information (portail : centré écran) */}
+      {offlineDialog && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-5 backdrop-blur-sm" onClick={() => setOfflineDialog(false)}>
+          <div
+            className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-7 text-center shadow-2xl dark:border-white/10 dark:bg-[#12121a]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-500">
+              <WifiOff className="h-5 w-5" />
+            </span>
+            <h2 className="mt-4 text-base font-black uppercase tracking-widest text-gray-900 dark:text-white">{t('net_offline')}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-zinc-300">{t('net_offline_msg')}</p>
+            <button
+              onClick={() => setOfflineDialog(false)}
+              className="mt-6 w-full rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 py-2.5 text-xs font-black uppercase tracking-widest text-gray-900 transition hover:brightness-110 active:scale-[0.98]"
+            >
+              {t('auth_reset_ok')}
+            </button>
           </div>
         </div>,
         document.body
