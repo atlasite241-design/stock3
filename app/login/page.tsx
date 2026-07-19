@@ -92,7 +92,7 @@ export default function LoginPage() {
         {needsSetup ? (
           <SetupForm users={users} updateUser={updateUser} establishSession={establishSession} />
         ) : (
-          <LoginForm users={users} addUser={addUser} loginIdentifier={loginIdentifier} loginPin={loginPin} onForgot={resetAccess} />
+          <LoginForm users={users} addUser={addUser} establishSession={establishSession} loginIdentifier={loginIdentifier} loginPin={loginPin} onForgot={resetAccess} />
         )}
       </motion.div>
     </div>
@@ -123,12 +123,14 @@ const inputCls =
 function LoginForm({
   users,
   addUser,
+  establishSession,
   loginIdentifier,
   loginPin,
   onForgot,
 }: {
   users: Users
   addUser: ReturnType<typeof useDroguerie>['addUser']
+  establishSession: (u: Users[number]) => void
   loginIdentifier: (id: string, p: string) => { ok: boolean }
   loginPin: (id: string, pin: string) => { ok: boolean }
   onForgot: () => void
@@ -202,13 +204,7 @@ function LoginForm({
       <SignupForm
         users={users}
         addUser={addUser}
-        onDone={(name) => {
-          setMode('password')
-          setIdentifier(name)
-          setPw('')
-          setError('')
-          setNotice(t('auth_ca_success'))
-        }}
+        establishSession={establishSession}
         onBack={() => { setMode('password'); setError('') }}
       />
     )
@@ -259,12 +255,12 @@ function LoginForm({
 function SignupForm({
   users,
   addUser,
-  onDone,
+  establishSession,
   onBack,
 }: {
   users: Users
   addUser: ReturnType<typeof useDroguerie>['addUser']
-  onDone: (name: string) => void
+  establishSession: (u: Users[number]) => void
   onBack: () => void
 }) {
   const { t } = useLanguage()
@@ -286,7 +282,7 @@ function SignupForm({
       (u) => norm(u.name) === norm(n) || (email.trim() && u.email && norm(u.email) === norm(email))
     )
     if (taken) return setError(t('auth_ca_taken'))
-    addUser({
+    const u = addUser({
       name: n,
       phone: '',
       role: 'Vendeur',
@@ -294,12 +290,10 @@ function SignupForm({
       email: email.trim(),
       passwordHash: hashSecret(pw),
     })
-    // useDroguerie n'est pas un contexte partagé : chaque composant a sa copie.
-    // Cet événement force l'AuthProvider (et le reste de l'app) à recharger la
-    // liste des utilisateurs depuis localStorage — sinon la connexion ne voit
-    // pas le compte fraîchement créé.
+    // Recharge la liste des utilisateurs partout (instances useDroguerie séparées).
     window.dispatchEvent(new CustomEvent('droguerie-sync-pull'))
-    onDone(n)
+    // Connexion immédiate avec le compte fraîchement créé — aucune course possible.
+    establishSession(u)
   }
 
   return (

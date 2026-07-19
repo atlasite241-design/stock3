@@ -1967,7 +1967,11 @@ export function useDroguerie() {
   }
 
   // ---- Users ----
-  const addUser = (data: Omit<AppUser, 'id'>) => persistUsers([{ ...data, id: uid() }, ...users])
+  const addUser = (data: Omit<AppUser, 'id'>): AppUser => {
+    const u: AppUser = { ...data, id: uid() }
+    persistUsers([u, ...users])
+    return u
+  }
   const updateUser = (id: string, data: Partial<AppUser>) =>
     persistUsers(users.map((u) => (u.id === id ? { ...u, ...data } : u)))
   const deleteUser = (id: string) => persistUsers(users.filter((u) => u.id !== id))
