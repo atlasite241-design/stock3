@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AlertTriangle, Bell, Languages, LogOut, Menu, Moon, Search, Settings, Sun, Volume2, VolumeX } from 'lucide-react'
@@ -192,8 +193,9 @@ export default function Topbar({
         </button>
       </div>
 
-      {/* Confirmation de déconnexion */}
-      {logoutOpen && (
+      {/* Confirmation de déconnexion — rendue dans <body> via portail : le
+          backdrop-filter du header piégerait sinon le position:fixed. */}
+      {logoutOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-5 backdrop-blur-sm" onClick={() => setLogoutOpen(false)}>
           <div
             className="w-full max-w-xs rounded-2xl border border-gray-200 bg-white p-7 text-center shadow-2xl dark:border-white/10 dark:bg-[#12121a]"
@@ -219,7 +221,8 @@ export default function Topbar({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </header>
   )
