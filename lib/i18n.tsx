@@ -2092,7 +2092,7 @@ const DICT = {
   logout_confirm_btn: { fr: 'Déconnecter', ar: 'خروج' },
   net_online: { fr: 'Mode connecté', ar: 'وضع متصل' },
   net_offline: { fr: 'Mode déconnecté', ar: 'وضع غير متصل' },
-  net_offline_msg: { fr: "Le basculement en mode déconnecté est activé en attendant le rétablissement de la connexion internet.", ar: 'تم تفعيل وضع عدم الاتصال في انتظار عودة الاتصال بالإنترنت.' },
+  net_offline_msg: { fr: "Aucune connexion Internet détectée. AtlasStock fonctionne en mode hors ligne. Toutes les opérations seront automatiquement synchronisées avec le serveur dès que la connexion Internet sera rétablie.", ar: 'لم يتم اكتشاف اتصال بالإنترنت. يعمل AtlasStock في وضع عدم الاتصال. ستتم مزامنة جميع العمليات تلقائياً مع الخادم فور عودة الاتصال بالإنترنت.' },
   lca_title: { fr: 'Clés de licence', ar: 'مفاتيح الترخيص' },
   lca_subtitle: { fr: 'Suivi des clés restantes et génération de nouvelles clés.', ar: 'متابعة المفاتيح المتبقية وتوليد مفاتيح جديدة.' },
   lca_remaining: { fr: 'Clés restantes', ar: 'المفاتيح المتبقية' },
