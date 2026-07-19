@@ -196,28 +196,25 @@ export default function Topbar({
       {logoutOpen && (
         <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-5 backdrop-blur-sm" onClick={() => setLogoutOpen(false)}>
           <div
-            className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#12121a]"
+            className="w-full max-w-xs rounded-2xl border border-gray-200 bg-white p-7 text-center shadow-2xl dark:border-white/10 dark:bg-[#12121a]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-3 flex items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-500/15 text-rose-500">
-                <LogOut className="h-5 w-5" />
-              </span>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white">{t('logout_confirm_title')}</h2>
-            </div>
-            <p className="text-sm leading-relaxed text-gray-600 dark:text-zinc-300">{t('logout_confirm_msg')}</p>
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-500">
+              <LogOut className="h-5 w-5" />
+            </span>
+            <h2 className="mt-4 text-base font-black uppercase tracking-widest text-gray-900 dark:text-white">{t('logout_confirm_title')}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-gray-500 dark:text-zinc-400">{t('logout_confirm_msg')}</p>
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button
                 onClick={() => setLogoutOpen(false)}
-                className="rounded-xl border border-gray-200 bg-gray-50 py-2.5 text-sm font-bold text-gray-700 transition hover:bg-gray-100 active:scale-[0.98] dark:border-white/15 dark:bg-white/5 dark:text-zinc-200 dark:hover:bg-white/10"
+                className="rounded-xl border border-gray-200 bg-gray-50 py-2.5 text-xs font-black uppercase tracking-widest text-gray-600 transition hover:bg-gray-100 active:scale-[0.98] dark:border-white/15 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
               >
                 {t('rst_cancel')}
               </button>
               <button
                 onClick={() => { setLogoutOpen(false); logout() }}
-                className="flex items-center justify-center gap-2 rounded-xl bg-rose-500 py-2.5 text-sm font-bold text-white transition hover:brightness-110 active:scale-[0.98]"
+                className="rounded-xl border border-rose-500/50 bg-rose-500/10 py-2.5 text-xs font-black uppercase tracking-widest text-rose-500 transition hover:bg-rose-500/20 active:scale-[0.98]"
               >
-                <LogOut className="h-4 w-4" />
                 {t('auth_logout')}
               </button>
             </div>
