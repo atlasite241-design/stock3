@@ -62,15 +62,15 @@ export default function LoginPage() {
   }
 
   if (!ready) {
-    return <div className="flex min-h-screen items-center justify-center bg-[#0b1220] text-sm text-slate-500">…</div>
+    return <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f] text-sm text-slate-500">…</div>
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#0b1220] via-[#0e1526] to-[#141c31] p-5">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#0a0a0f] via-[#0d0d14] to-[#12121a] p-5">
       {/* Glows */}
       <div className="pointer-events-none absolute inset-0" aria-hidden>
-        <div className="absolute -left-20 top-1/4 h-80 w-80 rounded-full bg-blue-600/15 blur-[130px]" />
-        <div className="absolute -right-20 bottom-1/4 h-80 w-80 rounded-full bg-violet-600/15 blur-[130px]" />
+        <div className="absolute -left-20 top-1/4 h-80 w-80 rounded-full bg-amber-500/10 blur-[130px]" />
+        <div className="absolute -right-20 bottom-1/4 h-80 w-80 rounded-full bg-yellow-500/10 blur-[130px]" />
       </div>
 
       <motion.div
@@ -81,8 +81,8 @@ export default function LoginPage() {
       >
         {/* Brand */}
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <h1 className="bg-gradient-to-r from-blue-400 via-indigo-400 to-violet-400 bg-clip-text text-3xl font-black tracking-tight text-transparent">
-            DROGUERIEPRO
+          <h1 className="text-3xl font-black tracking-tight text-white">
+            Droguerie <span className="text-amber-400">Pro</span>
           </h1>
           <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-300">
             {t('auth_edition')}
@@ -104,7 +104,7 @@ export default function LoginPage() {
             initial={{ opacity: 0, scale: 0.94, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.25 }}
-            className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#101a30] p-6 shadow-2xl"
+            className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#12121a] p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center gap-3">
@@ -118,7 +118,7 @@ export default function LoginPage() {
               <button onClick={() => setResetOpen(false)} className="rounded-xl border border-white/15 bg-white/5 py-2.5 text-sm font-bold text-slate-200 transition hover:bg-white/10 active:scale-[0.98]">
                 {t('rst_cancel')}
               </button>
-              <button onClick={resetAccess} className="rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 py-2.5 text-sm font-bold text-white transition hover:brightness-110 active:scale-[0.98]">
+              <button onClick={resetAccess} className="rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 py-2.5 text-sm font-bold text-gray-900 transition hover:brightness-110 active:scale-[0.98]">
                 {t('auth_reset_ok')}
               </button>
             </div>
@@ -148,7 +148,7 @@ function DarkField({ label, icon, right, children }: { label: string; icon?: Rea
 }
 
 const inputCls =
-  'h-12 w-full rounded-xl border border-white/10 bg-white/[0.06] pl-11 pr-4 text-sm text-white placeholder-slate-500 outline-none transition focus:border-blue-400/70 focus:bg-white/[0.08] focus:ring-2 focus:ring-blue-500/20'
+  'h-12 w-full rounded-xl border border-white/10 bg-white/[0.06] pl-11 pr-4 text-sm text-white placeholder-slate-500 outline-none transition focus:border-amber-400/70 focus:bg-white/[0.08] focus:ring-2 focus:ring-amber-500/20'
 
 function LoginForm({
   users,
@@ -203,8 +203,8 @@ function LoginForm({
             <p className="mb-2 text-xs font-semibold text-slate-400">{t('auth_choose_user')}</p>
             <div className="grid grid-cols-2 gap-2">
               {pinUsers.map((u) => (
-                <button key={u.id} onClick={() => { setPinUserId(u.id); setPin(''); setError('') }} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] p-3 text-left transition hover:border-blue-400/50 hover:bg-white/[0.07]">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 text-xs font-bold text-white">{u.name.slice(0, 2).toUpperCase()}</span>
+                <button key={u.id} onClick={() => { setPinUserId(u.id); setPin(''); setError('') }} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] p-3 text-left transition hover:border-amber-400/50 hover:bg-white/[0.07]">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-yellow-500 text-xs font-bold text-gray-900">{u.name.slice(0, 2).toUpperCase()}</span>
                   <span className="truncate text-sm font-semibold text-slate-100">{u.name}</span>
                 </button>
               ))}
@@ -219,13 +219,13 @@ function LoginForm({
             {error && <p className="text-center text-sm font-medium text-rose-400">{error}</p>}
             <div className="flex gap-2">
               <button onClick={() => { setPinUserId(''); setPin(''); setError('') }} className="h-12 flex-1 rounded-xl border border-white/10 bg-white/5 text-sm font-bold text-slate-200 transition hover:bg-white/10">{t('auth_back')}</button>
-              <button onClick={submitPin} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 text-sm font-bold text-white transition hover:brightness-110">
+              <button onClick={submitPin} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-sm font-bold text-gray-900 transition hover:brightness-110">
                 <LogIn className="h-4 w-4" />{t('auth_signin')}
               </button>
             </div>
           </div>
         )}
-        <button onClick={() => { setMode('password'); setError('') }} className="w-full text-center text-xs font-semibold text-slate-400 transition hover:text-blue-400">
+        <button onClick={() => { setMode('password'); setError('') }} className="w-full text-center text-xs font-semibold text-slate-400 transition hover:text-amber-400">
           {t('auth_password_link')}
         </button>
       </div>
@@ -253,7 +253,7 @@ function LoginForm({
       <DarkField
         label={t('auth_password')}
         icon={<Lock className="h-4 w-4" />}
-        right={<button type="button" onClick={onForgot} className="text-xs font-semibold text-blue-400 transition hover:text-blue-300">{t('auth_forgot')}</button>}
+        right={<button type="button" onClick={onForgot} className="text-xs font-semibold text-amber-400 transition hover:text-amber-300">{t('auth_forgot')}</button>}
       >
         <input className={`${inputCls} pr-11`} type={showPw ? 'text' : 'password'} value={pw} onChange={(e) => setPw(e.target.value)} placeholder="••••••••" onKeyDown={(e) => e.key === 'Enter' && submitPassword()} />
         <button type="button" onClick={() => setShowPw((s) => !s)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-200" aria-label="toggle">
@@ -262,23 +262,23 @@ function LoginForm({
       </DarkField>
 
       <label className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-300">
-        <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="h-4 w-4 rounded border-white/20 bg-white/10 accent-blue-500" />
+        <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="h-4 w-4 rounded border-white/20 bg-white/10 accent-amber-500" />
         {t('auth_remember')}
       </label>
 
       {error && <p className="text-sm font-medium text-rose-400">{error}</p>}
 
-      <button onClick={submitPassword} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-600 py-4 text-sm font-bold uppercase tracking-wide text-white shadow-lg shadow-blue-900/40 transition hover:brightness-110 active:scale-[0.98]">
+      <button onClick={submitPassword} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 py-4 text-sm font-bold uppercase tracking-wide text-gray-900 shadow-lg shadow-amber-900/40 transition hover:brightness-110 active:scale-[0.98]">
         {t('auth_connect')}
         <LogIn className="h-4 w-4" />
       </button>
 
       <div className="pt-1 text-center text-sm text-slate-500">
         {t('auth_no_account')}{' '}
-        <button onClick={() => { setMode('signup'); setError(''); setNotice('') }} className="font-bold text-white transition hover:text-blue-400">{t('auth_create_account')}</button>
+        <button onClick={() => { setMode('signup'); setError(''); setNotice('') }} className="font-bold text-white transition hover:text-amber-400">{t('auth_create_account')}</button>
       </div>
 
-      <button onClick={() => { setMode('pin'); setError('') }} className="w-full text-center text-xs font-semibold text-slate-500 transition hover:text-blue-400">
+      <button onClick={() => { setMode('pin'); setError('') }} className="w-full text-center text-xs font-semibold text-slate-500 transition hover:text-amber-400">
         {t('auth_pin_link')}
       </button>
     </div>
@@ -330,7 +330,7 @@ function SignupForm({
   return (
     <div className="space-y-4">
       <p className="text-center text-lg font-semibold text-white">{t('auth_req_title')}</p>
-      <p className="rounded-xl border border-blue-400/20 bg-blue-500/10 p-3 text-center text-xs text-blue-300">{t('auth_req_note')}</p>
+      <p className="rounded-xl border border-amber-400/20 bg-amber-500/10 p-3 text-center text-xs text-amber-300">{t('auth_req_note')}</p>
       <DarkField label={t('auth_ca_name')} icon={<User className="h-4 w-4" />}>
         <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('auth_ca_name_ph')} autoFocus />
       </DarkField>
@@ -338,10 +338,10 @@ function SignupForm({
         <input className={inputCls} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemple.com" onKeyDown={(e) => e.key === 'Enter' && submit()} />
       </DarkField>
       {error && <p className="text-sm font-medium text-rose-400">{error}</p>}
-      <button onClick={submit} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 py-3.5 text-sm font-bold text-white transition hover:brightness-110 active:scale-[0.98]">
+      <button onClick={submit} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 py-3.5 text-sm font-bold text-gray-900 transition hover:brightness-110 active:scale-[0.98]">
         <User className="h-4 w-4" />{t('auth_req_submit')}
       </button>
-      <button onClick={onBack} className="w-full text-center text-xs font-semibold text-slate-400 transition hover:text-blue-400">{t('auth_back')}</button>
+      <button onClick={onBack} className="w-full text-center text-xs font-semibold text-slate-400 transition hover:text-amber-400">{t('auth_back')}</button>
     </div>
   )
 }
@@ -366,7 +366,7 @@ function SetupForm({ users, updateUser, establishSession }: { users: Users; upda
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 py-2.5 text-xs text-blue-300">
+      <div className="flex items-center gap-2 rounded-xl border border-amber-400/20 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-300">
         <ShieldCheck className="h-4 w-4 shrink-0" />
         {t('auth_setup_desc')}
       </div>
@@ -383,7 +383,7 @@ function SetupForm({ users, updateUser, establishSession }: { users: Users; upda
         <input className={inputCls} type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} />
       </DarkField>
       {error && <p className="text-sm font-medium text-rose-400">{error}</p>}
-      <button onClick={submit} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 text-sm font-bold text-white transition hover:brightness-110 active:scale-[0.98]">
+      <button onClick={submit} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-sm font-bold text-gray-900 transition hover:brightness-110 active:scale-[0.98]">
         <ShieldCheck className="h-4 w-4" />{t('auth_setup_btn')}
       </button>
     </div>
