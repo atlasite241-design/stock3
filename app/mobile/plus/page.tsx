@@ -106,28 +106,44 @@ function Content() {
 
       {/* Déconnexion */}
       <section className="pt-1">
-        {!confirm ? (
-          <button
-            onClick={() => setConfirm(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-500/30 bg-rose-500/10 py-3.5 text-[15px] font-semibold text-rose-600 dark:text-rose-300 transition active:scale-[0.98]"
+        <button
+          onClick={() => setConfirm(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-500/30 bg-rose-500/10 py-3.5 text-[15px] font-semibold text-rose-600 dark:text-rose-300 transition active:scale-[0.98]"
+        >
+          <LogOut className="h-5 w-5" />
+          {t('mob_m_logout')}
+        </button>
+      </section>
+
+      {/* Dialogue de confirmation centré */}
+      {confirm && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm" onClick={() => setConfirm(false)}>
+          <div
+            className="w-full max-w-xs rounded-2xl border border-slate-200 bg-white p-7 text-center shadow-2xl dark:border-white/10 dark:bg-[#12121a]"
+            onClick={(e) => e.stopPropagation()}
           >
-            <LogOut className="h-5 w-5" />
-            {t('mob_m_logout')}
-          </button>
-        ) : (
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4">
-            <p className="mb-3 text-center text-sm font-semibold text-slate-900 dark:text-white">{t('mob_m_logout_confirm')}</p>
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => setConfirm(false)} className="rounded-xl bg-slate-200 dark:bg-white/10 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 transition active:scale-95">
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-500">
+              <LogOut className="h-5 w-5" />
+            </span>
+            <h2 className="mt-4 text-base font-black uppercase tracking-widest text-slate-900 dark:text-white">{t('logout_confirm_title')}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{t('logout_confirm_msg')}</p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setConfirm(false)}
+                className="rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-xs font-black uppercase tracking-widest text-slate-600 transition active:scale-[0.98] dark:border-white/15 dark:bg-white/5 dark:text-slate-300"
+              >
                 {t('mob_cancel')}
               </button>
-              <button onClick={doLogout} className="rounded-xl bg-rose-500 py-2.5 text-sm font-bold text-white transition active:scale-95">
-                {t('mob_m_logout')}
+              <button
+                onClick={doLogout}
+                className="rounded-xl border border-rose-500/50 bg-rose-500/10 py-2.5 text-xs font-black uppercase tracking-widest text-rose-500 transition active:scale-[0.98]"
+              >
+                {t('logout_confirm_btn')}
               </button>
             </div>
           </div>
-        )}
-      </section>
+        </div>
+      )}
     </>
   )
 }

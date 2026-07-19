@@ -215,7 +215,7 @@ export default function Topbar({
                 onClick={() => { setLogoutOpen(false); logout() }}
                 className="rounded-xl border border-rose-500/50 bg-rose-500/10 py-2.5 text-xs font-black uppercase tracking-widest text-rose-500 transition hover:bg-rose-500/20 active:scale-[0.98]"
               >
-                {t('auth_logout')}
+                {t('logout_confirm_btn')}
               </button>
             </div>
           </div>
