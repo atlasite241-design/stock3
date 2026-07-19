@@ -30,16 +30,24 @@ export default function LoginPage() {
         const db = turso()
         const res = await db.execute("SELECT data FROM records WHERE collection='users' AND deleted=0")
         if (res.rows.length === 0) return
-        const arr: unknown[] = []
+        type U = { id?: string }
+        const remote: U[] = []
         for (const row of res.rows) {
           try {
-            arr.push(JSON.parse(String(row.data)))
+            remote.push(JSON.parse(String(row.data)))
           } catch {}
         }
-        if (arr.length > 0) {
-          localStorage.setItem('dp_users', JSON.stringify(arr))
-          window.dispatchEvent(new CustomEvent('droguerie-sync-pull'))
-        }
+        if (remote.length === 0) return
+        // Fusion : le cloud fait référence, mais on conserve les comptes locaux
+        // pas encore synchronisés (ex. compte créé hors-ligne à l'instant).
+        let local: U[] = []
+        try {
+          local = JSON.parse(localStorage.getItem('dp_users') || '[]')
+        } catch {}
+        const ids = new Set(remote.map((u) => u.id))
+        const merged = [...remote, ...local.filter((u) => u.id && !ids.has(u.id))]
+        localStorage.setItem('dp_users', JSON.stringify(merged))
+        window.dispatchEvent(new CustomEvent('droguerie-sync-pull'))
       } catch {
         /* hors-ligne : on garde les comptes locaux */
       }
@@ -286,6 +294,11 @@ function SignupForm({
       email: email.trim(),
       passwordHash: hashSecret(pw),
     })
+    // useDroguerie n'est pas un contexte partagé : chaque composant a sa copie.
+    // Cet événement force l'AuthProvider (et le reste de l'app) à recharger la
+    // liste des utilisateurs depuis localStorage — sinon la connexion ne voit
+    // pas le compte fraîchement créé.
+    window.dispatchEvent(new CustomEvent('droguerie-sync-pull'))
     onDone(n)
   }
 
