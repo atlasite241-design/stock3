@@ -23,6 +23,7 @@ export default function Topbar({
   const router = useRouter()
   const { lang, toggleLang, t } = useLanguage()
   const { currentUser, session, logout } = useAuth()
+  const [logoutOpen, setLogoutOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [bellOpen, setBellOpen] = useState(false)
   const [lowStock, setLowStock] = useState<Product[]>([])
@@ -183,13 +184,46 @@ export default function Topbar({
         </Link>
 
         <button
-          onClick={logout}
+          onClick={() => setLogoutOpen(true)}
           title={t('auth_logout')}
           className="rounded-xl p-2.5 text-gray-500 transition hover:bg-rose-50 hover:text-rose-600 dark:text-zinc-400 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
         >
           <LogOut className="h-[18px] w-[18px]" />
         </button>
       </div>
+
+      {/* Confirmation de déconnexion */}
+      {logoutOpen && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-5 backdrop-blur-sm" onClick={() => setLogoutOpen(false)}>
+          <div
+            className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#12121a]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-500/15 text-rose-500">
+                <LogOut className="h-5 w-5" />
+              </span>
+              <h2 className="text-base font-bold text-gray-900 dark:text-white">{t('logout_confirm_title')}</h2>
+            </div>
+            <p className="text-sm leading-relaxed text-gray-600 dark:text-zinc-300">{t('logout_confirm_msg')}</p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setLogoutOpen(false)}
+                className="rounded-xl border border-gray-200 bg-gray-50 py-2.5 text-sm font-bold text-gray-700 transition hover:bg-gray-100 active:scale-[0.98] dark:border-white/15 dark:bg-white/5 dark:text-zinc-200 dark:hover:bg-white/10"
+              >
+                {t('rst_cancel')}
+              </button>
+              <button
+                onClick={() => { setLogoutOpen(false); logout() }}
+                className="flex items-center justify-center gap-2 rounded-xl bg-rose-500 py-2.5 text-sm font-bold text-white transition hover:brightness-110 active:scale-[0.98]"
+              >
+                <LogOut className="h-4 w-4" />
+                {t('auth_logout')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   )
 }

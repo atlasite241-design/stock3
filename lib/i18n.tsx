@@ -2087,6 +2087,8 @@ const DICT = {
   adm_auth_msg: { fr: 'Veuillez saisir le mot de passe administrateur pour confirmer cette action.', ar: 'يرجى إدخال كلمة مرور المسؤول لتأكيد هذا الإجراء.' },
   adm_auth_ph: { fr: 'Mot de passe…', ar: 'كلمة المرور…' },
   adm_auth_confirm: { fr: 'Confirmer', ar: 'تأكيد' },
+  logout_confirm_title: { fr: 'Déconnexion', ar: 'تسجيل الخروج' },
+  logout_confirm_msg: { fr: 'Voulez-vous vraiment vous déconnecter ?', ar: 'هل تريد حقاً تسجيل الخروج؟' },
   lca_title: { fr: 'Clés de licence', ar: 'مفاتيح الترخيص' },
   lca_subtitle: { fr: 'Suivi des clés restantes et génération de nouvelles clés.', ar: 'متابعة المفاتيح المتبقية وتوليد مفاتيح جديدة.' },
   lca_remaining: { fr: 'Clés restantes', ar: 'المفاتيح المتبقية' },
