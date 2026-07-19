@@ -190,6 +190,7 @@ const NAV: NavItem[] = [
       { href: '/parametres/theme', labelKey: 'nav_settings_theme' },
       { href: '/parametres/reinitialisation', labelKey: 'nav_settings_reset' },
       { href: '/parametres/licences', labelKey: 'nav_settings_licenses' },
+      { href: '/parametres/administration', labelKey: 'nav_settings_admin' },
     ],
   },
 ]
