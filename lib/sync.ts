@@ -358,13 +358,30 @@ export async function bootstrapFromRemote(): Promise<boolean> {
 }
 
 /** Active la synchro (après le chargement initial) : write-through + pull périodique. */
+/** Vrai si la liste de produits locale est vide (appareil non hydraté). */
+function localProductsEmpty(): boolean {
+  try {
+    const raw = localStorage.getItem('dp_products')
+    if (!raw) return true
+    const arr = JSON.parse(raw)
+    return !Array.isArray(arr) || arr.length === 0
+  } catch {
+    return true
+  }
+}
+
 export function startSync() {
   if (syncState.started || typeof window === 'undefined' || !tursoConfigured()) return
   syncState.started = true
   window.addEventListener('online', () => void flushDirty())
   void flushDirty()
-  // Premier pull immédiat, puis toutes les 4 s.
-  void pull().catch((e) => pushLog(`✗ pull: ${e instanceof Error ? e.message : String(e)}`))
+  // Auto-réparation : si le local n'a aucun produit, on télécharge tout depuis
+  // Turso (SELECT complet, fiable) au lieu du pull incrémental — sinon on
+  // enchaîne les pulls incrémentaux normaux.
+  const first = localProductsEmpty()
+    ? resyncFromStart().then(() => undefined)
+    : pull()
+  void first.catch((e) => pushLog(`✗ pull initial: ${e instanceof Error ? e.message : String(e)}`))
   setInterval(() => {
     void pull().catch((e) => pushLog(`✗ pull: ${e instanceof Error ? e.message : String(e)}`))
   }, 4000)
