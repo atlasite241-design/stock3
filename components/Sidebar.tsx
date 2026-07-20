@@ -184,8 +184,6 @@ const NAV: NavItem[] = [
       { href: '/parametres/societe', labelKey: 'nav_settings_company' },
       { href: '/parametres/impression', labelKey: 'nav_settings_print' },
       { href: '/parametres/sauvegarde', labelKey: 'nav_settings_backup' },
-      { href: '/parametres/import-excel', labelKey: 'nav_settings_import' },
-      { href: '/parametres/export-excel', labelKey: 'nav_settings_export' },
       { href: '/parametres/theme', labelKey: 'nav_settings_theme' },
       { href: '/parametres/reinitialisation', labelKey: 'nav_settings_reset' },
       { href: '/parametres/licences', labelKey: 'nav_settings_licenses' },
