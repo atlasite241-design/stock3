@@ -415,6 +415,18 @@ export interface Revenue {
 
 export const REVENUE_CATEGORIES = ['Ventes comptoir', 'Vente en gros', 'Prestations', 'Encaissement client', 'Remboursement', 'Subvention', 'Autre']
 
+export interface MoneyTransfer {
+  id: string
+  date: string
+  route: string
+  label: string
+  amount: number
+  note: string
+  storeId?: string
+}
+
+export const TRANSFER_ROUTES = ['Caisse → Banque', 'Banque → Caisse', 'Caisse → Coffre', 'Coffre → Caisse', 'Caisse → Magasin', 'Magasin → Caisse', 'Autre']
+
 export interface HeldSale {
   id: string
   date: string
@@ -512,6 +524,7 @@ const K = {
   supplierPayments: 'dp_supplier_payments',
   expenses: 'dp_expenses',
   revenues: 'dp_revenues',
+  moneyTransfers: 'dp_money_transfers',
   credits: 'dp_credits',
   stores: 'dp_stores',
   depots: 'dp_depots',
@@ -535,6 +548,7 @@ const SCOPED_KEYS: string[] = [
   K.supplierPayments,
   K.expenses,
   K.revenues,
+  K.moneyTransfers,
   K.users,
 ]
 
@@ -1144,6 +1158,7 @@ export function useDroguerie() {
   const [supplierPayments, setSupplierPayments] = useState<SupplierPayment[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [revenues, setRevenues] = useState<Revenue[]>([])
+  const [moneyTransfers, setMoneyTransfers] = useState<MoneyTransfer[]>([])
   const [stores, setStores] = useState<Store[]>([])
   const [depots, setDepots] = useState<Depot[]>([])
   const [transfers, setTransfers] = useState<Transfer[]>([])
@@ -1185,6 +1200,7 @@ export function useDroguerie() {
       setSupplierPayments(load(K.supplierPayments, []))
       setExpenses(load(K.expenses, []))
       setRevenues(load(K.revenues, []))
+      setMoneyTransfers(load(K.moneyTransfers, []))
       setStores(load(K.stores, []))
       setDepots(load(K.depots, []))
       setTransfers(load(K.transfers, []))
@@ -1257,6 +1273,7 @@ export function useDroguerie() {
   const persistSupplierPayments = useCallback(makeScopedPersist<SupplierPayment>(K.supplierPayments, setSupplierPayments), [])
   const persistExpenses = useCallback(makeScopedPersist<Expense>(K.expenses, setExpenses), [])
   const persistRevenues = useCallback(makeScopedPersist<Revenue>(K.revenues, setRevenues), [])
+  const persistMoneyTransfers = useCallback(makeScopedPersist<MoneyTransfer>(K.moneyTransfers, setMoneyTransfers), [])
   const persistStores = useCallback(makePersist<Store[]>(K.stores, setStores), [])
   const persistDepots = useCallback(makePersist<Depot[]>(K.depots, setDepots), [])
   const persistTransfers = useCallback(makePersist<Transfer[]>(K.transfers, setTransfers), [])
@@ -1715,6 +1732,18 @@ export function useDroguerie() {
 
   const deleteRevenue = (id: string) => {
     persistRevenues(revenues.filter((x) => x.id !== id))
+  }
+
+  // ---- Money transfers (transferts d'argent) ----
+  const addMoneyTransfer = (data: Omit<MoneyTransfer, 'id'>) => {
+    const transfer: MoneyTransfer = { ...data, id: uid() }
+    persistMoneyTransfers([transfer, ...moneyTransfers])
+    logActivity(`Transfert d'argent : ${transfer.route} — ${fmtDH(transfer.amount)}`)
+    return transfer
+  }
+
+  const deleteMoneyTransfer = (id: string) => {
+    persistMoneyTransfers(moneyTransfers.filter((x) => x.id !== id))
   }
 
   // ---- Suppliers ----
@@ -2340,6 +2369,7 @@ export function useDroguerie() {
     allCash: cash,
     allExpenses: expenses,
     revenues,
+    moneyTransfers,
     allSessions: sessions,
     // Magasins.
     stores,
@@ -2407,6 +2437,8 @@ export function useDroguerie() {
     deleteExpense,
     addRevenue,
     deleteRevenue,
+    addMoneyTransfer,
+    deleteMoneyTransfer,
     categoryActions: attrActions(categories, persistCategories),
     subcategoryActions: attrActions(subcategories, persistSubcategories),
     brandActions: attrActions(brands, persistBrands),
