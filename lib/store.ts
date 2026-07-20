@@ -38,6 +38,7 @@ export interface Product {
   name: string
   barcode: string
   category: string
+  subcategory?: string
   brand: string
   unit: string
   price: number

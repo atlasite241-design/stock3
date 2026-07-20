@@ -852,6 +852,7 @@ const DICT = {
   prod_all: { fr: 'Tous', ar: 'الكل' },
   prod_col_product: { fr: 'Produit', ar: 'المنتج' },
   prod_col_category: { fr: 'Catégorie', ar: 'الفئة' },
+  prod_col_subcategory: { fr: 'Sous-catégorie', ar: 'الفئة الفرعية' },
   prod_col_brand_unit: { fr: 'Marque / Unité', ar: 'العلامة / الوحدة' },
   prod_col_buy_price: { fr: 'Prix achat', ar: 'سعر الشراء' },
   prod_col_sell_price: { fr: 'Prix vente', ar: 'سعر البيع' },

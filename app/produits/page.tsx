@@ -18,6 +18,7 @@ const EMPTY_FORM = {
   name: '',
   barcode: '',
   category: '',
+  subcategory: '',
   brand: '',
   unit: 'Pièce',
   price: '',
@@ -28,7 +29,7 @@ const EMPTY_FORM = {
 }
 
 function ProduitsContent() {
-  const { ready, products, categories, brands, units, addProduct, updateProduct, deleteProduct } =
+  const { ready, products, categories, subcategories, brands, units, addProduct, updateProduct, deleteProduct } =
     useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
@@ -82,6 +83,7 @@ function ProduitsContent() {
       name: p.name,
       barcode: p.barcode,
       category: p.category,
+      subcategory: p.subcategory ?? '',
       brand: p.brand,
       unit: p.unit,
       price: String(p.price),
@@ -124,6 +126,7 @@ function ProduitsContent() {
       name: form.name.trim(),
       barcode: form.barcode.trim(),
       category: form.category.trim() || 'Divers',
+      subcategory: form.subcategory.trim(),
       brand: form.brand.trim(),
       unit: form.unit.trim() || 'Pièce',
       price: num(form.price),
@@ -215,11 +218,12 @@ function ProduitsContent() {
         className="glass-card print-area overflow-hidden"
       >
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px]">
+          <table className="w-full min-w-[980px]">
             <thead>
               <tr className="border-b border-gray-100 dark:border-white/10 text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500">
                 <th className="px-5 py-3.5">{t('prod_col_product')}</th>
                 <th className="px-5 py-3.5">{t('prod_col_category')}</th>
+                <th className="px-5 py-3.5">{t('prod_col_subcategory')}</th>
                 <th className="px-5 py-3.5">{t('prod_col_brand_unit')}</th>
                 <th className="px-5 py-3.5">{t('prod_col_buy_price')}</th>
                 <th className="px-5 py-3.5">{t('prod_col_sell_price')}</th>
@@ -246,6 +250,9 @@ function ProduitsContent() {
                     <span className="rounded-md bg-gray-100 dark:bg-white/10 px-2 py-1 text-xs font-semibold text-gray-600 dark:text-zinc-400">
                       {p.category}
                     </span>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <span className="text-xs text-gray-500 dark:text-zinc-400">{p.subcategory || '—'}</span>
                   </td>
                   <td className="px-5 py-3.5">
                     <p className="text-xs font-semibold text-gray-700 dark:text-zinc-300">{p.brand || '—'}</p>
@@ -285,7 +292,7 @@ function ProduitsContent() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-5 py-10 text-center text-sm text-gray-400 dark:text-zinc-500">
+                  <td colSpan={9} className="px-5 py-10 text-center text-sm text-gray-400 dark:text-zinc-500">
                     {t('prod_none_found')}
                   </td>
                 </tr>
@@ -395,6 +402,23 @@ function ProduitsContent() {
                 options={units.map((u) => ({ value: u.name, label: u.name }))}
               />
             </div>
+          </div>
+          <div>
+            <label className="field-label">{t('prod_col_subcategory')}</label>
+            <Select
+              value={form.subcategory || ''}
+              onChange={(v) => setForm({ ...form, subcategory: v })}
+              placeholder={t('prod_none')}
+              options={[
+                { value: '', label: t('prod_none') },
+                ...subcategories
+                  .filter((s) => !form.category || s.name.startsWith(form.category + ' › '))
+                  .map((s) => {
+                    const short = s.name.split(' › ').pop() || s.name
+                    return { value: short, label: short }
+                  }),
+              ]}
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
