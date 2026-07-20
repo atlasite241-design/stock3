@@ -30,11 +30,24 @@ function Content() {
                 <UserCog className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">{a.action}</p>
-                <p className="text-xs text-gray-400 dark:text-zinc-500">{a.user}</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {a.action}
+                  {a.target ? <span className="text-amber-600 dark:text-amber-400"> — {a.target}</span> : null}
+                </p>
+                {(a.oldValue || a.newValue) && (
+                  <p className="mt-0.5 text-xs tabular-nums">
+                    <span className="text-rose-500 line-through dark:text-rose-400">{a.oldValue}</span>
+                    <span className="mx-1.5 text-gray-400">→</span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">{a.newValue}</span>
+                  </p>
+                )}
+                <p className="mt-0.5 text-xs text-gray-400 dark:text-zinc-500">
+                  {a.user}
+                  {a.storeName ? <span className="ml-1 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500 dark:bg-white/10 dark:text-zinc-400">{a.storeName}</span> : null}
+                </p>
               </div>
-              <span className="shrink-0 pt-0.5 text-[11px] text-gray-400 dark:text-zinc-500">
-                {new Date(a.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}{' '}
+              <span className="shrink-0 pt-0.5 text-[11px] text-gray-400 dark:text-zinc-500 tabular-nums">
+                {new Date(a.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}{' '}
                 {new Date(a.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>

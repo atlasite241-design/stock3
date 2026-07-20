@@ -59,7 +59,7 @@ const ROLE_PERMS: Record<AppUser['role'], string[]> = {
 }
 
 function Content() {
-  const { ready, users, activity, settings, addUser, updateUser, deleteUser } = useDroguerie()
+  const { ready, users, activity, settings, addUser, updateUser, deleteUser, logActivity } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
 
@@ -77,7 +77,10 @@ function Content() {
   const savePerms = () => {
     if (!permUser) return
     const perms = permCustom ? ALL_PERMISSION_KEYS.filter((k) => permDraft.has(k)) : undefined
+    const before = Array.isArray(permUser.permissions) ? `${permUser.permissions.length} ${t('perm_count_active')}` : t('usr_perm_inherited')
+    const after = perms ? `${perms.length} ${t('perm_count_active')}` : t('usr_perm_inherited')
     updateUser(permUser.id, { permissions: perms })
+    logActivity(t('usr_perm_audit'), { target: permUser.name, oldValue: before, newValue: after })
     toast(`✓ ${t('usr_perm_saved')}`)
     setPermUser(null)
   }

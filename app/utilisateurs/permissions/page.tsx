@@ -62,7 +62,7 @@ const CATEGORY_ICON: Record<string, LucideIcon> = {
 }
 
 function Content() {
-  const { ready, users, settings, saveSettings } = useDroguerie()
+  const { ready, users, settings, saveSettings, logActivity } = useDroguerie()
   const { t, lang } = useLanguage()
   const toast = useToast()
 
@@ -114,7 +114,10 @@ function Content() {
   }
 
   const save = () => {
+    const before = (saved[selectedRole] ?? []).length
+    const after = (draft[selectedRole] ?? []).length
     saveSettings({ ...settings, rolePermissions: draft })
+    logActivity(t('perm_audit_role'), { target: t(ROLE_LABEL_KEY[selectedRole]), oldValue: `${before} ${t('perm_count_active')}`, newValue: `${after} ${t('perm_count_active')}` })
     toast(`✓ ${t('perm_saved')}`)
   }
   const cancel = () => setDraft(saved)

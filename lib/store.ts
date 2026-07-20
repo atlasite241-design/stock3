@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { bootstrapFromRemote, startSync, syncOnSave } from './sync'
 import { tursoConfigured } from './turso'
+import { getSession } from './auth'
 
 // ------------------------------------------------------------------
 // Types
@@ -352,6 +353,20 @@ export interface ActivityLog {
   date: string
   user: string
   action: string
+  /** Magasin où l'action a eu lieu. */
+  storeId?: string
+  storeName?: string
+  /** Élément concerné (ex. nom du produit, du rôle, de l'utilisateur). */
+  target?: string
+  /** Ancienne / nouvelle valeur (audit détaillé). */
+  oldValue?: string
+  newValue?: string
+}
+export interface AuditMeta {
+  target?: string
+  oldValue?: string
+  newValue?: string
+  base?: ActivityLog[]
 }
 
 export interface Attribute {
@@ -1288,9 +1303,24 @@ export function useDroguerie() {
     save(K.settings, next)
   }, [])
 
-  const logActivity = (action: string, base?: ActivityLog[]) => {
-    const entry: ActivityLog = { id: uid(), date: new Date().toISOString(), user: 'Yassir A.', action }
-    persistActivity([entry, ...(base ?? activity)].slice(0, 200))
+  const logActivity = (action: string, metaOrBase?: AuditMeta | ActivityLog[]) => {
+    const meta: AuditMeta = Array.isArray(metaOrBase) ? { base: metaOrBase } : (metaOrBase ?? {})
+    const sid = activeStoreRef.current
+    const store = stores.find((s) => s.id === sid)
+    let userName = 'Système'
+    try { userName = getSession()?.name || userName } catch {}
+    const entry: ActivityLog = {
+      id: uid(),
+      date: new Date().toISOString(),
+      user: userName,
+      action,
+      storeId: sid || undefined,
+      storeName: store?.name,
+      target: meta.target,
+      oldValue: meta.oldValue,
+      newValue: meta.newValue,
+    }
+    persistActivity([entry, ...(meta.base ?? activity)].slice(0, 300))
   }
 
   // Réinitialisation des statistiques : pose la date de début d'exercice
@@ -1310,7 +1340,12 @@ export function useDroguerie() {
   }
 
   const updateProduct = (id: string, data: Partial<Product>) => {
+    const prev = products.find((p) => p.id === id)
     persistProducts(products.map((p) => (p.id === id ? { ...p, ...data } : p)))
+    // Audit du changement de prix de vente.
+    if (prev && data.price !== undefined && data.price !== prev.price) {
+      logActivity('Modification du prix', { target: prev.name, oldValue: fmtDH(prev.price), newValue: fmtDH(data.price) })
+    }
   }
 
   const deleteProduct = (id: string) => {
@@ -2366,6 +2401,7 @@ export function useDroguerie() {
     suppliers,
     users,
     activity,
+    logActivity,
     categories,
     subcategories,
     brands,
