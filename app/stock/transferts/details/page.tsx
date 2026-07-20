@@ -37,12 +37,12 @@ function Content() {
 
   const sorted = useMemo(() => [...transfers].sort((a, b) => b.date.localeCompare(a.date)), [transfers])
 
-  // Affichage filtré : par date si renseignée, sinon le transfert choisi (défaut = le plus récent).
-  const effectiveRef = selectedRef || sorted[0]?.ref || ''
+  // Affichage filtré : par date si renseignée, sinon le transfert choisi ; rien si vide.
   const list = useMemo(() => {
     if (dateFilter) return sorted.filter((tr) => tr.date.slice(0, 10) === dateFilter)
-    return sorted.filter((tr) => tr.ref === effectiveRef)
-  }, [sorted, dateFilter, effectiveRef])
+    if (selectedRef) return sorted.filter((tr) => tr.ref === selectedRef)
+    return []
+  }, [sorted, dateFilter, selectedRef])
 
   if (!ready) {
     return <Loader />
@@ -83,7 +83,9 @@ function Content() {
       </motion.div>
 
       {list.length === 0 && (
-        <div className="glass-card p-10 text-center text-sm text-gray-400 dark:text-zinc-500">{t('trfd_none')}</div>
+        <div className="glass-card p-10 text-center text-sm text-gray-400 dark:text-zinc-500">
+          {!selectedRef && !dateFilter ? t('trfd_prompt') : t('trfd_none')}
+        </div>
       )}
 
       <div className="space-y-6">

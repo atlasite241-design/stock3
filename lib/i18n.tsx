@@ -46,6 +46,7 @@ const DICT = {
   trfd_filter_number: { fr: 'N° de transfert', ar: 'رقم التحويل' },
   trfd_filter_date: { fr: 'Filtrer par date', ar: 'التصفية حسب التاريخ' },
   trfd_reset: { fr: 'Réinitialiser', ar: 'إعادة تعيين' },
+  trfd_prompt: { fr: 'Sélectionnez un N° de transfert ou une date pour afficher le détail.', ar: 'اختر رقم تحويل أو تاريخًا لعرض التفاصيل.' },
   // ---- Transferts ----
   trf_title: { fr: 'Transferts de stock', ar: 'تحويلات المخزون' },
   trf_subtitle: { fr: 'Transferts de produits entre magasins et dépôts', ar: 'تحويل المنتجات بين المتاجر والمستودعات' },
