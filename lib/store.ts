@@ -406,6 +406,9 @@ export interface Settings {
   statsResetAt?: string
   /** Permissions éditables par rôle : { role: [clés de permission] }. */
   rolePermissions?: Record<string, string[]>
+  /** Dimensions de l'étiquette (mm) pour l'impression Zebra. */
+  labelWidthMm?: number
+  labelHeightMm?: number
 }
 
 export interface Expense {

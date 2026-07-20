@@ -1,24 +1,62 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { Barcode, Printer, Sparkles, Wand2 } from 'lucide-react'
+import { Barcode, Printer, Save, Sparkles, Tag, Wand2 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
+import Select from '@/components/Select'
 import EAN13, { generateEan13, normalizeEan13 } from '@/components/EAN13'
 import { useToast } from '@/components/Toast'
 import { fmtDH, useDroguerie } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
+// Formats d'étiquettes courants (mm) pour imprimantes Zebra.
+const LABEL_PRESETS = ['40 × 30', '50 × 30', '58 × 40', '38 × 25', '30 × 20', '60 × 40', '100 × 50']
+
 function Content() {
-  const { ready, products, settings, updateProduct } = useDroguerie()
+  const { ready, products, settings, updateProduct, saveSettings } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
   const [qty, setQty] = useState<Record<string, number>>({})
   const [testResult, setTestResult] = useState<string | null>(null)
+  const [labelW, setLabelW] = useState(40)
+  const [labelH, setLabelH] = useState(30)
+
+  useEffect(() => {
+    if (ready) {
+      setLabelW(settings.labelWidthMm ?? 40)
+      setLabelH(settings.labelHeightMm ?? 30)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready])
 
   if (!ready) {
     return <Loader />
+  }
+
+  const saveLabelSize = () => {
+    saveSettings({ ...settings, labelWidthMm: Math.max(10, labelW), labelHeightMm: Math.max(10, labelH) })
+    toast(`✓ ${t('barcodes_size_saved')}`)
+  }
+
+  // Impression Zebra : une étiquette par page au format exact (via le pilote Windows).
+  const printLabels = () => {
+    const w = Math.max(10, labelW)
+    const h = Math.max(10, labelH)
+    const style = document.createElement('style')
+    style.id = 'zebra-print-style'
+    style.textContent = `@media print {
+      @page { size: ${w}mm ${h}mm; margin: 0; }
+      body * { visibility: hidden !important; }
+      #zebra-print, #zebra-print * { visibility: visible !important; }
+      #zebra-print { position: absolute !important; left: 0; top: 0; }
+      #zebra-print .zlabel { width: ${w}mm; height: ${h}mm; page-break-after: always; break-after: page; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5mm; padding: 1mm; overflow: hidden; }
+      #zebra-print .zlabel:last-child { page-break-after: auto; break-after: auto; }
+    }`
+    document.head.appendChild(style)
+    window.print()
+    setTimeout(() => document.getElementById('zebra-print-style')?.remove(), 500)
   }
 
   const setAll = (n: number) => {
@@ -68,7 +106,7 @@ function Content() {
             {t('barcodes_all_to_0')}
           </button>
           <button
-            onClick={() => window.print()}
+            onClick={printLabels}
             disabled={labels.length === 0}
             className="btn-primary disabled:opacity-50"
           >
@@ -109,6 +147,43 @@ function Content() {
             {testResult}
           </p>
         )}
+      </motion.div>
+
+      {/* Format d'étiquette Zebra */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.08, duration: 0.4 }}
+        className="glass-card max-w-xl p-5"
+      >
+        <div className="mb-4 flex items-center gap-2">
+          <Tag className="h-4 w-4 text-amber-500" />
+          <h2 className="text-sm font-bold text-gray-900 dark:text-white">{t('barcodes_label_size')}</h2>
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="field-label">{t('barcodes_preset')}</label>
+            <Select
+              value={`${labelW} × ${labelH}`}
+              onChange={(v) => { const [w, h] = v.split('×').map((s) => Number(s.trim())); setLabelW(w); setLabelH(h) }}
+              options={LABEL_PRESETS}
+              className="w-auto min-w-[130px]"
+            />
+          </div>
+          <div>
+            <label className="field-label">{t('barcodes_label_width')}</label>
+            <input type="number" min="10" value={labelW} onChange={(e) => setLabelW(Number(e.target.value) || 0)} className="input-field !h-9 w-24" />
+          </div>
+          <div>
+            <label className="field-label">{t('barcodes_label_height')}</label>
+            <input type="number" min="10" value={labelH} onChange={(e) => setLabelH(Number(e.target.value) || 0)} className="input-field !h-9 w-24" />
+          </div>
+          <button onClick={saveLabelSize} className="btn-secondary !h-9 text-xs">
+            <Save className="h-3.5 w-3.5" />
+            {t('barcodes_save_size')}
+          </button>
+        </div>
+        <p className="mt-3 text-xs text-gray-400 dark:text-zinc-500">{t('barcodes_zebra_hint')}</p>
       </motion.div>
 
       {/* Products table */}
@@ -197,6 +272,18 @@ function Content() {
           </div>
         </div>
       )}
+
+      {/* Conteneur d'impression Zebra : hors écran, révélé uniquement à l'impression. */}
+      <div id="zebra-print" aria-hidden className="pointer-events-none fixed top-0 left-[-10000px]">
+        {labels.map(({ key, product }) => (
+          <div key={key} className="zlabel" style={{ width: `${labelW}mm`, height: `${labelH}mm`, color: '#000', background: '#fff', textAlign: 'center' }}>
+            <div style={{ fontSize: '6pt', fontWeight: 700, textTransform: 'uppercase', lineHeight: 1 }}>{settings.storeName}</div>
+            <div style={{ fontSize: '7pt', fontWeight: 600, lineHeight: 1.05, maxHeight: '5mm', overflow: 'hidden' }}>{product.name}</div>
+            <EAN13 code={product.barcode} height={Math.min(60, Math.round(labelH * 1.5))} moduleWidth={1.1} />
+            <div style={{ fontSize: '10pt', fontWeight: 800, lineHeight: 1 }}>{fmtDH(product.price)}</div>
+          </div>
+        ))}
+      </div>
     </>
   )
 }
