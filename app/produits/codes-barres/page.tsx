@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { Barcode, Printer, Save, Sparkles, Tag, Wand2 } from 'lucide-react'
@@ -23,9 +22,7 @@ function Content() {
   const [testResult, setTestResult] = useState<string | null>(null)
   const [labelW, setLabelW] = useState(40)
   const [labelH, setLabelH] = useState(30)
-  const [mounted, setMounted] = useState(false)
 
-  useEffect(() => { setMounted(true) }, [])
   useEffect(() => {
     if (ready) {
       setLabelW(settings.labelWidthMm ?? 40)
@@ -43,43 +40,50 @@ function Content() {
     toast(`✓ ${t('barcodes_size_saved')}`)
   }
 
-  // Impression Zebra : une étiquette par page au format exact (via le pilote Windows).
-  // On masque l'app (display:none sur les frères du conteneur d'étiquettes) pour ne pas
-  // générer des milliers de pages, puis on restaure via l'événement `afterprint`.
-  const printLabels = () => {
+  // Impression Zebra : rendu des étiquettes dans un iframe isolé (document autonome),
+  // puis impression de cet iframe. Contourne totalement la mise en page de l'app.
+  const printLabels = async () => {
     const w = Math.max(10, labelW)
     const h = Math.max(10, labelH)
-    const root = document.getElementById('zebra-print-root')
-    if (!root) return
-    const siblings = Array.from(document.body.children).filter((el) => el !== root) as HTMLElement[]
-    const prevDisplay = siblings.map((el) => el.style.display)
-
-    const style = document.createElement('style')
-    style.id = 'zebra-print-style'
-    style.textContent = `@media print {
+    const bcH = Math.min(60, Math.round(h * 1.5))
+    const { renderToStaticMarkup } = await import('react-dom/server')
+    const body = renderToStaticMarkup(
+      <>
+        {labels.map(({ key, product }) => (
+          <div key={key} className="zlabel">
+            <div style={{ fontSize: '6pt', fontWeight: 700, textTransform: 'uppercase', lineHeight: 1 }}>{settings.storeName}</div>
+            <div className="zname" style={{ fontSize: '7pt', fontWeight: 600, lineHeight: 1.05 }}>{product.name}</div>
+            <EAN13 code={product.barcode} height={bcH} moduleWidth={1.1} />
+            <div style={{ fontSize: '10pt', fontWeight: 800, lineHeight: 1 }}>{fmtDH(product.price)}</div>
+          </div>
+        ))}
+      </>
+    )
+    const doc = `<!doctype html><html><head><meta charset="utf-8"><style>
       @page { size: ${w}mm ${h}mm; margin: 0; }
-      #zebra-print-root .zlabel { width: ${w}mm; height: ${h}mm; page-break-after: always; break-after: page; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5mm; padding: 1mm; overflow: hidden; }
-      #zebra-print-root .zlabel:last-child { page-break-after: auto; break-after: auto; }
-    }`
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff; }
+      .zlabel { width: ${w}mm; height: ${h}mm; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5mm; padding: 1mm; text-align: center; overflow: hidden; page-break-after: always; }
+      .zlabel:last-child { page-break-after: auto; }
+      .zname { max-height: 5mm; overflow: hidden; }
+      svg { max-width: 100%; height: auto; }
+    </style></head><body>${body}</body></html>`
 
-    let restored = false
-    const restore = () => {
-      if (restored) return
-      restored = true
-      siblings.forEach((el, i) => { el.style.display = prevDisplay[i] })
-      root.classList.add('hidden')
-      document.getElementById('zebra-print-style')?.remove()
-      window.removeEventListener('afterprint', restore)
-    }
-
-    // Masque l'app, révèle les étiquettes, imprime, puis restaure après l'impression.
-    siblings.forEach((el) => { el.style.display = 'none' })
-    root.classList.remove('hidden')
-    document.head.appendChild(style)
-    window.addEventListener('afterprint', restore)
-    window.print()
-    // Filet de sécurité si `afterprint` ne se déclenche pas.
-    setTimeout(restore, 60000)
+    const iframe = document.createElement('iframe')
+    iframe.setAttribute('aria-hidden', 'true')
+    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;'
+    document.body.appendChild(iframe)
+    const idoc = iframe.contentWindow?.document
+    if (!idoc) { iframe.remove(); return }
+    idoc.open()
+    idoc.write(doc)
+    idoc.close()
+    // Laisse le temps au rendu (SVG) puis imprime, et nettoie après.
+    setTimeout(() => {
+      iframe.contentWindow?.focus()
+      iframe.contentWindow?.print()
+      setTimeout(() => iframe.remove(), 2000)
+    }, 350)
   }
 
   const setAll = (n: number) => {
@@ -296,21 +300,6 @@ function Content() {
         </div>
       )}
 
-      {/* Conteneur d'impression Zebra : rendu hors de l'app (portal, enfant direct de body),
-          masqué à l'écran (display:none), révélé et seul imprimé par printLabels(). */}
-      {mounted && createPortal(
-        <div id="zebra-print-root" className="hidden">
-          {labels.map(({ key, product }) => (
-            <div key={key} className="zlabel" style={{ width: `${labelW}mm`, height: `${labelH}mm`, color: '#000', background: '#fff', textAlign: 'center' }}>
-              <div style={{ fontSize: '6pt', fontWeight: 700, textTransform: 'uppercase', lineHeight: 1 }}>{settings.storeName}</div>
-              <div style={{ fontSize: '7pt', fontWeight: 600, lineHeight: 1.05, maxHeight: '5mm', overflow: 'hidden' }}>{product.name}</div>
-              <EAN13 code={product.barcode} height={Math.min(60, Math.round(labelH * 1.5))} moduleWidth={1.1} />
-              <div style={{ fontSize: '10pt', fontWeight: 800, lineHeight: 1 }}>{fmtDH(product.price)}</div>
-            </div>
-          ))}
-        </div>,
-        document.body
-      )}
     </>
   )
 }
