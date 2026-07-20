@@ -63,7 +63,7 @@ function Content() {
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-[190px]">
             <Select
-              value={dateFilter ? '' : effectiveRef}
+              value={dateFilter ? '' : selectedRef}
               onChange={(v) => { setSelectedRef(v); setDateFilter('') }}
               options={refOptions}
               placeholder={t('trfd_filter_number')}
