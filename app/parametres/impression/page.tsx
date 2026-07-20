@@ -42,7 +42,7 @@ function Content() {
         <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{t('psub_print_subtitle')}</p>
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05, duration: 0.4 }} className="glass-card max-w-xl p-6">
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05, duration: 0.4 }} className="glass-card max-w-3xl p-6">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-500">
             <Printer className="h-5 w-5" />
@@ -53,31 +53,35 @@ function Content() {
           </div>
         </div>
 
-        <div className="mt-5 space-y-4">
-          <div>
-            <label className="field-label">{t('psub_print_format_label')}</label>
-            <div className="grid grid-cols-3 gap-3">
-              {FORMATS.map((f) => (
-                <button
-                  key={f.key}
-                  onClick={() => setForm({ ...form, printFormat: f.key })}
-                  className={`rounded-xl border px-3 py-3 text-sm font-semibold transition ${
-                    form.printFormat === f.key
-                      ? 'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-400'
-                      : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#12121a] text-gray-600 dark:text-zinc-400 hover:border-amber-300'
-                  }`}
-                >
-                  {t(f.labelKey)}
-                </button>
-              ))}
+        <div className="mt-5 space-y-5">
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Format d'impression */}
+            <div>
+              <label className="field-label">{t('psub_print_format_label')}</label>
+              <div className="grid grid-cols-3 gap-3">
+                {FORMATS.map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => setForm({ ...form, printFormat: f.key })}
+                    className={`rounded-xl border px-3 py-3 text-sm font-semibold transition ${
+                      form.printFormat === f.key
+                        ? 'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-400'
+                        : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#12121a] text-gray-600 dark:text-zinc-400 hover:border-amber-300'
+                    }`}
+                  >
+                    {t(f.labelKey)}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="border-t border-gray-100 dark:border-white/10 pt-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">{t('psub_ticket_section')}</p>
-            <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-400">{t('psub_ticket_hint')}</p>
-            <div className="mt-3">
-              <label className="field-label">{t('set_ticket_message')}</label>
-              <input type="text" value={form.ticketMessage} onChange={(e) => setForm({ ...form, ticketMessage: e.target.value })} className="input-field" />
+            {/* Ticket */}
+            <div className="lg:border-l lg:border-gray-100 lg:pl-6 lg:dark:border-white/10">
+              <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">{t('psub_ticket_section')}</p>
+              <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-400">{t('psub_ticket_hint')}</p>
+              <div className="mt-3">
+                <label className="field-label">{t('set_ticket_message')}</label>
+                <input type="text" value={form.ticketMessage} onChange={(e) => setForm({ ...form, ticketMessage: e.target.value })} className="input-field" />
+              </div>
             </div>
           </div>
           <button onClick={save} className="btn-primary w-full">
