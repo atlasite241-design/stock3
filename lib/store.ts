@@ -1738,6 +1738,13 @@ export function useDroguerie() {
   const addMoneyTransfer = (data: Omit<MoneyTransfer, 'id'>) => {
     const transfer: MoneyTransfer = { ...data, id: uid() }
     persistMoneyTransfers([transfer, ...moneyTransfers])
+    // Impact caisse : « Caisse → X » = sortie, « X → Caisse » = entrée, sinon neutre.
+    const [from, to] = transfer.route.split('→').map((s) => s.trim().toLowerCase())
+    const cashType = from === 'caisse' ? 'depense' : to === 'caisse' ? 'recette' : null
+    if (cashType) {
+      const desc = `Transfert : ${transfer.route}${transfer.label ? ` — ${transfer.label}` : ''}`
+      persistCash([{ id: uid(), date: transfer.date, type: cashType, label: desc, amount: transfer.amount }, ...cash])
+    }
     logActivity(`Transfert d'argent : ${transfer.route} — ${fmtDH(transfer.amount)}`)
     return transfer
   }
