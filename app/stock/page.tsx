@@ -116,9 +116,10 @@ function StockContent() {
         className="glass-card overflow-hidden"
       >
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px]">
+          <table className="w-full min-w-[860px]">
             <thead>
               <tr className="border-b border-gray-100 dark:border-white/10 text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500">
+                <th className="px-5 py-3.5">{t('stock_col_barcode')}</th>
                 <th className="px-5 py-3.5">{t('stock_col_product')}</th>
                 <th className="px-5 py-3.5">{t('stock_col_level')}</th>
                 <th className="px-5 py-3.5">{t('stock_col_status')}</th>
@@ -131,6 +132,9 @@ function StockContent() {
                 const s = statut(p)
                 return (
                   <tr key={p.id} className="border-b border-gray-50 transition-colors hover:bg-amber-50/40">
+                    <td className="px-5 py-3.5">
+                      <span className="font-mono text-xs text-gray-500 dark:text-zinc-400">{p.barcode || '—'}</span>
+                    </td>
                     <td className="px-5 py-3.5">
                       <p className="text-sm font-semibold text-gray-900 dark:text-white">{p.name}</p>
                       <p className="text-xs text-gray-400 dark:text-zinc-500">{p.category}</p>
@@ -187,7 +191,7 @@ function StockContent() {
               })}
               {visible.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-10 text-center text-sm text-gray-400 dark:text-zinc-500">
+                  <td colSpan={6} className="px-5 py-10 text-center text-sm text-gray-400 dark:text-zinc-500">
                     {t('stock_no_products_in_filter')}
                   </td>
                 </tr>

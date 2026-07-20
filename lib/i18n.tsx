@@ -932,6 +932,7 @@ const DICT = {
   stock_col_adjust: { fr: 'Ajuster', ar: 'تعديل' },
   stock_col_status: { fr: 'Statut', ar: 'الحالة' },
   stock_col_level: { fr: 'Niveau de stock', ar: 'مستوى المخزون' },
+  stock_col_barcode: { fr: 'Code-barres', ar: 'الرمز الشريطي' },
   stock_col_product: { fr: 'Produit', ar: 'المنتج' },
   stock_restock_btn: { fr: 'Réappro', ar: 'تعبئة' },
   stock_status_ok: { fr: 'OK', ar: 'جيد' },
