@@ -44,21 +44,42 @@ function Content() {
   }
 
   // Impression Zebra : une étiquette par page au format exact (via le pilote Windows).
+  // On masque l'app (display:none sur les frères du conteneur d'étiquettes) pour ne pas
+  // générer des milliers de pages, puis on restaure via l'événement `afterprint`.
   const printLabels = () => {
     const w = Math.max(10, labelW)
     const h = Math.max(10, labelH)
+    const root = document.getElementById('zebra-print-root')
+    if (!root) return
+    const siblings = Array.from(document.body.children).filter((el) => el !== root) as HTMLElement[]
+    const prevDisplay = siblings.map((el) => el.style.display)
+
     const style = document.createElement('style')
     style.id = 'zebra-print-style'
     style.textContent = `@media print {
       @page { size: ${w}mm ${h}mm; margin: 0; }
-      body > * { display: none !important; }
-      #zebra-print-root { display: block !important; }
       #zebra-print-root .zlabel { width: ${w}mm; height: ${h}mm; page-break-after: always; break-after: page; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5mm; padding: 1mm; overflow: hidden; }
       #zebra-print-root .zlabel:last-child { page-break-after: auto; break-after: auto; }
     }`
+
+    let restored = false
+    const restore = () => {
+      if (restored) return
+      restored = true
+      siblings.forEach((el, i) => { el.style.display = prevDisplay[i] })
+      root.classList.add('hidden')
+      document.getElementById('zebra-print-style')?.remove()
+      window.removeEventListener('afterprint', restore)
+    }
+
+    // Masque l'app, révèle les étiquettes, imprime, puis restaure après l'impression.
+    siblings.forEach((el) => { el.style.display = 'none' })
+    root.classList.remove('hidden')
     document.head.appendChild(style)
+    window.addEventListener('afterprint', restore)
     window.print()
-    setTimeout(() => document.getElementById('zebra-print-style')?.remove(), 500)
+    // Filet de sécurité si `afterprint` ne se déclenche pas.
+    setTimeout(restore, 60000)
   }
 
   const setAll = (n: number) => {
