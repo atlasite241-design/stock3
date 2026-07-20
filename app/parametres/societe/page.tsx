@@ -29,7 +29,12 @@ function Content() {
   }
 
   const save = () => {
-    saveSettings({ ...form, storeName: form.storeName.trim() || 'Droguerie Pro' })
+    saveSettings({
+      ...form,
+      storeName: form.storeName.trim() || 'Droguerie Pro',
+      currency: form.currency.trim() || 'MAD (DH)',
+      tva: Math.max(0, Number(form.tva) || 0),
+    })
     toast(`✓ ${t('set_toast_saved')}`)
   }
 
@@ -278,6 +283,16 @@ function Content() {
                       { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD' },
                     ]}
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="field-label">{t('set_currency')}</label>
+                    <input type="text" value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} className="input-field" />
+                  </div>
+                  <div>
+                    <label className="field-label">{t('set_tva')}</label>
+                    <input type="number" min="0" value={form.tva} onChange={(e) => setForm({ ...form, tva: Number(e.target.value) })} className="input-field" />
+                  </div>
                 </div>
                 <div className="rounded-xl border border-gray-100 dark:border-white/10 bg-gray-50/60 dark:bg-white/5 p-4">
                   <p className="text-xs italic text-gray-500 dark:text-zinc-400">{t('soc_number_preview')}</p>
