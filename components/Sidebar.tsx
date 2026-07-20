@@ -57,7 +57,7 @@ const NAV: NavItem[] = [
       { href: '/caisse-journal?action=open', labelKey: 'nav_caisse_open' },
       { href: '/caisse-journal?action=close', labelKey: 'nav_caisse_close' },
       { href: '/depenses', labelKey: 'nav_caisse_expenses' },
-      { href: '/caisse-journal?action=recette', labelKey: 'nav_caisse_income' },
+      { href: '/recettes', labelKey: 'nav_caisse_income' },
       { href: '/caisse-journal?action=transfert', labelKey: 'nav_caisse_transfer' },
       { href: '/caisse-journal/fin-journee', labelKey: 'nav_caisse_endday' },
       { href: '/caisse-journal', labelKey: 'nav_caisse_journal' },
