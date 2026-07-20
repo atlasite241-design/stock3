@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import {
   AlertTriangle,
@@ -93,7 +94,7 @@ function Content() {
   const categoryTotal = categoryData.reduce((a, c) => a + c.value, 0)
 
   if (!ready) {
-    return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
+    return <Loader />
   }
 
   const thisMonthTotal = expenses

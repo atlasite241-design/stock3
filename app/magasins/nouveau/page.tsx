@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { Building2, Save } from 'lucide-react'
@@ -18,7 +19,7 @@ function Content() {
   const [form, setForm] = useState<StoreFormValues>(emptyStoreForm())
 
   if (!ready) {
-    return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
+    return <Loader />
   }
 
   const save = () => {

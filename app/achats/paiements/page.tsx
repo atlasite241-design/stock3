@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { Banknote, HandCoins, Plus, Printer } from 'lucide-react'
 import AppShell from '@/components/AppShell'
@@ -23,7 +24,7 @@ function Content() {
   const [methodFilter, setMethodFilter] = useState('tous')
 
   if (!ready) {
-    return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
+    return <Loader />
   }
 
   const withBalance = suppliers.filter((s) => s.balance > 0)

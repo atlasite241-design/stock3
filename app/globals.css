@@ -188,3 +188,9 @@ table [contenteditable='true'] {
     border-color: #d1d5db !important;
   }
 }
+
+/* Loader « égaliseur » animé (barres orange) — utilisé par <Loader /> */
+@keyframes loaderBars {
+  0%, 100% { transform: scaleY(0.3); opacity: 0.75; }
+  50%      { transform: scaleY(1);   opacity: 1; }
+}

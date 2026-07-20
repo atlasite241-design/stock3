@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { AlertTriangle, Boxes, Minus, PackageX, Plus, TrendingUp, Truck } from 'lucide-react'
 import AppShell from '@/components/AppShell'
@@ -20,7 +21,7 @@ function StockContent() {
   const [restockQty, setRestockQty] = useState('10')
 
   if (!ready) {
-    return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
+    return <Loader />
   }
 
   const lowStock = products.filter((p) => p.stock > 0 && p.stock <= p.minStock)

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useMemo, useState } from 'react'
+import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { Building2, Check, Package, Pencil, Plus, Save, Trash2, TrendingUp, Users, Warehouse } from 'lucide-react'
@@ -39,7 +40,7 @@ function Content() {
   }, [stores, allProducts, allSales, allPurchases])
 
   if (!ready) {
-    return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
+    return <Loader />
   }
 
   const openEdit = (s: Store) => {

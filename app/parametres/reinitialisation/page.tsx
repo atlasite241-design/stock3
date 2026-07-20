@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { AlertTriangle, CheckCircle2, Loader2, Lock, RotateCcw, ShieldAlert, ShieldCheck } from 'lucide-react'
 import AppShell from '@/components/AppShell'
@@ -21,7 +22,7 @@ function Content() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  if (!ready) return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
+  if (!ready) return <Loader />
 
   const isAdmin = session?.role === 'Administrateur'
 

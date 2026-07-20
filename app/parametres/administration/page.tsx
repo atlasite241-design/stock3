@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Loader from '@/components/Loader'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Ban, Check, KeyRound, Lock, Mail, Search, ShieldAlert, ShieldCheck, UserCheck, UserPlus, Users, X } from 'lucide-react'
@@ -57,7 +58,7 @@ function Content() {
   const [gatePw, setGatePw] = useState('')
   const [gateError, setGateError] = useState('')
 
-  if (!ready) return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
+  if (!ready) return <Loader />
 
   const isAdmin = session?.role === 'Administrateur'
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Loader from '@/components/Loader'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
@@ -74,7 +75,7 @@ function ClientsContent() {
   }, [sales])
 
   if (!ready) {
-    return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
+    return <Loader />
   }
 
   // A client is "en retard" only when they have a credit whose due date has passed

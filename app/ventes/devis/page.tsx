@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import {
   ChevronRight,
@@ -194,7 +195,7 @@ ${notes.trim() ? `<div class="notes"><b>Conditions particulières :</b><br>${esc
 
   const recent = useMemo(() => [...quotes].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6), [quotes])
 
-  if (!ready) return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
+  if (!ready) return <Loader />
 
   const card = 'rounded-2xl border border-gray-200 bg-white/80 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.03]'
   const input = 'w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 dark:border-white/10 dark:bg-white/5 dark:text-white'

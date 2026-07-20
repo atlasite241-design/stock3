@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { Download, Printer, TrendingDown, TrendingUp } from 'lucide-react'
 import {
@@ -28,7 +29,7 @@ function Content() {
   const [period, setPeriod] = useState<Period>('30j')
 
   if (!ready) {
-    return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
+    return <Loader />
   }
 
   const now = new Date()

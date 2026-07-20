@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Loader from '@/components/Loader'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Eye, FileDown, Pencil, Plus, Printer, Search, Send, Trash2, Truck } from 'lucide-react'
@@ -50,7 +51,7 @@ function Content() {
   const [statusFilter, setStatusFilter] = useState('tous')
 
   if (!ready) {
-    return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
+    return <Loader />
   }
 
   const visible = purchases

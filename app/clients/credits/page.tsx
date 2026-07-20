@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { AlertTriangle, Banknote, Eye, FileDown, HandCoins, Pencil, Plus, Printer, Search, Trash2, Users, Wallet, X } from 'lucide-react'
 import AppShell from '@/components/AppShell'
@@ -57,7 +58,7 @@ function Content() {
   const [newRef, setNewRef] = useState('')
 
   if (!ready) {
-    return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
+    return <Loader />
   }
 
   const now = new Date()

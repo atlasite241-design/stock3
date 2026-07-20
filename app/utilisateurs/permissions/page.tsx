@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import Loader from '@/components/Loader'
 import { Check, ShieldCheck, X } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import { useDroguerie, type AppUser } from '@/lib/store'
@@ -34,7 +35,7 @@ function Content() {
   const { t } = useLanguage()
 
   if (!ready) {
-    return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
+    return <Loader />
   }
 
   return (

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useRef } from 'react'
+import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { FileSpreadsheet, FileUp } from 'lucide-react'
 import AppShell from '@/components/AppShell'
@@ -16,7 +17,7 @@ function Content() {
   const csvInputRef = useRef<HTMLInputElement>(null)
 
   if (!ready) {
-    return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
+    return <Loader />
   }
 
   const onImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {

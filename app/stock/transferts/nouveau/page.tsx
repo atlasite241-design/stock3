@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useMemo, useState } from 'react'
+import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { ArrowLeftRight, Plus, Save, Search, Trash2, X } from 'lucide-react'
@@ -29,7 +30,7 @@ function Content() {
   const sourceProducts = useMemo(() => allProducts.filter((p) => p.storeId === sourceStoreId), [allProducts, sourceStoreId])
 
   if (!ready) {
-    return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
+    return <Loader />
   }
 
   const sourceDepots = depots.filter((d) => d.storeId === sourceStoreId)

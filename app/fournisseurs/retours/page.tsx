@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import Loader from '@/components/Loader'
 import { HandCoins, RotateCcw, Undo2 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import { fmtDH, useDroguerie } from '@/lib/store'
@@ -11,7 +12,7 @@ function Content() {
   const { t } = useLanguage()
 
   if (!ready) {
-    return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
+    return <Loader />
   }
 
   const returned = [...purchases].filter((p) => p.status === 'retournee').sort((a, b) => b.date.localeCompare(a.date))

@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import {
   FileText,
@@ -118,7 +119,7 @@ function Content() {
   const totalAchats = timeline.filter((e) => e.type === 'facture').reduce((a, e) => a + e.amount, 0)
 
   if (!ready) {
-    return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
+    return <Loader />
   }
 
   const periods: { key: Period; label: string }[] = [

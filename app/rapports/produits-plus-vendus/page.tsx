@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import Loader from '@/components/Loader'
 import AppShell from '@/components/AppShell'
 import { fmtDH, useDroguerie } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
@@ -10,7 +11,7 @@ function Content() {
   const { t } = useLanguage()
 
   if (!ready) {
-    return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
+    return <Loader />
   }
 
   const prodMap = new Map<string, { name: string; category: string; qty: number; revenue: number }>()

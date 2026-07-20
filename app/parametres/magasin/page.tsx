@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { Save, Store } from 'lucide-react'
 import AppShell from '@/components/AppShell'
@@ -20,7 +21,7 @@ function Content() {
   }, [ready])
 
   if (!ready) {
-    return <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_loading')}</div>
+    return <Loader />
   }
 
   const save = () => {

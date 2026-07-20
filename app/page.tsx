@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import {
   AlertTriangle,
@@ -110,9 +111,7 @@ export default function DashboardPage() {
   if (!ready) {
     return (
       <AppShell>
-        <div className="flex h-64 items-center justify-center text-sm text-gray-400 dark:text-zinc-500">
-          {t('dash_loading')}
-        </div>
+        <Loader />
       </AppShell>
     )
   }
