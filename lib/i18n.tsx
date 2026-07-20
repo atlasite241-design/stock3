@@ -2207,6 +2207,8 @@ const DICT = {
   psub_print_title: { fr: 'Impression', ar: 'الطباعة' },
   psub_print_subtitle: { fr: "Format d'impression des tickets et factures.", ar: 'صيغة طباعة الإيصالات والفواتير.' },
   psub_print_format_label: { fr: "Format d'impression", ar: 'صيغة الطباعة' },
+  psub_ticket_section: { fr: 'Ticket', ar: 'التذكرة' },
+  psub_ticket_hint: { fr: 'Message affiché en bas des tickets de caisse.', ar: 'رسالة تظهر أسفل تذاكر الصندوق.' },
   psub_print_ticket58: { fr: 'Ticket 58mm', ar: 'إيصال 58مم' },
   psub_print_ticket80: { fr: 'Ticket 80mm', ar: 'إيصال 80مم' },
   psub_print_a4: { fr: 'Feuille A4', ar: 'ورقة A4' },

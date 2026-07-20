@@ -72,6 +72,14 @@ function Content() {
               ))}
             </div>
           </div>
+          <div className="border-t border-gray-100 dark:border-white/10 pt-4">
+            <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">{t('psub_ticket_section')}</p>
+            <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-400">{t('psub_ticket_hint')}</p>
+            <div className="mt-3">
+              <label className="field-label">{t('set_ticket_message')}</label>
+              <input type="text" value={form.ticketMessage} onChange={(e) => setForm({ ...form, ticketMessage: e.target.value })} className="input-field" />
+            </div>
+          </div>
           <button onClick={save} className="btn-primary w-full">
             <Save className="h-4 w-4" />
             {t('set_save_settings')}
