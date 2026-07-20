@@ -19,7 +19,12 @@ function Content() {
       newPlaceholder={t('subcat_new_placeholder')}
       icon={FolderTree}
       items={subcategories}
-      usageOf={(name) => products.filter((p) => p.category === name).length}
+      usageOf={(name) => {
+        // name au format « Catégorie › Sous-catégorie »
+        const [cat, sub] = name.split('›').map((s) => s.trim())
+        if (!sub) return products.filter((p) => (p.subcategory ?? '') === cat).length
+        return products.filter((p) => p.category === cat && (p.subcategory ?? '') === sub).length
+      }}
       actions={subcategoryActions}
     />
   )
