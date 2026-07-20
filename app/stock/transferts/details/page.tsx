@@ -3,9 +3,10 @@
 import React, { useMemo, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { ArrowLeftRight, ArrowRight, Printer, Search, TriangleAlert } from 'lucide-react'
+import { ArrowLeftRight, ArrowRight, Printer, TriangleAlert } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
+import Select from '@/components/Select'
 import TransferDocument from '@/components/TransferDocument'
 import {
   transferQty,
@@ -28,21 +29,26 @@ const STATUS_KEY: Record<TransferStatus, TKey> = {
 function Content() {
   const { ready, transfers, stores } = useDroguerie()
   const { t } = useLanguage()
-  const [query, setQuery] = useState('')
+  const [selectedRef, setSelectedRef] = useState('')
+  const [dateFilter, setDateFilter] = useState('')
   const [printing, setPrinting] = useState<Transfer | null>(null)
 
   const storeName = (id: string) => stores.find((s) => s.id === id)?.name ?? '—'
 
+  const sorted = useMemo(() => [...transfers].sort((a, b) => b.date.localeCompare(a.date)), [transfers])
+
+  // Affichage filtré : par date si renseignée, sinon le transfert choisi (défaut = le plus récent).
+  const effectiveRef = selectedRef || sorted[0]?.ref || ''
   const list = useMemo(() => {
-    let l = [...transfers].sort((a, b) => b.date.localeCompare(a.date))
-    const q = query.trim().toLowerCase()
-    if (q) l = l.filter((tr) => tr.ref.toLowerCase().includes(q) || tr.items.some((i) => i.name.toLowerCase().includes(q) || i.barcode.includes(q)))
-    return l
-  }, [transfers, query])
+    if (dateFilter) return sorted.filter((tr) => tr.date.slice(0, 10) === dateFilter)
+    return sorted.filter((tr) => tr.ref === effectiveRef)
+  }, [sorted, dateFilter, effectiveRef])
 
   if (!ready) {
     return <Loader />
   }
+
+  const refOptions = sorted.map((tr) => ({ value: tr.ref, label: tr.ref }))
 
   return (
     <>
@@ -54,9 +60,25 @@ function Content() {
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{t('trfd_subtitle')}</p>
         </div>
-        <div className="relative min-w-[240px]">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('trf_search')} className="input-field pl-10" />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="min-w-[190px]">
+            <Select
+              value={dateFilter ? '' : effectiveRef}
+              onChange={(v) => { setSelectedRef(v); setDateFilter('') }}
+              options={refOptions}
+              placeholder={t('trfd_filter_number')}
+            />
+          </div>
+          <input
+            type="date"
+            value={dateFilter}
+            onChange={(e) => { setDateFilter(e.target.value); setSelectedRef('') }}
+            className="input-field w-auto"
+            aria-label={t('trfd_filter_date')}
+          />
+          {dateFilter && (
+            <button onClick={() => setDateFilter('')} className="btn-secondary !h-9 text-xs">{t('trfd_reset')}</button>
+          )}
         </div>
       </motion.div>
 
