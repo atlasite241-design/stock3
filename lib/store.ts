@@ -489,6 +489,7 @@ const K = {
   users: 'dp_users',
   activity: 'dp_activity',
   catAttr: 'dp_attr_categories',
+  subcatAttr: 'dp_attr_souscategories',
   brandAttr: 'dp_attr_marques',
   unitAttr: 'dp_attr_unites',
   held: 'dp_held_sales',
@@ -1118,6 +1119,7 @@ export function useDroguerie() {
   const [users, setUsers] = useState<AppUser[]>([])
   const [activity, setActivity] = useState<ActivityLog[]>([])
   const [categories, setCategories] = useState<Attribute[]>([])
+  const [subcategories, setSubcategories] = useState<Attribute[]>([])
   const [brands, setBrands] = useState<Attribute[]>([])
   const [units, setUnits] = useState<Attribute[]>([])
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
@@ -1158,6 +1160,7 @@ export function useDroguerie() {
       setUsers(load(K.users, []))
       setActivity(load(K.activity, []))
       setCategories(load(K.catAttr, []))
+      setSubcategories(load(K.subcatAttr, []))
       setBrands(load(K.brandAttr, []))
       setUnits(load(K.unitAttr, []))
       setClientPayments(load(K.clientPayments, []))
@@ -1228,6 +1231,7 @@ export function useDroguerie() {
   const persistUsers = useCallback(makePersist<AppUser[]>(K.users, setUsers), [])
   const persistActivity = useCallback(makePersist<ActivityLog[]>(K.activity, setActivity), [])
   const persistCategories = useCallback(makePersist<Attribute[]>(K.catAttr, setCategories), [])
+  const persistSubcategories = useCallback(makePersist<Attribute[]>(K.subcatAttr, setSubcategories), [])
   const persistBrands = useCallback(makePersist<Attribute[]>(K.brandAttr, setBrands), [])
   const persistUnits = useCallback(makePersist<Attribute[]>(K.unitAttr, setUnits), [])
   const persistClientPayments = useCallback(makeScopedPersist<ClientPayment>(K.clientPayments, setClientPayments), [])
@@ -2289,6 +2293,7 @@ export function useDroguerie() {
     users,
     activity,
     categories,
+    subcategories,
     brands,
     units,
     settings,
@@ -2366,6 +2371,7 @@ export function useDroguerie() {
     markExpensePaid,
     deleteExpense,
     categoryActions: attrActions(categories, persistCategories),
+    subcategoryActions: attrActions(subcategories, persistSubcategories),
     brandActions: attrActions(brands, persistBrands),
     unitActions: attrActions(units, persistUnits),
     saveSettings,

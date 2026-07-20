@@ -510,6 +510,7 @@ const DICT = {
   nav_products: { fr: 'Produits', ar: 'المنتجات' },
   nav_products_list: { fr: 'Produits', ar: 'المنتجات' },
   nav_products_categories: { fr: 'Catégories', ar: 'الفئات' },
+  nav_products_subcategories: { fr: 'Sous-catégories', ar: 'الفئات الفرعية' },
   nav_products_brands: { fr: 'Marques', ar: 'العلامات التجارية' },
   nav_products_units: { fr: 'Unités', ar: 'الوحدات' },
   nav_products_barcodes: { fr: 'Codes-barres', ar: 'الرموز الشريطية' },
@@ -960,6 +961,11 @@ const DICT = {
   cat_title: { fr: 'Catégories', ar: 'الفئات' },
   cat_subtitle: { fr: 'Organisez votre catalogue par rayon.', ar: 'نظّم كتالوجك حسب القسم.' },
   cat_new_placeholder: { fr: 'Nouvelle catégorie…', ar: 'فئة جديدة…' },
+
+  // Sous-catégories page
+  subcat_title: { fr: 'Sous-catégories', ar: 'الفئات الفرعية' },
+  subcat_subtitle: { fr: 'Affinez vos rayons au format « Catégorie › Sous-catégorie ».', ar: 'صنّف أقسامك بصيغة «الفئة › الفئة الفرعية».' },
+  subcat_new_placeholder: { fr: 'Nouvelle sous-catégorie (ex. Peinture › Vernis)…', ar: 'فئة فرعية جديدة (مثال: الدهان › الورنيش)…' },
 
   // Marques page
   brand_title: { fr: 'Marques', ar: 'العلامات التجارية' },

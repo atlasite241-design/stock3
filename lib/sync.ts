@@ -31,6 +31,7 @@ export const COLLECTIONS: Collection[] = [
   { collection: 'users', key: 'dp_users' },
   { collection: 'activity', key: 'dp_activity' },
   { collection: 'categories', key: 'dp_attr_categories' },
+  { collection: 'subcategories', key: 'dp_attr_souscategories' },
   { collection: 'brands', key: 'dp_attr_marques' },
   { collection: 'units', key: 'dp_attr_unites' },
   { collection: 'clientPayments', key: 'dp_client_payments' },

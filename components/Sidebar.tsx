@@ -70,6 +70,7 @@ const NAV: NavItem[] = [
     children: [
       { href: '/produits', labelKey: 'nav_products_list' },
       { href: '/produits/categories', labelKey: 'nav_products_categories' },
+      { href: '/produits/sous-categories', labelKey: 'nav_products_subcategories' },
       { href: '/produits/marques', labelKey: 'nav_products_brands' },
       { href: '/produits/unites', labelKey: 'nav_products_units' },
       { href: '/produits/codes-barres', labelKey: 'nav_products_barcodes' },

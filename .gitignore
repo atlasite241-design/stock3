@@ -24,3 +24,5 @@ yarn-error.log*
 
 .vercel
 license-keys-1000.txt
+Catalogue_complet.csv
+*.csv
