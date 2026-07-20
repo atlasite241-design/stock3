@@ -190,7 +190,7 @@ ${notes.trim() ? `<div class="notes"><b>Conditions particulières :</b><br>${esc
 
   const q = search.trim().toLowerCase()
   const results = q
-    ? products.filter((p) => p.name.toLowerCase().includes(q) || p.barcode.includes(q)).slice(0, 6)
+    ? products.filter((p) => p.name.toLowerCase().includes(q) || p.barcode.includes(q)).slice(0, 50)
     : []
 
   const recent = useMemo(() => [...quotes].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6), [quotes])
@@ -305,7 +305,7 @@ ${notes.trim() ? `<div class="notes"><b>Conditions particulières :</b><br>${esc
                 <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('dvc_add_via')} className={`${input} border-2 border-dashed pl-9`} />
               </div>
               {results.length > 0 && (
-                <div className="absolute z-40 mt-1 w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-white/10 dark:bg-zinc-900">
+                <div className="absolute z-40 mt-1 max-h-80 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-white/10 dark:bg-zinc-900">
                   {results.map((p) => (
                     <button key={p.id} onClick={() => addLine(p.id)} className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition hover:bg-gray-50 dark:hover:bg-white/5">
                       <span className="truncate text-gray-900 dark:text-white">{p.name}</span>
