@@ -7,7 +7,7 @@
 export default function Loader({ className = '', barCount = 5 }: { className?: string; barCount?: number }) {
   const bars = Array.from({ length: barCount })
   return (
-    <div className={`flex h-64 items-center justify-center ${className}`} role="status" aria-label="Chargement">
+    <div className={`flex min-h-[70vh] w-full items-center justify-center ${className}`} role="status" aria-label="Chargement">
       <div className="flex items-end gap-1.5" style={{ height: 32 }}>
         {bars.map((_, i) => (
           <span
