@@ -31,6 +31,7 @@ const SEC_QUESTIONS: TKey[] = ['auth_sec_q1', 'auth_sec_q2', 'auth_sec_q3', 'aut
 const ROLE_KEY: Record<AppUser['role'], TKey> = {
   Administrateur: 'usr_role_admin',
   Gérant: 'usr_role_manager',
+  Magasinier: 'usr_role_stockman',
   Caissier: 'usr_role_cashier',
   Vendeur: 'usr_role_seller',
 }

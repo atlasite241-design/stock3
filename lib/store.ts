@@ -315,8 +315,10 @@ export interface AppUser {
   id: string
   name: string
   phone: string
-  role: 'Administrateur' | 'Gérant' | 'Caissier' | 'Vendeur'
+  role: 'Administrateur' | 'Gérant' | 'Magasinier' | 'Caissier' | 'Vendeur'
   active: boolean
+  /** Override individuel des permissions (clés du catalogue). Si défini, remplace les permissions du rôle. */
+  permissions?: string[]
   storeId?: string
   storeIds?: string[]
   email?: string
@@ -332,7 +334,7 @@ export interface AppUser {
   securityAnswerHash?: string
 }
 
-export const USER_ROLES: AppUser['role'][] = ['Administrateur', 'Gérant', 'Caissier', 'Vendeur']
+export const USER_ROLES: AppUser['role'][] = ['Administrateur', 'Gérant', 'Magasinier', 'Caissier', 'Vendeur']
 
 /** Store ids a user may access. Administrators see all stores. */
 export function userStoreAccess(user: AppUser | null | undefined, stores: Store[]): string[] {

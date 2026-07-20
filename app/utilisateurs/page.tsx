@@ -20,10 +20,11 @@ function genTempPassword(): string {
   return s
 }
 
-const ROLES: AppUser['role'][] = ['Administrateur', 'Gérant', 'Caissier', 'Vendeur']
+const ROLES: AppUser['role'][] = ['Administrateur', 'Gérant', 'Magasinier', 'Caissier', 'Vendeur']
 const ROLE_LABEL_KEY: Record<AppUser['role'], TKey> = {
   Administrateur: 'usr_role_admin',
   Gérant: 'usr_role_manager',
+  Magasinier: 'usr_role_stockman',
   Caissier: 'usr_role_cashier',
   Vendeur: 'usr_role_seller',
 }
@@ -31,6 +32,7 @@ const ROLE_LABEL_KEY: Record<AppUser['role'], TKey> = {
 const ROLE_META: Record<AppUser['role'], { chip: string }> = {
   Administrateur: { chip: 'border-violet-200 dark:border-violet-500/20 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400' },
   Gérant: { chip: 'border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' },
+  Magasinier: { chip: 'border-orange-200 dark:border-orange-500/20 bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400' },
   Caissier: { chip: 'border-sky-200 dark:border-sky-500/20 bg-sky-50 dark:bg-sky-500/10 text-sky-700' },
   Vendeur: { chip: 'border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300' },
 }
@@ -49,6 +51,7 @@ const PERMISSION_KEYS: { key: string; labelKey: TKey }[] = [
 const ROLE_PERMS: Record<AppUser['role'], string[]> = {
   Administrateur: PERMISSION_KEYS.map((p) => p.key),
   Gérant: ['pos', 'produits', 'stock', 'achats', 'rapports', 'caisse'],
+  Magasinier: ['produits', 'stock', 'achats'],
   Caissier: ['pos', 'caisse', 'stock'],
   Vendeur: ['pos', 'produits'],
 }
