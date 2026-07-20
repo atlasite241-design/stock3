@@ -279,6 +279,26 @@ export async function pull(): Promise<void> {
 }
 
 /**
+ * Force un re-téléchargement COMPLET depuis Turso : remet le curseur à 0 puis
+ * appelle pull() en boucle jusqu'à épuisement. Utile après l'ajout d'une nouvelle
+ * collection (dont les enregistrements ont pu être « sautés » par un ancien client
+ * qui avait quand même avancé le curseur). Fusion par id : sans perte locale.
+ */
+export async function resyncFromStart(): Promise<number> {
+  setCursor(0)
+  let iterations = 0
+  while (iterations < 100) {
+    const before = getCursor()
+    await pull()
+    iterations++
+    if (getCursor() === before) break // plus rien de nouveau
+  }
+  pushLog(`↺ re-synchronisation complète (${iterations} lots)`)
+  window.dispatchEvent(new CustomEvent('droguerie-sync-pull'))
+  return iterations
+}
+
+/**
  * Amorçage d'un appareil NEUF : rapatrie toutes les données depuis Turso dans
  * localStorage (au lieu de générer des données de démo). Retourne false si Turso
  * est vide (première installation → on laissera le seed s'exécuter).

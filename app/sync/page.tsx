@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { countRemote, localCounts, pushAll, syncState } from '@/lib/sync'
+import { countRemote, localCounts, pushAll, resyncFromStart, syncState } from '@/lib/sync'
 import { tursoConfigured } from '@/lib/turso'
 import { useDroguerie } from '@/lib/store'
 
@@ -38,6 +38,22 @@ export default function SyncPage() {
     return () => clearInterval(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const resync = async () => {
+    setBusy(true)
+    setError('')
+    setLog([])
+    try {
+      add('↺ Re-téléchargement complet depuis Turso…')
+      const n = await resyncFromStart()
+      add(`✓ Terminé — ${n} lot(s) traité(s). Données à jour.`)
+      await refresh()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const addTestProduct = () => {
     addProduct({ name: 'TEST-' + Date.now().toString().slice(-5), barcode: '', category: 'Divers', brand: '', unit: 'Pièce', price: 1, cost: 0, stock: 1, minStock: 0 })
@@ -87,6 +103,9 @@ export default function SyncPage() {
       <div style={{ marginTop: 16, display: 'flex', gap: 12 }}>
         <button onClick={migrate} disabled={busy} style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: '#0ea5e9', color: '#fff', fontWeight: 700, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}>
           {busy ? 'En cours…' : 'Tout renvoyer vers Turso'}
+        </button>
+        <button onClick={resync} disabled={busy} style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: '#7c3aed', color: '#fff', fontWeight: 700, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+          {busy ? 'En cours…' : '↺ Re-télécharger tout depuis Turso'}
         </button>
         <button onClick={refresh} disabled={busy} style={{ padding: '10px 18px', borderRadius: 10, border: '1px solid #cbd5e1', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>
           Rafraîchir les compteurs
