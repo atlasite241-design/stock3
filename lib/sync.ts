@@ -279,23 +279,48 @@ export async function pull(): Promise<void> {
 }
 
 /**
- * Force un re-téléchargement COMPLET depuis Turso : remet le curseur à 0 puis
- * appelle pull() en boucle jusqu'à épuisement. Utile après l'ajout d'une nouvelle
- * collection (dont les enregistrements ont pu être « sautés » par un ancien client
- * qui avait quand même avancé le curseur). Fusion par id : sans perte locale.
+ * Force un re-téléchargement COMPLET depuis Turso en UN SEUL SELECT (sans curseur,
+ * sans LIMIT). Reconstruit chaque collection locale à partir du serveur (Turso =
+ * source de vérité). Évite le bug de pagination du pull incrémental (curseur sur
+ * horodatage non-unique) qui « sautait » des enregistrements. Utile après un import
+ * côté serveur ou l'ajout d'une nouvelle collection.
  */
 export async function resyncFromStart(): Promise<number> {
-  setCursor(0)
-  let iterations = 0
-  while (iterations < 100) {
-    const before = getCursor()
-    await pull()
-    iterations++
-    if (getCursor() === before) break // plus rien de nouveau
+  const db = turso()
+  const res = await db.execute('SELECT collection, id, data, updated_at FROM records WHERE deleted = 0')
+
+  let maxTs = 0
+  const byCol = new Map<string, { data: string }[]>()
+  for (const r of res.rows as unknown as (RemoteRow & { updated_at: number })[]) {
+    maxTs = Math.max(maxTs, Number(r.updated_at))
+    const list = byCol.get(String(r.collection)) ?? []
+    list.push({ data: String(r.data) })
+    byCol.set(String(r.collection), list)
   }
-  pushLog(`↺ re-synchronisation complète (${iterations} lots)`)
+
+  let total = 0
+  for (const [colName, rows] of byCol) {
+    const c = COL_BY_NAME.get(colName)
+    if (!c) continue
+    if (c.singleton) {
+      localStorage.setItem(c.key, rows[rows.length - 1].data)
+      total += 1
+      continue
+    }
+    const arr: unknown[] = []
+    for (const r of rows) {
+      try {
+        arr.push(JSON.parse(r.data))
+      } catch {}
+    }
+    localStorage.setItem(c.key, JSON.stringify(arr))
+    total += arr.length
+  }
+
+  setCursor(maxTs)
+  pushLog(`↺ re-synchronisation complète : ${total} enregistrements`)
   window.dispatchEvent(new CustomEvent('droguerie-sync-pull'))
-  return iterations
+  return total
 }
 
 /**

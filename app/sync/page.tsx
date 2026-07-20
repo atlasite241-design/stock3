@@ -46,7 +46,7 @@ export default function SyncPage() {
     try {
       add('↺ Re-téléchargement complet depuis Turso…')
       const n = await resyncFromStart()
-      add(`✓ Terminé — ${n} lot(s) traité(s). Données à jour.`)
+      add(`✓ Terminé — ${n} enregistrement(s) rapatrié(s). Données à jour.`)
       await refresh()
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
