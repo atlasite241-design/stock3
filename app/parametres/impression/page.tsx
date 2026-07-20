@@ -9,10 +9,9 @@ import { useToast } from '@/components/Toast'
 import { useDroguerie, type Settings } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
-const FORMATS: { key: Settings['printFormat']; labelKey: 'psub_print_ticket58' | 'psub_print_ticket80' | 'psub_print_a4' }[] = [
+const FORMATS: { key: Settings['printFormat']; labelKey: 'psub_print_ticket58' | 'psub_print_ticket80' }[] = [
   { key: 'ticket58', labelKey: 'psub_print_ticket58' },
   { key: 'ticket80', labelKey: 'psub_print_ticket80' },
-  { key: 'a4', labelKey: 'psub_print_a4' },
 ]
 
 function Content() {
@@ -58,7 +57,7 @@ function Content() {
             {/* Format d'impression */}
             <div>
               <label className="field-label">{t('psub_print_format_label')}</label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 {FORMATS.map((f) => (
                   <button
                     key={f.key}
