@@ -387,6 +387,8 @@ export interface Settings {
   signatureDataUrl: string
   /** Début d'exercice : le tableau de bord ne compte que l'activité postérieure à cette date ISO. */
   statsResetAt?: string
+  /** Permissions éditables par rôle : { role: [clés de permission] }. */
+  rolePermissions?: Record<string, string[]>
 }
 
 export interface Expense {
