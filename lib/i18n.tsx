@@ -38,6 +38,11 @@ const DICT = {
   nav_caisse_archives: { fr: 'Archives', ar: 'الأرشيف' },
   nav_stock_by_store: { fr: 'Stock par magasin', ar: 'المخزون حسب المتجر' },
   nav_stock_transfers: { fr: 'Transferts de stock', ar: 'تحويلات المخزون' },
+  nav_stock_transfers_detail: { fr: 'Détail du transfert', ar: 'تفاصيل التحويل' },
+  trfd_title: { fr: 'Détail des transferts', ar: 'تفاصيل التحويلات' },
+  trfd_subtitle: { fr: 'Tous les transferts avec leur détail complet.', ar: 'جميع التحويلات مع تفاصيلها الكاملة.' },
+  trfd_none: { fr: 'Aucun transfert.', ar: 'لا توجد تحويلات.' },
+  trfd_print: { fr: 'Bon de transfert', ar: 'سند التحويل' },
   // ---- Transferts ----
   trf_title: { fr: 'Transferts de stock', ar: 'تحويلات المخزون' },
   trf_subtitle: { fr: 'Transferts de produits entre magasins et dépôts', ar: 'تحويل المنتجات بين المتاجر والمستودعات' },

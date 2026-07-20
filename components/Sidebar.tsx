@@ -85,6 +85,7 @@ const NAV: NavItem[] = [
       { href: '/stock/inventaire', labelKey: 'nav_stock_inventory' },
       { href: '/stock/mouvements', labelKey: 'nav_stock_history' },
       { href: '/stock/transferts', labelKey: 'nav_stock_transfers' },
+      { href: '/stock/transferts/details', labelKey: 'nav_stock_transfers_detail' },
     ],
   },
   {
