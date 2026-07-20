@@ -182,7 +182,6 @@ const NAV: NavItem[] = [
     icon: Settings,
     children: [
       { href: '/parametres/societe', labelKey: 'nav_settings_company' },
-      { href: '/parametres/magasin', labelKey: 'nav_settings_store' },
       { href: '/parametres/impression', labelKey: 'nav_settings_print' },
       { href: '/parametres/sauvegarde', labelKey: 'nav_settings_backup' },
       { href: '/parametres/import-excel', labelKey: 'nav_settings_import' },
