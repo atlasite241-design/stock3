@@ -183,8 +183,6 @@ const NAV: NavItem[] = [
     children: [
       { href: '/parametres/societe', labelKey: 'nav_settings_company' },
       { href: '/parametres/magasin', labelKey: 'nav_settings_store' },
-      { href: '/parametres/tva', labelKey: 'nav_settings_tva' },
-      { href: '/parametres/devise', labelKey: 'nav_settings_currency' },
       { href: '/parametres/impression', labelKey: 'nav_settings_print' },
       { href: '/parametres/sauvegarde', labelKey: 'nav_settings_backup' },
       { href: '/parametres/import-excel', labelKey: 'nav_settings_import' },
