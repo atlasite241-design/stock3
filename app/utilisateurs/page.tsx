@@ -3,13 +3,15 @@
 import { useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { Check, Mail, Pencil, Plus, ShieldCheck, Trash2, UserCog, UserPlus, X } from 'lucide-react'
+import { CheckSquare, Check, Mail, Pencil, Plus, ShieldCheck, Square, Trash2, UserCog, UserPlus, X } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
 import Select from '@/components/Select'
+import PermissionGrid from '@/components/PermissionGrid'
 import { useToast } from '@/components/Toast'
 import { useDroguerie, type AppUser } from '@/lib/store'
 import { hashSecret } from '@/lib/auth'
+import { ALL_PERMISSION_KEYS, ROLE_DEFAULT_PERMISSIONS, type RoleName } from '@/lib/permissions'
 import { useLanguage, type TKey } from '@/lib/i18n'
 
 // Mot de passe temporaire lisible (sans caractères ambigus).
@@ -57,9 +59,28 @@ const ROLE_PERMS: Record<AppUser['role'], string[]> = {
 }
 
 function Content() {
-  const { ready, users, activity, addUser, updateUser, deleteUser } = useDroguerie()
+  const { ready, users, activity, settings, addUser, updateUser, deleteUser } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
+
+  // Override des permissions par utilisateur.
+  const [permUser, setPermUser] = useState<AppUser | null>(null)
+  const [permCustom, setPermCustom] = useState(false)
+  const [permDraft, setPermDraft] = useState<Set<string>>(new Set())
+  const roleDefaults = (role: AppUser['role']) => settings.rolePermissions?.[role] ?? ROLE_DEFAULT_PERMISSIONS[role as RoleName] ?? []
+  const openPerms = (u: AppUser) => {
+    setPermUser(u)
+    const custom = Array.isArray(u.permissions)
+    setPermCustom(custom)
+    setPermDraft(new Set(custom ? u.permissions : roleDefaults(u.role)))
+  }
+  const savePerms = () => {
+    if (!permUser) return
+    const perms = permCustom ? ALL_PERMISSION_KEYS.filter((k) => permDraft.has(k)) : undefined
+    updateUser(permUser.id, { permissions: perms })
+    toast(`✓ ${t('usr_perm_saved')}`)
+    setPermUser(null)
+  }
 
   const [tab, setTab] = useState<'equipe' | 'permissions' | 'journal'>('equipe')
   const [modalOpen, setModalOpen] = useState(false)
@@ -290,6 +311,13 @@ function Content() {
                     <td className="px-5 py-3.5">
                       <div className="flex items-center justify-end gap-1">
                         <button
+                          onClick={() => openPerms(u)}
+                          title={t('usr_perm_edit')}
+                          className="rounded-lg p-2 text-gray-400 dark:text-zinc-500 transition hover:bg-sky-50 hover:text-sky-600 dark:hover:bg-sky-500/10 dark:hover:text-sky-400"
+                        >
+                          <ShieldCheck className="h-4 w-4" />
+                        </button>
+                        <button
                           onClick={() => openEdit(u)}
                           className="rounded-lg p-2 text-gray-400 dark:text-zinc-500 transition hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-500/10 dark:hover:text-amber-400"
                         >
@@ -467,6 +495,62 @@ function Content() {
             {t('usr_delete')}
           </button>
         </div>
+      </Modal>
+
+      {/* Override des permissions par utilisateur */}
+      <Modal open={!!permUser} onClose={() => setPermUser(null)} title={permUser ? `${t('usr_perm_edit')} — ${permUser.name}` : ''} maxWidth="max-w-3xl">
+        {permUser && (
+          <div className="space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 dark:border-white/10 bg-gray-50/60 dark:bg-white/5 p-4">
+              <div>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">{permUser.name}</p>
+                <p className="text-xs text-gray-500 dark:text-zinc-400">{t(ROLE_LABEL_KEY[permUser.role])}</p>
+              </div>
+              <label className="flex cursor-pointer items-center gap-2">
+                <span className="text-sm text-gray-700 dark:text-zinc-300">{t('usr_perm_custom')}</span>
+                <button
+                  onClick={() => {
+                    const next = !permCustom
+                    setPermCustom(next)
+                    if (next) setPermDraft(new Set(permUser.permissions ?? roleDefaults(permUser.role)))
+                  }}
+                  aria-pressed={permCustom}
+                  className={`relative h-5 w-10 shrink-0 rounded-full transition-colors ${permCustom ? 'bg-amber-500' : 'bg-gray-300 dark:bg-white/15'}`}
+                >
+                  <span className={`absolute top-1 h-3 w-3 rounded-full bg-white shadow-sm transition-all ${permCustom ? 'right-1' : 'left-1'}`} />
+                </button>
+              </label>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-zinc-400">{t('usr_perm_custom_hint')}</p>
+
+            {permCustom && (
+              <div className="flex flex-wrap justify-end gap-2">
+                <button onClick={() => setPermDraft(new Set(ALL_PERMISSION_KEYS))} className="btn-secondary !h-9 text-xs">
+                  <CheckSquare className="h-3.5 w-3.5" />
+                  {t('perm_select_all')}
+                </button>
+                <button onClick={() => setPermDraft(new Set())} className="btn-secondary !h-9 text-xs">
+                  <Square className="h-3.5 w-3.5" />
+                  {t('perm_deselect_all')}
+                </button>
+              </div>
+            )}
+
+            <div className="max-h-[50vh] overflow-y-auto pr-1">
+              <PermissionGrid value={permDraft} onChange={setPermDraft} disabled={!permCustom} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setPermUser(null)} className="btn-secondary">
+                {t('usr_cancel')}
+              </button>
+              <button onClick={savePerms} className="btn-primary">
+                <ShieldCheck className="h-4 w-4" />
+                {t('usr_save')}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </>
   )
