@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import type { RegisterSession } from '@/lib/store'
 import { useLanguage, type TKey } from '@/lib/i18n'
+import { ROUTE_PERM, usePermissions } from '@/lib/access'
 
 interface NavChild {
   href: string
@@ -202,6 +203,12 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
   const [cartCount, setCartCount] = useState(0)
   const [caisseOpen, setCaisseOpen] = useState(false)
   const { t } = useLanguage()
+  const { can } = usePermissions()
+
+  // Masquage des entrées selon les permissions de l'utilisateur connecté.
+  const visibleNav = NAV.map((item) =>
+    item.children ? { ...item, children: item.children.filter((c) => can(ROUTE_PERM[basePath(c.href)])) } : item
+  ).filter((item) => (item.children ? item.children.length > 0 : can(ROUTE_PERM[basePath(item.href ?? '/')])))
 
   useEffect(() => {
     const read = () => {
@@ -276,7 +283,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <div className="space-y-1">
-            {NAV.map((item) => {
+            {visibleNav.map((item) => {
               if (!item.children) {
                 const active = pathname === item.href
                 return (

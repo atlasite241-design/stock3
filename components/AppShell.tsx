@@ -1,13 +1,40 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { ShieldAlert } from 'lucide-react'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
 import AuthGate from './AuthGate'
 import { ToastProvider } from './Toast'
 import { useTheme } from '@/lib/theme'
 import { playSound } from '@/lib/sound'
+import { routePermission, usePermissions } from '@/lib/access'
+import { useLanguage } from '@/lib/i18n'
+
+/** Garde de route : bloque l'accès si l'utilisateur connecté n'a pas la permission. */
+function AccessGuard({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const { can } = usePermissions()
+  const { t } = useLanguage()
+  const required = routePermission(pathname)
+  if (required && !can(required)) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-50 text-rose-500 dark:bg-rose-500/10 dark:text-rose-400">
+          <ShieldAlert className="h-8 w-8" />
+        </div>
+        <h2 className="mt-5 text-xl font-bold text-gray-900 dark:text-white">{t('acc_denied_title')}</h2>
+        <p className="mt-1 max-w-md text-sm text-gray-500 dark:text-zinc-400">{t('acc_denied_desc')}</p>
+        <Link href="/" className="btn-primary mt-6">
+          {t('acc_back_home')}
+        </Link>
+      </div>
+    )
+  }
+  return <>{children}</>
+}
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -79,7 +106,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="relative z-10 flex min-h-screen flex-col lg:pl-64 rtl:lg:pl-0 rtl:lg:pr-64">
           <Topbar onMenuClick={() => setSidebarOpen(true)} theme={theme} onToggleTheme={toggleTheme} />
           <main className="mx-auto w-full max-w-[1560px] flex-1 space-y-6 p-4 sm:p-6 lg:p-8">
-            {children}
+            <AccessGuard>{children}</AccessGuard>
           </main>
         </div>
       </div>
