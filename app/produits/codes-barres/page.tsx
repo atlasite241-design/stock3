@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { Barcode, Printer, Save, Sparkles, Tag, Wand2 } from 'lucide-react'
@@ -22,7 +23,9 @@ function Content() {
   const [testResult, setTestResult] = useState<string | null>(null)
   const [labelW, setLabelW] = useState(40)
   const [labelH, setLabelH] = useState(30)
+  const [mounted, setMounted] = useState(false)
 
+  useEffect(() => { setMounted(true) }, [])
   useEffect(() => {
     if (ready) {
       setLabelW(settings.labelWidthMm ?? 40)
@@ -48,11 +51,10 @@ function Content() {
     style.id = 'zebra-print-style'
     style.textContent = `@media print {
       @page { size: ${w}mm ${h}mm; margin: 0; }
-      body * { visibility: hidden !important; }
-      #zebra-print, #zebra-print * { visibility: visible !important; }
-      #zebra-print { position: absolute !important; left: 0; top: 0; }
-      #zebra-print .zlabel { width: ${w}mm; height: ${h}mm; page-break-after: always; break-after: page; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5mm; padding: 1mm; overflow: hidden; }
-      #zebra-print .zlabel:last-child { page-break-after: auto; break-after: auto; }
+      body > * { display: none !important; }
+      #zebra-print-root { display: block !important; }
+      #zebra-print-root .zlabel { width: ${w}mm; height: ${h}mm; page-break-after: always; break-after: page; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5mm; padding: 1mm; overflow: hidden; }
+      #zebra-print-root .zlabel:last-child { page-break-after: auto; break-after: auto; }
     }`
     document.head.appendChild(style)
     window.print()
@@ -273,17 +275,21 @@ function Content() {
         </div>
       )}
 
-      {/* Conteneur d'impression Zebra : hors écran, révélé uniquement à l'impression. */}
-      <div id="zebra-print" aria-hidden className="pointer-events-none fixed top-0 left-[-10000px]">
-        {labels.map(({ key, product }) => (
-          <div key={key} className="zlabel" style={{ width: `${labelW}mm`, height: `${labelH}mm`, color: '#000', background: '#fff', textAlign: 'center' }}>
-            <div style={{ fontSize: '6pt', fontWeight: 700, textTransform: 'uppercase', lineHeight: 1 }}>{settings.storeName}</div>
-            <div style={{ fontSize: '7pt', fontWeight: 600, lineHeight: 1.05, maxHeight: '5mm', overflow: 'hidden' }}>{product.name}</div>
-            <EAN13 code={product.barcode} height={Math.min(60, Math.round(labelH * 1.5))} moduleWidth={1.1} />
-            <div style={{ fontSize: '10pt', fontWeight: 800, lineHeight: 1 }}>{fmtDH(product.price)}</div>
-          </div>
-        ))}
-      </div>
+      {/* Conteneur d'impression Zebra : rendu hors de l'app (portal, enfant direct de body),
+          masqué à l'écran (display:none), révélé et seul imprimé par printLabels(). */}
+      {mounted && createPortal(
+        <div id="zebra-print-root" className="hidden">
+          {labels.map(({ key, product }) => (
+            <div key={key} className="zlabel" style={{ width: `${labelW}mm`, height: `${labelH}mm`, color: '#000', background: '#fff', textAlign: 'center' }}>
+              <div style={{ fontSize: '6pt', fontWeight: 700, textTransform: 'uppercase', lineHeight: 1 }}>{settings.storeName}</div>
+              <div style={{ fontSize: '7pt', fontWeight: 600, lineHeight: 1.05, maxHeight: '5mm', overflow: 'hidden' }}>{product.name}</div>
+              <EAN13 code={product.barcode} height={Math.min(60, Math.round(labelH * 1.5))} moduleWidth={1.1} />
+              <div style={{ fontSize: '10pt', fontWeight: 800, lineHeight: 1 }}>{fmtDH(product.price)}</div>
+            </div>
+          ))}
+        </div>,
+        document.body
+      )}
     </>
   )
 }
