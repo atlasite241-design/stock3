@@ -4,6 +4,7 @@ import './globals.css'
 import { LanguageProvider } from '@/lib/i18n'
 import { AuthProvider } from '@/lib/auth-context'
 import PwaRegister from '@/components/PwaRegister'
+import InstallPrompt from '@/components/InstallPrompt'
 
 export const metadata: Metadata = {
   title: 'Droguerie Pro — Gestion & Caisse',
@@ -70,6 +71,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <PwaRegister />
         <LanguageProvider>
           <AuthProvider>{children}</AuthProvider>
+          <InstallPrompt />
         </LanguageProvider>
       </body>
     </html>
