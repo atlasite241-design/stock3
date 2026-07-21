@@ -15,7 +15,7 @@ import { useLanguage } from '@/lib/i18n'
 const PAGE_SIZE = 12
 
 function Content() {
-  const { ready, products, stores, activeStoreId, activeStoreInitialized, initializeStock } = useDroguerie()
+  const { ready, products, movements, stores, activeStoreId, activeStoreInitialized, initializeStock } = useDroguerie()
   const { currentUser } = useAuth()
   const { t } = useLanguage()
   const toast = useToast()
@@ -31,16 +31,24 @@ function Content() {
   const canForce = currentUser?.role === 'Administrateur' || currentUser?.role === 'Gérant'
   const storeName = stores.find((s) => s.id === activeStoreId)?.name ?? '—'
 
+  // Produits déjà initialisés (un mouvement stock_initial existe) → exclus de la liste.
+  const initializedIds = useMemo(
+    () => new Set(movements.filter((m) => m.type === 'stock_initial').map((m) => m.productId)),
+    [movements]
+  )
+
   const categories = useMemo(() => ['Toutes', ...Array.from(new Set(products.map((p) => p.category)))], [products])
+
+  const pending = useMemo(() => products.filter((p) => !initializedIds.has(p.id)), [products, initializedIds])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return products.filter((p) => {
+    return pending.filter((p) => {
       const okCat = category === 'Toutes' || p.category === category
       const okQ = !q || p.name.toLowerCase().includes(q) || p.barcode.includes(q) || p.id.toLowerCase().includes(q)
       return okCat && okQ
     })
-  }, [products, query, category])
+  }, [pending, query, category])
 
   if (!ready) {
     return <Loader />
@@ -52,7 +60,7 @@ function Content() {
   const setQ = (id: string, v: number) => setQty((m) => ({ ...m, [id]: Math.max(0, Math.round(v || 0)) }))
   const ref = (id: string) => id.slice(-8).toUpperCase()
 
-  const entries = Object.entries(qty).filter(([, v]) => v > 0)
+  const entries = Object.entries(qty).filter(([id, v]) => v > 0 && !initializedIds.has(id))
   const totalQty = entries.reduce((s, [, v]) => s + v, 0)
   const totalValue = entries.reduce((s, [id, v]) => s + v * (products.find((p) => p.id === id)?.cost ?? 0), 0)
 
@@ -61,6 +69,7 @@ function Content() {
     if (!c) return
     const p = products.find((x) => x.barcode === c)
     if (!p) { toast(`${t('si_toast_not_found')} ${c}`, 'error'); return }
+    if (initializedIds.has(p.id)) { toast(`${p.name} — ${t('si_already_prod')}`, 'error'); return }
     setQ(p.id, (qty[p.id] ?? 0) + 1)
     toast(`+1 ${p.name}`)
   }
@@ -72,7 +81,7 @@ function Content() {
     reader.onload = () => {
       const text = String(reader.result).replace(/^﻿/, '')
       const lines = text.split(/\r?\n/).filter((l) => l.trim())
-      const byBarcode = new Map(products.map((p) => [p.barcode, p.id]))
+      const byBarcode = new Map(pending.map((p) => [p.barcode, p.id]))
       const next = { ...qty }
       let n = 0
       for (const line of lines) {
@@ -116,7 +125,10 @@ function Content() {
             <Boxes className="h-6 w-6 text-amber-500" />
             {t('si_title')}
           </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{t('si_subtitle')} · <span className="font-semibold text-amber-600 dark:text-amber-400">{storeName}</span></p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+            {t('si_subtitle')} · <span className="font-semibold text-amber-600 dark:text-amber-400">{storeName}</span>
+            {initializedIds.size > 0 && <span className="tabular-nums"> · {initializedIds.size} {t('si_initialized_count')}</span>}
+          </p>
         </div>
         <div className="flex flex-wrap gap-3">
           <button onClick={() => csvRef.current?.click()} className="btn-secondary">

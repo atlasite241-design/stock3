@@ -557,6 +557,8 @@ const DICT = {
   si_toast_not_found: { fr: 'Code-barres introuvable :', ar: 'الرمز الشريطي غير موجود:' },
   si_force_btn: { fr: 'Forcer la ré-initialisation', ar: 'فرض إعادة التهيئة' },
   si_cancel: { fr: 'Annuler', ar: 'إلغاء' },
+  si_already_prod: { fr: 'produit déjà initialisé', ar: 'منتج مُهيّأ مسبقًا' },
+  si_initialized_count: { fr: 'déjà initialisé(s)', ar: 'مُهيّأ مسبقًا' },
   nav_stock_in: { fr: 'Entrées', ar: 'الإدخالات' },
   nav_stock_out: { fr: 'Sorties', ar: 'الإخراجات' },
   nav_stock_adjust: { fr: 'Ajustements', ar: 'التسويات' },
