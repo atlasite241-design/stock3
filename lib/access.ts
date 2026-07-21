@@ -26,6 +26,7 @@ export const ROUTE_PERM: Record<string, string> = {
   '/produits/codes-barres': 'prod.scan',
   // Stock
   '/stock': 'stock.view',
+  '/stock/stock-initial': 'stock.entry',
   '/stock/par-magasin': 'stock.view',
   '/stock/inventaire': 'stock.inventory',
   '/stock/mouvements': 'stock.movements',

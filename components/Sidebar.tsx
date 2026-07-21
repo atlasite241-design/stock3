@@ -82,6 +82,7 @@ const NAV: NavItem[] = [
     icon: Boxes,
     children: [
       { href: '/stock', labelKey: 'nav_stock_current' },
+      { href: '/stock/stock-initial', labelKey: 'nav_stock_initial' },
       { href: '/stock/par-magasin', labelKey: 'nav_stock_by_store' },
       { href: '/stock/inventaire', labelKey: 'nav_stock_inventory' },
       { href: '/stock/mouvements', labelKey: 'nav_stock_history' },

@@ -185,7 +185,7 @@ export interface StockMovement {
   date: string
   productId: string
   productName: string
-  type: 'entree' | 'sortie' | 'ajustement' | 'vente' | 'reception' | 'retour' | 'inventaire' | 'transfert_out' | 'transfert_in'
+  type: 'entree' | 'sortie' | 'ajustement' | 'vente' | 'reception' | 'retour' | 'inventaire' | 'transfert_out' | 'transfert_in' | 'stock_initial'
   qty: number
   note: string
   storeId?: string
@@ -635,6 +635,7 @@ export const MOVEMENT_META: Record<StockMovement['type'], { label: string; chip:
   inventaire: { label: 'Inventaire', chip: 'border-gray-200 bg-gray-50 text-gray-700' },
   transfert_out: { label: 'Transfert sortant', chip: 'border-orange-200 bg-orange-50 text-orange-700' },
   transfert_in: { label: 'Transfert entrant', chip: 'border-teal-200 bg-teal-50 text-teal-700' },
+  stock_initial: { label: 'Stock initial', chip: 'border-indigo-200 bg-indigo-50 text-indigo-700' },
 }
 
 export const fmtDH = (n: number) => `${n.toFixed(2).replace('.', ',')} DH`
@@ -1433,6 +1434,30 @@ export function useDroguerie() {
     persistProducts(curProducts)
     persistMovements(curMovements)
     logActivity('Inventaire physique validé')
+  }
+
+  // ---- Stock initial (mise en service d'un magasin) ----
+  /** Vrai si le magasin actif a déjà été initialisé (un mouvement stock_initial existe). */
+  const activeStoreInitialized = movements.some((m) => m.type === 'stock_initial' && (m.storeId ?? activeStoreRef.current) === activeStoreRef.current)
+
+  const initializeStock = (entries: { productId: string; qty: number }[], force = false) => {
+    const sid = activeStoreRef.current
+    const already = movements.some((m) => m.type === 'stock_initial' && (m.storeId ?? sid) === sid)
+    if (already && !force) return { ok: false as const, error: 'already' as const }
+    const qtyMap = new Map(entries.filter((e) => e.qty > 0).map((e) => [e.productId, Math.round(e.qty)]))
+    if (qtyMap.size === 0) return { ok: false as const, error: 'empty' as const }
+    const nowIso = new Date().toISOString()
+    const newMovements: StockMovement[] = []
+    const nextProducts = products.map((p) => {
+      const q = qtyMap.get(p.id)
+      if (q === undefined || p.storeId !== sid) return p
+      newMovements.push({ id: uid(), date: nowIso, productId: p.id, productName: p.name, type: 'stock_initial', qty: q, note: 'Initialisation du stock', storeId: sid })
+      return { ...p, stock: q }
+    })
+    persistProducts(nextProducts)
+    persistMovements([...newMovements, ...movements])
+    logActivity('Initialisation du stock', { target: stores.find((s) => s.id === sid)?.name, newValue: `${qtyMap.size} produit(s)` })
+    return { ok: true as const, count: qtyMap.size }
   }
 
   // ---- Sales ----
@@ -2448,6 +2473,8 @@ export function useDroguerie() {
     deleteProduct,
     importProducts,
     addMovement,
+    initializeStock,
+    activeStoreInitialized,
     adjustStock,
     applyInventory,
     recordSale,
