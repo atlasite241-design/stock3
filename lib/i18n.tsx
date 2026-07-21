@@ -9,6 +9,13 @@ const KEY = 'dp_lang'
 const DICT = {
   // Sidebar — top-level & group labels
   nav_dashboard: { fr: 'Tableau de bord', ar: 'لوحة القيادة' },
+  nav_guide: { fr: 'Guide de démarrage', ar: 'دليل البدء' },
+  guide_title: { fr: 'Guide de démarrage', ar: 'دليل البدء' },
+  guide_subtitle: { fr: "Procédure de mise en service, du paramétrage au stock initial jusqu'à la facturation.", ar: 'خطوات التشغيل، من الإعداد إلى المخزون الأولي حتى الفوترة.' },
+  guide_thread: { fr: 'Fil rouge', ar: 'المسار' },
+  guide_print: { fr: 'Imprimer', ar: 'طباعة' },
+  guide_reset: { fr: 'Décocher tout', ar: 'إلغاء تحديد الكل' },
+  guide_progress: { fr: 'étapes complétées', ar: 'خطوات مكتملة' },
   nav_pos: { fr: 'Point de vente (POS)', ar: 'نقطة البيع' },
   nav_pos_new_sale: { fr: 'Nouvelle vente (POS tactile)', ar: 'بيع جديد (نقطة بيع تفاعلية)' },
   nav_pos_quick_sale: { fr: 'Vente rapide', ar: 'بيع سريع' },

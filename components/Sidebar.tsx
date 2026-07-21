@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   Monitor,
   Package,
+  Rocket,
   Settings,
   ShoppingCart,
   Store,
@@ -41,6 +42,7 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { labelKey: 'nav_dashboard', icon: LayoutDashboard, href: '/' },
+  { labelKey: 'nav_guide', icon: Rocket, href: '/guide-demarrage' },
   {
     labelKey: 'nav_pos',
     icon: Monitor,
