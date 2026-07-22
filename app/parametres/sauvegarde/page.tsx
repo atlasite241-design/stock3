@@ -29,6 +29,7 @@ function Content() {
   const [resetOpen, setResetOpen] = useState(false)
   const [backups, setBackups] = useState<Backup[]>([])
   const [restoreTarget, setRestoreTarget] = useState<Backup | null>(null)
+  const [importState, setImportState] = useState<{ msg: string; pct: number | null } | null>(null)
   const jsonInputRef = useRef<HTMLInputElement>(null)
   const csvInputRef = useRef<HTMLInputElement>(null)
 
@@ -78,22 +79,52 @@ function Content() {
   const onImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    e.target.value = ''
+    setImportState({ msg: t('set_import_reading'), pct: 0 })
     const reader = new FileReader()
+    reader.onprogress = (ev) => {
+      if (ev.lengthComputable) setImportState({ msg: t('set_import_reading'), pct: Math.round((ev.loaded / ev.total) * 100) })
+    }
+    reader.onerror = () => { setImportState(null); toast(t('set_toast_invalid_backup'), 'error') }
     reader.onload = () => {
-      const rows = parseProductsCSV(String(reader.result))
-      if (rows.length === 0) {
-        toast(t('set_toast_no_valid_product'), 'error')
-        return
-      }
-      const { added, updated } = importProducts(rows)
-      toast(`✓ ${t('set_toast_import_added')} ${added} ${t('set_toast_import_added_suffix')} ${updated} ${t('set_toast_import_updated_suffix')}`)
+      // On repasse la main au navigateur entre chaque phase lourde (évite le gel).
+      setImportState({ msg: t('set_import_parsing'), pct: null })
+      setTimeout(() => {
+        let rows: ReturnType<typeof parseProductsCSV>
+        try { rows = parseProductsCSV(String(reader.result)) } catch { setImportState(null); toast(t('set_toast_no_valid_product'), 'error'); return }
+        if (rows.length === 0) { setImportState(null); toast(t('set_toast_no_valid_product'), 'error'); return }
+        setImportState({ msg: `${t('set_import_importing')} (${rows.length})`, pct: null })
+        setTimeout(() => {
+          try {
+            const { added, updated } = importProducts(rows)
+            toast(`✓ ${t('set_toast_import_added')} ${added} ${t('set_toast_import_added_suffix')} ${updated} ${t('set_toast_import_updated_suffix')}`)
+          } catch {
+            // Dépassement de quota localStorage sur un fichier trop volumineux.
+            toast(t('set_import_quota'), 'error')
+          } finally {
+            setImportState(null)
+          }
+        }, 40)
+      }, 40)
     }
     reader.readAsText(file)
-    e.target.value = ''
   }
 
   return (
     <>
+      {importState && (
+        <div className="fixed inset-x-3 bottom-3 z-[70] mx-auto max-w-md rounded-2xl border border-sky-200 bg-white/95 p-4 shadow-2xl backdrop-blur dark:border-sky-500/25 dark:bg-[#12121a]/95">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-semibold text-gray-900 dark:text-white">{importState.msg}</span>
+            {importState.pct !== null && <span className="font-bold text-sky-600 dark:text-sky-400 tabular-nums">{importState.pct}%</span>}
+          </div>
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
+            {importState.pct !== null
+              ? <div className="h-full rounded-full bg-gradient-to-r from-sky-400 to-blue-500 transition-all" style={{ width: `${importState.pct}%` }} />
+              : <div className="h-full w-1/3 animate-[pulse_1s_ease-in-out_infinite] rounded-full bg-gradient-to-r from-sky-400 to-blue-500" />}
+          </div>
+        </div>
+      )}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">{t('psub_backup_title')}</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{t('psub_backup_subtitle')}</p>

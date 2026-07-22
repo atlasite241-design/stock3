@@ -11,7 +11,7 @@ import CameraScanner from '@/components/CameraScanner'
 import { generateEan13 } from '@/components/EAN13'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
-import { exportProductsCSV, fmtDH, useDroguerie, type Product } from '@/lib/store'
+import { exportProductsCSVAsync, fmtDH, useDroguerie, type Product } from '@/lib/store'
 import { removeWhiteBackground } from '@/lib/image'
 import { useLanguage } from '@/lib/i18n'
 
@@ -42,8 +42,20 @@ function ProduitsContent() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null)
   const [cameraOpen, setCameraOpen] = useState(false)
+  const [exportPct, setExportPct] = useState<number | null>(null)
   const urlConsumed = useRef(false)
   const imageInputRef = useRef<HTMLInputElement>(null)
+
+  const runExport = async () => {
+    if (exportPct !== null) return
+    setExportPct(0)
+    try {
+      await exportProductsCSVAsync(products, (p) => setExportPct(p))
+      toast(`✓ ${products.length} ${t('prod_catalog_count')}`)
+    } finally {
+      setTimeout(() => setExportPct(null), 400)
+    }
+  }
 
   useEffect(() => {
     if (urlConsumed.current) return
@@ -166,6 +178,17 @@ function ProduitsContent() {
 
   return (
     <>
+      {exportPct !== null && (
+        <div className="fixed inset-x-3 bottom-3 z-[70] mx-auto max-w-md rounded-2xl border border-amber-200 bg-white/95 p-4 shadow-2xl backdrop-blur dark:border-amber-500/25 dark:bg-[#12121a]/95">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-semibold text-gray-900 dark:text-white">{t('prod_export_csv')}…</span>
+            <span className="font-bold text-amber-600 dark:text-amber-400 tabular-nums">{exportPct}%</span>
+          </div>
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
+            <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 transition-all" style={{ width: `${exportPct}%` }} />
+          </div>
+        </div>
+      )}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -181,8 +204,8 @@ function ProduitsContent() {
             <Printer className="h-4 w-4" />
             {t('prod_print')}
           </button>
-          <button onClick={() => exportProductsCSV(products)} className="btn-secondary">
-            {t('prod_export_csv')}
+          <button onClick={runExport} disabled={exportPct !== null} className="btn-secondary disabled:opacity-60">
+            {exportPct !== null ? `${t('prod_export_csv')}… ${exportPct}%` : t('prod_export_csv')}
           </button>
           <button onClick={openAdd} className="btn-primary">
             <Plus className="h-4 w-4" />

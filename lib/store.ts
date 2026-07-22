@@ -1053,12 +1053,26 @@ export function exportSalesCSV(sales: Sale[]) {
   downloadFile('ventes-droguerie.csv', rows.map((r) => r.join(';')).join('\n'), 'text/csv;charset=utf-8')
 }
 
+const PRODUCT_CSV_HEADER = ['Nom', 'Code-barres', 'Catégorie', 'Sous-catégorie', 'Marque', 'Unité', 'Prix achat', 'Prix vente', 'Stock', 'Stock min']
+const productCsvRow = (p: Product) => [p.name, p.barcode, p.category, p.subcategory ?? '', p.brand, p.unit, p.cost.toFixed(2), p.price.toFixed(2), String(p.stock), String(p.minStock)]
+
 export function exportProductsCSV(products: Product[]) {
-  const rows = [['Nom', 'Code-barres', 'Catégorie', 'Marque', 'Unité', 'Prix achat', 'Prix vente', 'Stock', 'Stock min']]
-  products.forEach((p) =>
-    rows.push([p.name, p.barcode, p.category, p.brand, p.unit, p.cost.toFixed(2), p.price.toFixed(2), String(p.stock), String(p.minStock)])
-  )
+  const rows = [PRODUCT_CSV_HEADER, ...products.map(productCsvRow)]
   downloadFile('produits-droguerie.csv', rows.map((r) => r.join(';')).join('\n'), 'text/csv;charset=utf-8')
+}
+
+/** Export CSV asynchrone par lots, avec progression (0→100), sans figer l'UI. */
+export async function exportProductsCSVAsync(products: Product[], onProgress?: (pct: number) => void) {
+  const CHUNK = 2000
+  const lines: string[] = [PRODUCT_CSV_HEADER.join(';')]
+  for (let i = 0; i < products.length; i += CHUNK) {
+    const part = products.slice(i, i + CHUNK)
+    for (const p of part) lines.push(productCsvRow(p).join(';'))
+    onProgress?.(Math.min(100, Math.round(((i + part.length) / Math.max(1, products.length)) * 100)))
+    await new Promise((r) => setTimeout(r, 0)) // laisse l'UI se rafraîchir
+  }
+  onProgress?.(100)
+  downloadFile('produits-droguerie.csv', lines.join('\n'), 'text/csv;charset=utf-8')
 }
 
 /** Parse a products CSV (semicolon or comma separated, FR headers accepted). Returns parsed rows. */
@@ -1359,20 +1373,25 @@ export function useDroguerie() {
   }
 
   const importProducts = (rows: Omit<Product, 'id'>[]) => {
+    // O(N) : index par code-barres au lieu d'un .find() dans la boucle (évite le gel sur gros fichiers).
     let added = 0
     let updated = 0
-    let next = [...products]
-    rows.forEach((r) => {
-      const existing = r.barcode ? next.find((p) => p.barcode === r.barcode) : undefined
-      if (existing) {
-        next = next.map((p) => (p.id === existing.id ? { ...p, ...r } : p))
+    const arr: Product[] = products.map((p) => ({ ...p }))
+    const byBarcode = new Map<string, number>()
+    arr.forEach((p, i) => { if (p.barcode) byBarcode.set(p.barcode, i) })
+    for (const r of rows) {
+      const bc = r.barcode
+      const idx = bc ? byBarcode.get(bc) : undefined
+      if (idx !== undefined) {
+        arr[idx] = { ...arr[idx], ...r }
         updated++
       } else {
-        next = [{ ...r, id: uid() }, ...next]
+        if (bc) byBarcode.set(bc, arr.length)
+        arr.push({ ...r, id: uid() })
         added++
       }
-    })
-    persistProducts(next)
+    }
+    persistProducts(arr)
     logActivity(`Import produits : ${added} ajoutés, ${updated} mis à jour`)
     return { added, updated }
   }
