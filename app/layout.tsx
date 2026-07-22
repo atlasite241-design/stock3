@@ -73,8 +73,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <PwaRegister />
         <LanguageProvider>
           <DroguerieProvider>
-            <BootSplash />
-            <AuthProvider>{children}</AuthProvider>
+            <AuthProvider>
+              <BootSplash />
+              {children}
+            </AuthProvider>
           </DroguerieProvider>
           <InstallPrompt />
         </LanguageProvider>

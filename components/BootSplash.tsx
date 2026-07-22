@@ -3,30 +3,39 @@
 import { useEffect, useRef, useState } from 'react'
 import { Store } from 'lucide-react'
 import { useDroguerie } from '@/lib/store'
+import { useAuth } from '@/lib/auth-context'
 import { useLanguage } from '@/lib/i18n'
 
-/** Écran de démarrage affiché pendant le chargement initial (lecture des produits en
- *  IndexedDB). Masque le figement et donne une entrée soignée. Se retire une fois prêt. */
+/** Écran de démarrage affiché APRÈS l'identification (entrée dans l'app), le temps que
+ *  les données soient prêtes. Masque le figement et donne une entrée soignée. */
 export default function BootSplash() {
   const { ready } = useDroguerie()
+  const { currentUser } = useAuth()
   const { t } = useLanguage()
+  const authed = !!currentUser
+  const [visible, setVisible] = useState(false)
   const [minElapsed, setMinElapsed] = useState(false)
-  const [hidden, setHidden] = useState(false)
-  const startedHidden = useRef(false)
+  const startedRef = useRef(false)
 
+  // Déclenche le splash au moment de l'identification (et réarme après déconnexion).
   useEffect(() => {
-    const tm = setTimeout(() => setMinElapsed(true), 1400) // durée mini pour un rendu fluide
+    if (!authed) { startedRef.current = false; setVisible(false); return }
+    if (startedRef.current) return
+    startedRef.current = true
+    setVisible(true)
+    setMinElapsed(false)
+    const tm = setTimeout(() => setMinElapsed(true), 1400)
     return () => clearTimeout(tm)
-  }, [])
+  }, [authed])
 
+  // Retire le splash quand les données sont prêtes ET la durée mini écoulée.
   useEffect(() => {
-    if (!ready || !minElapsed || startedHidden.current) return
-    startedHidden.current = true
-    const tm = setTimeout(() => setHidden(true), 550)
+    if (!visible || !ready || !minElapsed) return
+    const tm = setTimeout(() => setVisible(false), 550)
     return () => clearTimeout(tm)
-  }, [ready, minElapsed])
+  }, [visible, ready, minElapsed])
 
-  if (hidden) return null
+  if (!visible) return null
   const leaving = ready && minElapsed
 
   return (
