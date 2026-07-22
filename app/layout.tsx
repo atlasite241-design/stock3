@@ -3,8 +3,10 @@ import type { ReactNode } from 'react'
 import './globals.css'
 import { LanguageProvider } from '@/lib/i18n'
 import { AuthProvider } from '@/lib/auth-context'
+import { DroguerieProvider } from '@/lib/droguerie-provider'
 import PwaRegister from '@/components/PwaRegister'
 import InstallPrompt from '@/components/InstallPrompt'
+import BootSplash from '@/components/BootSplash'
 
 export const metadata: Metadata = {
   title: 'Droguerie Pro — Gestion & Caisse',
@@ -70,7 +72,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="font-sans">
         <PwaRegister />
         <LanguageProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <DroguerieProvider>
+            <BootSplash />
+            <AuthProvider>{children}</AuthProvider>
+          </DroguerieProvider>
           <InstallPrompt />
         </LanguageProvider>
       </body>

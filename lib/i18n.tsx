@@ -14,6 +14,7 @@ const DICT = {
   install_desc: { fr: "Ajoute Droguerie Pro à ton écran d'accueil.", ar: 'أضف Droguerie Pro إلى الشاشة الرئيسية.' },
   install_ios: { fr: "Appuie sur Partager ↑ puis « Sur l'écran d'accueil ».", ar: 'اضغط على مشاركة ↑ ثم «إضافة إلى الشاشة الرئيسية».' },
   install_btn: { fr: 'Installer', ar: 'تثبيت' },
+  splash_init: { fr: 'Initialisation du système…', ar: 'تهيئة النظام…' },
   guide_title: { fr: 'Guide de démarrage', ar: 'دليل البدء' },
   guide_subtitle: { fr: "Procédure de mise en service, du paramétrage au stock initial jusqu'à la facturation.", ar: 'خطوات التشغيل، من الإعداد إلى المخزون الأولي حتى الفوترة.' },
   guide_thread: { fr: 'Fil rouge', ar: 'المسار' },

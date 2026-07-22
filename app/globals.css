@@ -194,3 +194,7 @@ table [contenteditable='true'] {
   0%, 100% { transform: scaleY(0.3); opacity: 0.75; }
   50%      { transform: scaleY(1);   opacity: 1; }
 }
+
+/* Splash de démarrage — barre indéterminée (animation composée → fluide même pendant un blocage JS) */
+@keyframes splashSlide { 0% { transform: translateX(-120%); } 100% { transform: translateX(360%); } }
+@keyframes splashPulse { 0%,100% { opacity: .55; } 50% { opacity: 1; } }

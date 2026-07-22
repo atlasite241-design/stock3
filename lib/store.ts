@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { bootstrapFromRemote, startSync, syncOnSave } from './sync'
 import { tursoConfigured } from './turso'
 import { getSession } from './auth'
@@ -1174,7 +1174,10 @@ export function importAllJSON(text: string): boolean {
 // Main hook
 // ------------------------------------------------------------------
 
-export function useDroguerie() {
+// Hook interne : contient TOUT l'état + les actions. Appelé UNE SEULE FOIS par le
+// DroguerieProvider (voir lib/droguerie-provider.tsx). Les pages consomment via le
+// contexte partagé `useDroguerie()` → les 55 000 produits ne sont chargés qu'une fois.
+export function useDroguerieState() {
   const [products, setProducts] = useState<Product[]>([])
   const [sales, setSales] = useState<Sale[]>([])
   const [clients, setClients] = useState<Client[]>([])
@@ -2554,4 +2557,15 @@ export function useDroguerie() {
     saveSettings,
     resetStats,
   }
+}
+
+// Contexte partagé : l'état est calculé UNE fois par le DroguerieProvider et
+// distribué à toutes les pages (au lieu d'un rechargement par page).
+export type DroguerieValue = ReturnType<typeof useDroguerieState>
+export const DroguerieContext = createContext<DroguerieValue | null>(null)
+
+export function useDroguerie(): DroguerieValue {
+  const ctx = useContext(DroguerieContext)
+  if (!ctx) throw new Error('useDroguerie doit être utilisé dans <DroguerieProvider>')
+  return ctx
 }
