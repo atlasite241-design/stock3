@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Printer, RotateCcw, Rocket } from 'lucide-react'
+import { Copy, Printer, RotateCcw, Rocket, Smartphone } from 'lucide-react'
 import AppShell from '@/components/AppShell'
+import InstallQR from '@/components/InstallQR'
+import { useToast } from '@/components/Toast'
 import { useLanguage } from '@/lib/i18n'
 
 type Bi = { fr: string; ar: string }
@@ -104,11 +106,18 @@ function renderText(t: string) {
 
 function Content() {
   const { t, lang } = useLanguage()
+  const toast = useToast()
   const [checks, setChecks] = useState<Set<string>>(new Set())
+  const [appUrl, setAppUrl] = useState('')
 
   useEffect(() => {
     try { const raw = localStorage.getItem(KEY); if (raw) setChecks(new Set(JSON.parse(raw))) } catch {}
+    setAppUrl(window.location.origin)
   }, [])
+
+  const copyUrl = async () => {
+    try { await navigator.clipboard.writeText(appUrl); toast(`✓ ${t('guide_copied')}`) } catch {}
+  }
 
   const persist = (s: Set<string>) => { setChecks(new Set(s)); try { localStorage.setItem(KEY, JSON.stringify([...s])) } catch {} }
   const toggle = (id: string) => { const s = new Set(checks); s.has(id) ? s.delete(id) : s.add(id); persist(s) }
@@ -131,6 +140,22 @@ function Content() {
         <div className="guide-noprint flex flex-wrap gap-3">
           <button onClick={reset} className="btn-secondary"><RotateCcw className="h-4 w-4" />{t('guide_reset')}</button>
           <button onClick={() => window.print()} className="btn-primary"><Printer className="h-4 w-4" />{t('guide_print')}</button>
+        </div>
+      </motion.div>
+
+      {/* Installer sur mobile (QR) */}
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="glass-card flex flex-col items-center gap-4 p-5 sm:flex-row sm:items-center sm:gap-6">
+        <InstallQR url={appUrl} />
+        <div className="min-w-0 flex-1 text-center sm:text-left">
+          <h2 className="flex items-center justify-center gap-2 text-base font-bold text-gray-900 dark:text-white sm:justify-start sm:text-lg">
+            <Smartphone className="h-5 w-5 text-amber-500" />
+            {t('guide_install_title')}
+          </h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{t('guide_install_hint')}</p>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+            <span className="rounded-lg bg-gray-100 px-3 py-1.5 font-mono text-xs text-gray-700 dark:bg-white/10 dark:text-zinc-300">{appUrl}</span>
+            <button onClick={copyUrl} className="btn-secondary !h-8 text-xs"><Copy className="h-3.5 w-3.5" />{t('guide_copy')}</button>
+          </div>
         </div>
       </motion.div>
 
