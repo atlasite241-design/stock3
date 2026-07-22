@@ -14,6 +14,14 @@ let cache: string | null = null
 let cacheReady = false
 let dbPromise: Promise<IDBDatabase | null> | null = null
 
+// Écriture différée : le tableau produits est gardé tel quel et n'est sérialisé
+// qu'une fois par rafale. Sans cela, chaque vente (qui décrémente un stock)
+// déclenchait un JSON.stringify de ~15 Mo, bloquant la caisse quelques centaines
+// de millisecondes. Toute lecture force la matérialisation (voir productsGet).
+let pendingArr: unknown[] | null = null
+let flushTimer: ReturnType<typeof setTimeout> | null = null
+const FLUSH_MS = 700
+
 function openDB(): Promise<IDBDatabase | null> {
   if (dbPromise) return dbPromise
   dbPromise = new Promise((resolve) => {
@@ -71,8 +79,30 @@ export async function initProductCache(): Promise<void> {
 
 export function productCacheReady(): boolean { return cacheReady }
 
+/** Sérialise le tableau en attente et persiste (appelé par le minuteur ou une lecture). */
+export function flushProducts(): void {
+  if (flushTimer != null) { clearTimeout(flushTimer); flushTimer = null }
+  if (pendingArr == null) return
+  const value = JSON.stringify(pendingArr)
+  pendingArr = null
+  cache = value
+  void openDB().then((db) => { if (db) void idbPut(db, value) })
+}
+
+/** Écriture rapide : garde le tableau en mémoire, sérialisation différée. */
+export function productsSetArray(arr: unknown[]): void {
+  pendingArr = arr
+  if (flushTimer == null) flushTimer = setTimeout(flushProducts, FLUSH_MS)
+}
+
+/** Tableau produits encore non sérialisé (évite un stringify + parse inutiles). */
+export function productsGetArray(): unknown[] | null {
+  return pendingArr
+}
+
 /** Lecture synchrone (depuis le cache mémoire). */
 export function productsGet(): string | null {
+  if (pendingArr != null) flushProducts() // une lecture exige la version à jour
   if (cache != null) return cache
   // Repli avant init (ne devrait pas arriver après initProductCache).
   if (typeof localStorage !== 'undefined') return localStorage.getItem(PRODUCTS_KEY)
@@ -81,11 +111,15 @@ export function productsGet(): string | null {
 
 /** Écriture synchrone du cache + persistance IndexedDB asynchrone. */
 export function productsSet(value: string): void {
+  if (flushTimer != null) { clearTimeout(flushTimer); flushTimer = null }
+  pendingArr = null
   cache = value
   void openDB().then((db) => { if (db) void idbPut(db, value) })
 }
 
 export function productsRemove(): void {
+  if (flushTimer != null) { clearTimeout(flushTimer); flushTimer = null }
+  pendingArr = null
   cache = null
   void openDB().then((db) => {
     if (!db) return
@@ -105,4 +139,13 @@ export function storageGet(key: string): string | null {
 export function storageSet(key: string, value: string): void {
   if (key === PRODUCTS_KEY) { productsSet(value); return }
   localStorage.setItem(key, value)
+}
+
+// Filet de sécurité : rien ne doit rester en attente si l'onglet se ferme.
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', flushProducts)
+  window.addEventListener('beforeunload', flushProducts)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushProducts()
+  })
 }

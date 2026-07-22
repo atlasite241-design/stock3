@@ -4,7 +4,15 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { bootstrapFromRemote, startSync, syncOnSave } from './sync'
 import { tursoConfigured } from './turso'
 import { getSession } from './auth'
-import { initProductCache, productsRemove, storageGet, storageSet } from './pstore'
+import {
+  PRODUCTS_KEY,
+  initProductCache,
+  productsGetArray,
+  productsRemove,
+  productsSetArray,
+  storageGet,
+  storageSet,
+} from './pstore'
 
 // ------------------------------------------------------------------
 // Types
@@ -645,6 +653,12 @@ export const uid = () => Date.now().toString(36) + Math.random().toString(36).sl
 
 function load<T>(key: string, fallback: T): T {
   try {
+    // Produits : si le tableau est encore en mémoire (non sérialisé), on le rend
+    // directement — inutile de faire un stringify suivi d'un parse de ~15 Mo.
+    if (key === PRODUCTS_KEY) {
+      const arr = productsGetArray()
+      if (arr) return arr as T
+    }
     const raw = storageGet(key)
     return raw ? (JSON.parse(raw) as T) : fallback
   } catch {
@@ -654,6 +668,14 @@ function load<T>(key: string, fallback: T): T {
 
 function save(key: string, value: unknown) {
   // La clé produits est routée vers IndexedDB (gros catalogues) ; le reste vers localStorage.
+  // Pour les produits, la sérialisation est différée (voir pstore) : une vente ne
+  // doit pas bloquer la caisse le temps d'un JSON.stringify de ~15 Mo.
+  if (key === PRODUCTS_KEY && Array.isArray(value)) {
+    productsSetArray(value)
+    window.dispatchEvent(new CustomEvent('droguerie-store-change', { detail: key }))
+    syncOnSave(key)
+    return
+  }
   storageSet(key, JSON.stringify(value))
   window.dispatchEvent(new CustomEvent('droguerie-store-change', { detail: key }))
   // Write-through vers Turso (no-op tant que startSync() n'a pas été appelée,

@@ -64,6 +64,17 @@ function upsertStmt(collection: string, id: string, storeId: string | null, data
   return { sql: UPSERT, args: [collection, id, storeId, JSON.stringify(data), now] }
 }
 
+function upsertStmtRaw(collection: string, id: string, storeId: string | null, data: string, now: number): Stmt {
+  return { sql: UPSERT, args: [collection, id, storeId, data, now] }
+}
+
+// Empreinte du dernier état poussé (collection → id → JSON). Sans elle, `pushOne`
+// re-téléversait TOUS les enregistrements à chaque sauvegarde : une vente qui
+// décrémente un stock renvoyait les 55 000 produits (550 requêtes) et réécrivait
+// tous les `updated_at`, obligeant ensuite chaque appareil à re-télécharger le
+// catalogue entier à chaque pull. On n'envoie plus que ce qui a réellement changé.
+const pushedSnapshot = new Map<string, Map<string, string>>()
+
 /** Pousse une collection (tous ses enregistrements) vers Turso. */
 async function pushOne(c: Collection, now: number): Promise<number> {
   const raw = typeof window !== 'undefined' ? storageGet(c.key) : null
@@ -75,18 +86,26 @@ async function pushOne(c: Collection, now: number): Promise<number> {
     return 0
   }
   const stmts: Stmt[] = []
+  let nextSnapshot: Map<string, string> | null = null
   if (c.singleton) {
     stmts.push(upsertStmt(c.collection, 'global', null, parsed, now))
   } else if (Array.isArray(parsed)) {
+    const prev = pushedSnapshot.get(c.collection)
+    nextSnapshot = new Map<string, string>()
     for (const rec of parsed as Row[]) {
       if (!rec || !rec.id) continue
-      stmts.push(upsertStmt(c.collection, rec.id, rec.storeId ?? null, rec, now))
+      const data = JSON.stringify(rec)
+      nextSnapshot.set(rec.id, data)
+      if (prev && prev.get(rec.id) === data) continue // inchangé depuis le dernier envoi
+      stmts.push(upsertStmtRaw(c.collection, rec.id, rec.storeId ?? null, data, now))
     }
   }
   const db = turso()
   for (let i = 0; i < stmts.length; i += 100) {
     await db.batch(stmts.slice(i, i + 100))
   }
+  // Enregistré seulement après succès : un échec fera repartir l'envoi complet.
+  if (nextSnapshot) pushedSnapshot.set(c.collection, nextSnapshot)
   return stmts.length
 }
 
