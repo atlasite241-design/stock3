@@ -20,6 +20,7 @@ import {
   TriangleAlert,
   User,
 } from 'lucide-react'
+import Loader from '@/components/Loader'
 import { useAuth } from '@/lib/auth-context'
 import { hashSecret, verifySecret } from '@/lib/auth'
 import { useDroguerie, type AppUser } from '@/lib/store'
@@ -87,7 +88,11 @@ export default function LoginPage() {
   }
 
   if (!ready) {
-    return <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f] text-sm text-slate-500">…</div>
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f]">
+        <Loader className="!min-h-0" />
+      </div>
+    )
   }
 
   return (

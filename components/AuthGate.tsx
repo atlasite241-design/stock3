@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
+import Loader from './Loader'
 import LicenseGate from './LicenseGate'
 import PasswordChangeGate from './PasswordChangeGate'
 
@@ -23,8 +24,8 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (!ready) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white text-sm text-gray-400 dark:bg-[#0a0a0f] dark:text-zinc-500">
-        …
+      <div className="flex min-h-screen items-center justify-center bg-white dark:bg-[#0a0a0f]">
+        <Loader className="!min-h-0" />
       </div>
     )
   }

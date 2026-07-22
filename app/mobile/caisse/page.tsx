@@ -1,5 +1,6 @@
 'use client'
 
+import Loader from '@/components/Loader'
 import React, { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Check, CreditCard, Lock, Minus, Plus, ScanLine, Search, ShoppingCart, Trash2, Wallet } from 'lucide-react'
@@ -27,7 +28,7 @@ function Content() {
   const inCart = (id: string) => cart.find((i) => i.productId === id)?.qty ?? 0
   const total = useMemo(() => cart.reduce((a, i) => a + i.price * i.qty, 0), [cart])
 
-  if (!ready) return <div className="flex h-64 items-center justify-center text-sm text-slate-500 dark:text-slate-400">…</div>
+  if (!ready) return <Loader className="!min-h-0 h-64" />
 
   // Register must be open for the active store.
   if (!currentSession) {

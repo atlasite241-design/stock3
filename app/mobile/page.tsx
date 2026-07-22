@@ -1,5 +1,6 @@
 'use client'
 
+import Loader from '@/components/Loader'
 import { useMemo } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -78,7 +79,7 @@ function Content() {
   }, [sales, products])
 
   if (!ready) {
-    return <div className="flex h-64 items-center justify-center text-sm text-slate-500 dark:text-slate-400">…</div>
+    return <Loader className="!min-h-0 h-64" />
   }
 
   const manager = activeStore?.manager || 'Gérant'

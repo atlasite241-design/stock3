@@ -1,5 +1,6 @@
 'use client'
 
+import Loader from '@/components/Loader'
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Check, Minus, Plus, RotateCcw, ScanLine, Search, X } from 'lucide-react'
@@ -63,7 +64,7 @@ function Content() {
     setDone(true)
   }
 
-  if (!ready) return <div className="flex h-64 items-center justify-center text-sm text-slate-500 dark:text-slate-400">…</div>
+  if (!ready) return <Loader className="!min-h-0 h-64" />
 
   if (done) {
     return (

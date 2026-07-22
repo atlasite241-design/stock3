@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { CheckCircle2, KeyRound, Loader2, ShieldCheck } from 'lucide-react'
+import Loader from './Loader'
 import { activateLicense, isLicensed } from '@/lib/license'
 import { useLanguage } from '@/lib/i18n'
 
@@ -47,7 +48,11 @@ export default function LicenseGate({ children }: { children: React.ReactNode })
   }
 
   if (!checked) {
-    return <div className="flex min-h-screen items-center justify-center bg-white text-sm text-gray-400 dark:bg-[#0a0a0f] dark:text-zinc-500">…</div>
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white dark:bg-[#0a0a0f]">
+        <Loader className="!min-h-0" />
+      </div>
+    )
   }
 
   if (licensed) return <>{children}</>

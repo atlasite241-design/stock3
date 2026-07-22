@@ -1,5 +1,6 @@
 'use client'
 
+import Loader from '@/components/Loader'
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { Receipt } from 'lucide-react'
@@ -30,7 +31,7 @@ function Content() {
     return { total, count: todaySales.length, byMode, recent }
   }, [sales])
 
-  if (!ready) return <div className="flex h-64 items-center justify-center text-sm text-slate-500 dark:text-slate-400">…</div>
+  if (!ready) return <Loader className="!min-h-0 h-64" />
 
   const modes: Sale['payment'][] = ['especes', 'carte', 'credit', 'mixte']
 

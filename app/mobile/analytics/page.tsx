@@ -1,5 +1,6 @@
 'use client'
 
+import Loader from '@/components/Loader'
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import MobileShell from '@/components/MobileShell'
@@ -44,7 +45,7 @@ function Content() {
     return { days, maxCa, ca7, profit7, count7, avgBasket: count7 > 0 ? ca7 / count7 : 0, cats, catTotal }
   }, [sales, products])
 
-  if (!ready) return <div className="flex h-64 items-center justify-center text-sm text-slate-500 dark:text-slate-400">…</div>
+  if (!ready) return <Loader className="!min-h-0 h-64" />
 
   const kpis = [
     { label: t('mob_revenue_7d'), value: fmtDH(model.ca7) },
