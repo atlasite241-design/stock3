@@ -214,25 +214,49 @@ interface RemoteRow {
   deleted: number
 }
 
+// Verrou de ré-entrance : le pull est déclenché toutes les 4 s. Sans ce garde,
+// un rattrapage long (gros catalogue) voyait plusieurs pulls se chevaucher et
+// réécrire le blob produits en parallèle → onglet figé.
+let pulling = false
+
 /** Récupère les enregistrements modifiés depuis le dernier curseur et les fusionne en local. */
 export async function pull(): Promise<void> {
-  if (!syncState.started) return
-  const db = turso()
-  const since = getCursor()
-  const res = await db.execute({
-    sql: 'SELECT collection, id, data, updated_at, deleted FROM records WHERE updated_at > ? ORDER BY updated_at ASC LIMIT 1000',
-    args: [since],
-  })
-  if (res.rows.length === 0) return
-
-  let maxTs = since
-  const byCol = new Map<string, RemoteRow[]>()
-  for (const r of res.rows as unknown as RemoteRow[]) {
-    maxTs = Math.max(maxTs, Number(r.updated_at))
-    const list = byCol.get(r.collection) ?? []
-    list.push(r)
-    byCol.set(r.collection, list)
+  if (!syncState.started || pulling) return
+  pulling = true
+  try {
+    await pullInner()
+  } finally {
+    pulling = false
   }
+}
+
+async function pullInner(): Promise<void> {
+  const db = turso()
+  const since0 = getCursor()
+  let since = since0
+  let maxTs = since0
+  const byCol = new Map<string, RemoteRow[]>()
+
+  // Rattrapage en mémoire AVANT toute écriture locale. Auparavant, un seul lot de
+  // 1000 était appliqué par appel : rattraper 50 000 produits réécrivait le blob
+  // produits (~15 Mo : JSON.parse + JSON.stringify) une fois par lot, ce qui
+  // figeait l'onglet plusieurs secondes (« Page ne répondant pas »).
+  for (let batch = 0; batch < 200; batch++) {
+    const res = await db.execute({
+      sql: 'SELECT collection, id, data, updated_at, deleted FROM records WHERE updated_at > ? ORDER BY updated_at ASC LIMIT 1000',
+      args: [since],
+    })
+    if (res.rows.length === 0) break
+    for (const r of res.rows as unknown as RemoteRow[]) {
+      maxTs = Math.max(maxTs, Number(r.updated_at))
+      const list = byCol.get(r.collection) ?? []
+      list.push(r)
+      byCol.set(r.collection, list)
+    }
+    if (res.rows.length < 1000) break
+    since = maxTs
+  }
+  if (byCol.size === 0) return
 
   const changedCols: string[] = []
   for (const [colName, rows] of byCol) {
@@ -277,7 +301,9 @@ export async function pull(): Promise<void> {
   setCursor(maxTs)
   if (changedCols.length) {
     pushLog(`⇣ reçu: ${changedCols.join(', ')}`)
-    window.dispatchEvent(new CustomEvent('droguerie-sync-pull'))
+    // On transmet les collections réellement modifiées : le store ne recharge
+    // ainsi que ce qui a changé (recharger les produits = parser ~15 Mo).
+    window.dispatchEvent(new CustomEvent('droguerie-sync-pull', { detail: { collections: changedCols } }))
   }
 }
 

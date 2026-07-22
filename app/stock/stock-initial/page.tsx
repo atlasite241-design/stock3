@@ -53,35 +53,32 @@ function Content() {
     return m
   }, [products])
 
-  const pending = useMemo(() => products.filter((p) => !initializedIds.has(p.id)), [products, initializedIds])
-
-  // Clé de recherche pré-calculée une seule fois : sans elle, chaque frappe
-  // relançait un toLowerCase() sur tout le catalogue (figement du champ).
-  const searchIndex = useMemo(
-    () => pending.map((p) => ({ p, key: `${p.name} ${p.barcode} ${p.id}`.toLowerCase() })),
-    [pending]
-  )
-
   // Recherche différée : la saisie reste fluide même sur 50 000 produits.
   const deferredQuery = useDeferredValue(query)
 
-  const filtered = useMemo(() => {
+  // Un SEUL passage sur le catalogue : compte le total et extrait uniquement la
+  // page affichée, sans construire de tableau intermédiaire de 50 000 éléments.
+  const { pageItems, total } = useMemo(() => {
     const q = deferredQuery.trim().toLowerCase()
-    const out: typeof pending = []
-    for (const it of searchIndex) {
-      if (category !== 'Toutes' && it.p.category !== category) continue
-      if (q && !it.key.includes(q)) continue
-      out.push(it.p)
+    const start = (page - 1) * PAGE_SIZE
+    const end = start + PAGE_SIZE
+    const items: typeof products = []
+    let total = 0
+    for (const p of products) {
+      if (initializedIds.has(p.id)) continue
+      if (category !== 'Toutes' && p.category !== category) continue
+      if (q && !(p.name.toLowerCase().includes(q) || p.barcode.includes(q) || p.id.toLowerCase().includes(q))) continue
+      if (total >= start && total < end) items.push(p)
+      total++
     }
-    return out
-  }, [searchIndex, deferredQuery, category])
+    return { pageItems: items, total }
+  }, [products, initializedIds, category, deferredQuery, page])
 
   if (!ready) {
     return <Loader />
   }
 
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const setQ = (id: string, v: number) => setQty((m) => ({ ...m, [id]: Math.max(0, Math.round(v || 0)) }))
   const ref = (id: string) => id.slice(-8).toUpperCase()
@@ -107,7 +104,8 @@ function Content() {
     reader.onload = () => {
       const text = String(reader.result).replace(/^﻿/, '')
       const lines = text.split(/\r?\n/).filter((l) => l.trim())
-      const byBarcode = new Map(pending.map((p) => [p.barcode, p.id]))
+      const byBarcode = new Map<string, string>()
+      for (const p of products) if (p.barcode && !initializedIds.has(p.id)) byBarcode.set(p.barcode, p.id)
       const next = { ...qty }
       let n = 0
       for (const line of lines) {
@@ -250,7 +248,7 @@ function Content() {
                   </tr>
                 )
               })}
-              {filtered.length === 0 && (
+              {total === 0 && (
                 <tr><td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-zinc-500">{t('prod_none_found')}</td></tr>
               )}
             </tbody>
@@ -258,7 +256,7 @@ function Content() {
         </div>
         {pageCount > 1 && (
           <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 dark:border-white/10">
-            <p className="text-xs text-gray-500 dark:text-zinc-400 tabular-nums">{filtered.length} · {page}/{pageCount}</p>
+            <p className="text-xs text-gray-500 dark:text-zinc-400 tabular-nums">{total} · {page}/{pageCount}</p>
             <div className="flex gap-1">
               <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronLeft className="h-4 w-4" /></button>
               <button onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={page === pageCount} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronRight className="h-4 w-4" /></button>

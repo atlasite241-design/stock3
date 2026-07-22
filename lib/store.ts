@@ -1220,12 +1220,17 @@ export function useDroguerieState() {
   useEffect(() => {
     // Lit tout le localStorage dans l'état React. Rejoué quand la synchro
     // rapatrie des changements d'un autre appareil (événement 'droguerie-sync-pull').
-    const loadAll = () => {
-      setProducts(load<Product[]>(K.products, []).map(normProduct))
-      setSales(load(K.sales, []))
+    // `only` = collections réellement modifiées par la synchro (undefined au
+    // démarrage = tout charger). Recharger les produits coûte un JSON.parse de
+    // ~15 Mo + normProduct sur des dizaines de milliers d'objets : on l'évite
+    // quand la synchro n'a rapatrié que des ventes, des logs, etc.
+    const loadAll = (only?: string[]) => {
+      const wants = (name: string) => !only || only.includes(name)
+      if (wants('products')) setProducts(load<Product[]>(K.products, []).map(normProduct))
+      if (wants('sales')) setSales(load(K.sales, []))
       setClients(load<Client[]>(K.clients, []).map(normClient))
       setSuppliers(load(K.suppliers, []))
-      setMovements(load(K.movements, []))
+      if (wants('movements')) setMovements(load(K.movements, []))
       setPurchases(load(K.purchases, []))
       setQuotes(load(K.quotes, []))
       setReturns(load(K.returns, []))
@@ -1275,8 +1280,12 @@ export function useDroguerieState() {
     }
     void boot()
 
-    window.addEventListener('droguerie-sync-pull', loadAll)
-    return () => window.removeEventListener('droguerie-sync-pull', loadAll)
+    const onPull = (e: Event) => {
+      const cols = (e as CustomEvent<{ collections?: string[] }>).detail?.collections
+      loadAll(cols)
+    }
+    window.addEventListener('droguerie-sync-pull', onPull)
+    return () => window.removeEventListener('droguerie-sync-pull', onPull)
   }, [])
 
   const makePersist = <T,>(key: string, setter: (v: T) => void) =>
