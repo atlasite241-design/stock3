@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { Barcode, Printer, Save, Sparkles, Tag, Wand2 } from 'lucide-react'
+import { Barcode, ChevronLeft, ChevronRight, Printer, Save, Search, Sparkles, Tag, Wand2 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Select from '@/components/Select'
 import EAN13, { generateEan13, normalizeEan13 } from '@/components/EAN13'
@@ -22,6 +22,10 @@ function Content() {
   const [testResult, setTestResult] = useState<string | null>(null)
   const [labelW, setLabelW] = useState(40)
   const [labelH, setLabelH] = useState(30)
+  const [bcQuery, setBcQuery] = useState('')
+  const [bcPage, setBcPage] = useState(1)
+
+  useEffect(() => { setBcPage(1) }, [bcQuery])
 
   useEffect(() => {
     if (ready) {
@@ -31,9 +35,20 @@ function Content() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready])
 
+  const bcFiltered = useMemo(() => {
+    const q = bcQuery.trim().toLowerCase()
+    if (!q) return products
+    return products.filter((p) => p.name.toLowerCase().includes(q) || p.barcode.includes(q))
+  }, [products, bcQuery])
+
   if (!ready) {
     return <Loader />
   }
+
+  const BC_PAGE = 50
+  const bcPageCount = Math.max(1, Math.ceil(bcFiltered.length / BC_PAGE))
+  const bcSafePage = Math.min(bcPage, bcPageCount)
+  const bcPageItems = bcFiltered.slice((bcSafePage - 1) * BC_PAGE, bcSafePage * BC_PAGE)
 
   const saveLabelSize = () => {
     saveSettings({ ...settings, labelWidthMm: Math.max(10, labelW), labelHeightMm: Math.max(10, labelH) })
@@ -220,6 +235,12 @@ function Content() {
         transition={{ delay: 0.1, duration: 0.4 }}
         className="glass-card overflow-hidden"
       >
+        <div className="border-b border-gray-100 p-4 dark:border-white/10">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input value={bcQuery} onChange={(e) => setBcQuery(e.target.value)} placeholder={t('prod_search_placeholder')} className="input-field pl-10" />
+          </div>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px]">
             <thead>
@@ -231,7 +252,7 @@ function Content() {
               </tr>
             </thead>
             <tbody>
-              {products.map((p) => {
+              {bcPageItems.map((p) => {
                 const valid = !!normalizeEan13(p.barcode)
                 return (
                   <tr key={p.id} className="border-b border-gray-50 transition-colors hover:bg-amber-50/40">
@@ -273,6 +294,17 @@ function Content() {
             </tbody>
           </table>
         </div>
+        {bcPageCount > 1 && (
+          <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3 dark:border-white/10">
+            <p className="text-xs text-gray-500 dark:text-zinc-400 tabular-nums">{bcFiltered.length} · {bcSafePage}/{bcPageCount}</p>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setBcPage(1)} disabled={bcSafePage === 1} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-500 disabled:opacity-40 dark:border-white/10">«</button>
+              <button onClick={() => setBcPage((p) => Math.max(1, p - 1))} disabled={bcSafePage === 1} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronLeft className="h-4 w-4" /></button>
+              <button onClick={() => setBcPage((p) => Math.min(bcPageCount, p + 1))} disabled={bcSafePage === bcPageCount} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronRight className="h-4 w-4" /></button>
+              <button onClick={() => setBcPage(bcPageCount)} disabled={bcSafePage === bcPageCount} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-500 disabled:opacity-40 dark:border-white/10">»</button>
+            </div>
+          </div>
+        )}
       </motion.div>
 
       {/* Labels preview / print area */}

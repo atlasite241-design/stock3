@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { bootstrapFromRemote, startSync, syncOnSave } from './sync'
 import { tursoConfigured } from './turso'
 import { getSession } from './auth'
@@ -2432,10 +2432,17 @@ export function useDroguerie() {
   // Store-scoped views returned to every page (mutations keep operating on the full arrays).
   const scoped = <R extends { storeId?: string }>(arr: R[]) => arr.filter((r) => r.storeId === activeStoreId)
 
+  // Les produits peuvent être TRÈS nombreux (50 000+) : on mémorise le filtrage par
+  // magasin pour ne pas le recalculer à chaque rendu (sinon l'app fige).
+  const scopedProducts = useMemo(
+    () => products.filter((p) => p.storeId === activeStoreId),
+    [products, activeStoreId]
+  )
+
   return {
     ready,
     // Store-scoped views (filtered to the active store).
-    products: scoped(products),
+    products: scopedProducts,
     sales: scoped(sales),
     movements: scoped(movements),
     purchases: scoped(purchases),
