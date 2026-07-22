@@ -430,7 +430,17 @@ export function startSync() {
     ? resyncFromStart().then(() => undefined)
     : pull()
   void first.catch((e) => pushLog(`✗ pull initial: ${e instanceof Error ? e.message : String(e)}`))
+  // Le pull tournait toutes les 4 s, même onglet en arrière-plan : c'est ce qui a
+  // consommé des centaines de millions de « rows read » chez Turso. On espace, et
+  // on ne lit rien quand l'onglet n'est pas visible (rattrapage au retour).
+  const safePull = () => void pull().catch((e) => pushLog(`✗ pull: ${e instanceof Error ? e.message : String(e)}`))
   setInterval(() => {
-    void pull().catch((e) => pushLog(`✗ pull: ${e instanceof Error ? e.message : String(e)}`))
-  }, 4000)
+    if (typeof document !== 'undefined' && document.hidden) return
+    safePull()
+  }, 20000)
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) safePull()
+    })
+  }
 }
