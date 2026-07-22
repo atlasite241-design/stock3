@@ -1207,6 +1207,8 @@ export function useDroguerieState() {
   const [transfers, setTransfers] = useState<Transfer[]>([])
   const [activeStoreId, setActiveStoreIdState] = useState<string>('')
   const [ready, setReady] = useState(false)
+  // Étape de démarrage affichée sous le loader plein écran (diagnostic + confort).
+  const [bootPhase, setBootPhase] = useState('')
 
   // A ref so the memoized persist wrappers always stamp with the current store id.
   const activeStoreRef = useRef('')
@@ -1258,13 +1260,20 @@ export function useDroguerieState() {
     }
 
     const boot = async () => {
+      const t0 = performance.now()
+      const mark = (phase: string, label: string) => {
+        setBootPhase(label)
+        console.info(`[boot] ${phase} @ ${Math.round(performance.now() - t0)} ms`)
+      }
       // Charge d'abord le cache produits depuis IndexedDB (migre l'ancien localStorage).
+      mark('idb', 'Lecture du catalogue local…')
       await initProductCache()
       // Appareil neuf (aucune donnée locale) + Turso configuré → rapatrier les vraies
       // données au lieu de générer des données de démo divergentes.
       const fresh = !storageGet(K.products) && !localStorage.getItem(K.stores)
       if (fresh && tursoConfigured()) {
         try {
+          mark('bootstrap', 'Première synchronisation…')
           const hadRemote = await bootstrapFromRemote()
           if (!hadRemote) ensureSeeded()
         } catch {
@@ -1273,7 +1282,9 @@ export function useDroguerieState() {
       } else {
         ensureSeeded()
       }
+      mark('parse', 'Préparation des données…')
       loadAll()
+      mark('ready', '')
       // Active la synchro APRÈS le chargement/seed : les écritures suivantes
       // (actions utilisateur) partiront vers Turso ; le seed initial est ignoré.
       startSync()
@@ -2453,6 +2464,7 @@ export function useDroguerieState() {
 
   return {
     ready,
+    bootPhase,
     // Store-scoped views (filtered to the active store).
     products: scopedProducts,
     sales: scoped(sales),

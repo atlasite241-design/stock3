@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
+import { useDroguerie } from '@/lib/store'
 import Loader from './Loader'
 import LicenseGate from './LicenseGate'
 import PasswordChangeGate from './PasswordChangeGate'
@@ -13,6 +14,7 @@ import PasswordChangeGate from './PasswordChangeGate'
  */
 export default function AuthGate({ children }: { children: React.ReactNode }) {
   const { ready, session } = useAuth()
+  const { bootPhase } = useDroguerie()
   const router = useRouter()
   const pathname = usePathname()
 
@@ -24,8 +26,11 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (!ready) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white dark:bg-[#0a0a0f]">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-white dark:bg-[#0a0a0f]">
         <Loader className="!min-h-0" />
+        {bootPhase && (
+          <p className="text-xs font-medium tracking-wide text-gray-400 dark:text-zinc-500">{bootPhase}</p>
+        )}
       </div>
     )
   }

@@ -41,7 +41,7 @@ const norm = (s: string) => s.trim().toLowerCase().replace(/\./g, '').replace(/\
 
 export default function LoginPage() {
   const { ready, session, needsSetup, loginIdentifier, loginPin, establishSession, logout } = useAuth()
-  const { users, updateUser, addUser } = useDroguerie()
+  const { users, updateUser, addUser, bootPhase } = useDroguerie()
   const { t } = useLanguage()
   const router = useRouter()
   const [resetOpen, setResetOpen] = useState(false)
@@ -89,8 +89,9 @@ export default function LoginPage() {
 
   if (!ready) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f]">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#0a0a0f]">
         <Loader className="!min-h-0" />
+        {bootPhase && <p className="text-xs font-medium tracking-wide text-zinc-500">{bootPhase}</p>}
       </div>
     )
   }
