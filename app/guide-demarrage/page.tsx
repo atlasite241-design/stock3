@@ -159,8 +159,8 @@ function Content() {
         </div>
       </motion.div>
 
-      {/* Progression */}
-      <div className="glass-card p-5">
+      {/* Progression — reste visible en haut pendant le défilement */}
+      <div className="glass-card sticky top-16 z-20 p-5 shadow-md">
         <div className="flex items-center justify-between text-sm">
           <span className="font-semibold text-gray-900 dark:text-white tabular-nums">{done}/{ALL_IDS.length} {t('guide_progress')}</span>
           <span className="font-bold text-amber-600 dark:text-amber-400 tabular-nums">{pct}%</span>
