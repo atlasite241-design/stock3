@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
@@ -108,6 +108,14 @@ export default function DashboardPage() {
     )
   }, [lang])
 
+  // Index produit par id : O(1) au lieu d'un products.find() dans la boucle des ventes
+  // (crucial avec 50 000+ produits, sinon le tableau de bord fige).
+  const prodById = useMemo(() => {
+    const m = new Map<string, (typeof products)[number]>()
+    for (const p of products) m.set(p.id, p)
+    return m
+  }, [products])
+
   if (!ready) {
     return (
       <AppShell>
@@ -186,7 +194,7 @@ export default function DashboardPage() {
   const catMap = new Map<string, number>()
   sales.forEach((s) =>
     s.items.forEach((i) => {
-      const cat = products.find((p) => p.id === i.productId)?.category ?? t('dash_other_category')
+      const cat = prodById.get(i.productId)?.category ?? t('dash_other_category')
       catMap.set(cat, (catMap.get(cat) ?? 0) + i.price * i.qty)
     })
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useRef, useState } from 'react'
+import React, { useDeferredValue, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import Loader from '@/components/Loader'
 import { Barcode, Boxes, ChevronLeft, ChevronRight, PackageCheck, RotateCcw, Save, Search, ShieldAlert, Upload } from 'lucide-react'
@@ -39,16 +39,42 @@ function Content() {
 
   const categories = useMemo(() => ['Toutes', ...Array.from(new Set(products.map((p) => p.category)))], [products])
 
+  // Index O(1) : évite un find() sur des dizaines de milliers de produits
+  // à chaque rendu (coût de la ligne saisie, scan douchette).
+  const prodById = useMemo(() => {
+    const m = new Map<string, (typeof products)[number]>()
+    for (const p of products) m.set(p.id, p)
+    return m
+  }, [products])
+
+  const prodByBarcode = useMemo(() => {
+    const m = new Map<string, (typeof products)[number]>()
+    for (const p of products) if (p.barcode) m.set(p.barcode, p)
+    return m
+  }, [products])
+
   const pending = useMemo(() => products.filter((p) => !initializedIds.has(p.id)), [products, initializedIds])
 
+  // Clé de recherche pré-calculée une seule fois : sans elle, chaque frappe
+  // relançait un toLowerCase() sur tout le catalogue (figement du champ).
+  const searchIndex = useMemo(
+    () => pending.map((p) => ({ p, key: `${p.name} ${p.barcode} ${p.id}`.toLowerCase() })),
+    [pending]
+  )
+
+  // Recherche différée : la saisie reste fluide même sur 50 000 produits.
+  const deferredQuery = useDeferredValue(query)
+
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return pending.filter((p) => {
-      const okCat = category === 'Toutes' || p.category === category
-      const okQ = !q || p.name.toLowerCase().includes(q) || p.barcode.includes(q) || p.id.toLowerCase().includes(q)
-      return okCat && okQ
-    })
-  }, [pending, query, category])
+    const q = deferredQuery.trim().toLowerCase()
+    const out: typeof pending = []
+    for (const it of searchIndex) {
+      if (category !== 'Toutes' && it.p.category !== category) continue
+      if (q && !it.key.includes(q)) continue
+      out.push(it.p)
+    }
+    return out
+  }, [searchIndex, deferredQuery, category])
 
   if (!ready) {
     return <Loader />
@@ -62,12 +88,12 @@ function Content() {
 
   const entries = Object.entries(qty).filter(([id, v]) => v > 0 && !initializedIds.has(id))
   const totalQty = entries.reduce((s, [, v]) => s + v, 0)
-  const totalValue = entries.reduce((s, [id, v]) => s + v * (products.find((p) => p.id === id)?.cost ?? 0), 0)
+  const totalValue = entries.reduce((s, [id, v]) => s + v * (prodById.get(id)?.cost ?? 0), 0)
 
   const onScan = (code: string) => {
     const c = code.trim()
     if (!c) return
-    const p = products.find((x) => x.barcode === c)
+    const p = prodByBarcode.get(c)
     if (!p) { toast(`${t('si_toast_not_found')} ${c}`, 'error'); return }
     if (initializedIds.has(p.id)) { toast(`${p.name} — ${t('si_already_prod')}`, 'error'); return }
     setQ(p.id, (qty[p.id] ?? 0) + 1)

@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { FolderTree } from 'lucide-react'
 import Loader from '@/components/Loader'
 import AppShell from '@/components/AppShell'
@@ -10,6 +11,13 @@ import { useLanguage } from '@/lib/i18n'
 function Content() {
   const { ready, products, categories, categoryActions } = useDroguerie()
   const { t } = useLanguage()
+  // Comptage en un seul passage : un filter() par ligne coûtait
+  // (nb catégories x nb produits) comparaisons à chaque rendu.
+  const counts = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const p of products) m.set(p.category, (m.get(p.category) ?? 0) + 1)
+    return m
+  }, [products])
   if (!ready) {
     return <Loader />
   }
@@ -20,7 +28,7 @@ function Content() {
       newPlaceholder={t('cat_new_placeholder')}
       icon={FolderTree}
       items={categories}
-      usageOf={(name) => products.filter((p) => p.category === name).length}
+      usageOf={(name) => counts.get(name) ?? 0}
       actions={categoryActions}
     />
   )

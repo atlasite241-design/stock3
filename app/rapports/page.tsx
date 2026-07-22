@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { Download, Printer, TrendingDown, TrendingUp } from 'lucide-react'
@@ -27,6 +27,14 @@ function Content() {
   const { ready, products, sales, clients, suppliers } = useDroguerie()
   const { t } = useLanguage()
   const [period, setPeriod] = useState<Period>('30j')
+
+  // Index produit O(1) : sans lui, les boucles de ventes font un find() sur
+  // des dizaines de milliers de produits => figement de la page.
+  const prodById = useMemo(() => {
+    const m = new Map<string, (typeof products)[number]>()
+    for (const p of products) m.set(p.id, p)
+    return m
+  }, [products])
 
   if (!ready) {
     return <Loader />
@@ -56,7 +64,7 @@ function Content() {
     s.items.forEach((i) => {
       const e = prodMap.get(i.productId)
       if (!e) return
-      const p = products.find((x) => x.id === i.productId)
+      const p = prodById.get(i.productId)
       e.qty += i.qty
       e.revenue += i.price * i.qty
       e.profit += (i.price - (p?.cost ?? 0)) * i.qty
@@ -70,7 +78,7 @@ function Content() {
   const catMap = new Map<string, number>()
   inPeriod.forEach((s) =>
     s.items.forEach((i) => {
-      const cat = products.find((p) => p.id === i.productId)?.category ?? 'Autre'
+      const cat = prodById.get(i.productId)?.category ?? 'Autre'
       catMap.set(cat, (catMap.get(cat) ?? 0) + i.price * i.qty)
     })
   )

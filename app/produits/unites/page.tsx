@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { Ruler } from 'lucide-react'
 import Loader from '@/components/Loader'
 import AppShell from '@/components/AppShell'
@@ -10,6 +11,12 @@ import { useLanguage } from '@/lib/i18n'
 function Content() {
   const { ready, products, units, unitActions } = useDroguerie()
   const { t } = useLanguage()
+  // Comptage en un seul passage (voir /produits/categories).
+  const counts = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const p of products) if (p.unit) m.set(p.unit, (m.get(p.unit) ?? 0) + 1)
+    return m
+  }, [products])
   if (!ready) {
     return <Loader />
   }
@@ -20,7 +27,7 @@ function Content() {
       newPlaceholder={t('units_new_placeholder')}
       icon={Ruler}
       items={units}
-      usageOf={(name) => products.filter((p) => p.unit === name).length}
+      usageOf={(name) => counts.get(name) ?? 0}
       actions={unitActions}
     />
   )

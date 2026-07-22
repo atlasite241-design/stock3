@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -122,7 +122,7 @@ function CaisseContent() {
   const handleScan = (code: string) => {
     const c = code.trim()
     if (!c) return
-    const p = products.find((x) => x.barcode === c)
+    const p = prodByBarcode.get(c)
     if (!p) {
       toast(`${t('pos_toast_product_not_found')} ${c}`, 'error')
       return
@@ -174,15 +174,41 @@ function CaisseContent() {
     [products]
   )
 
-  const filtered = products.filter((p) => {
-    const okCat = category === 'Tous' || p.category === category
-    const q = query.trim().toLowerCase()
-    const okQuery = !q || p.name.toLowerCase().includes(q) || p.barcode.includes(q)
-    return okCat && okQuery
-  })
+  // Index O(1) par id / code-barres : indispensable avec un gros catalogue,
+  // sinon chaque rendu du panier refait un find() sur tout le catalogue.
+  const prodById = useMemo(() => {
+    const m = new Map<string, (typeof products)[number]>()
+    for (const p of products) m.set(p.id, p)
+    return m
+  }, [products])
+
+  const prodByBarcode = useMemo(() => {
+    const m = new Map<string, (typeof products)[number]>()
+    for (const p of products) if (p.barcode) m.set(p.barcode, p)
+    return m
+  }, [products])
+
+  // Clé de recherche pré-calculée + recherche différée : la frappe reste fluide
+  // (avant : un toLowerCase() sur tout le catalogue à chaque caractère).
+  const searchIndex = useMemo(
+    () => products.map((p) => ({ p, key: `${p.name} ${p.barcode}`.toLowerCase() })),
+    [products]
+  )
+  const deferredQuery = useDeferredValue(query)
+
+  const filtered = useMemo(() => {
+    const q = deferredQuery.trim().toLowerCase()
+    const out: typeof products = []
+    for (const it of searchIndex) {
+      if (category !== 'Tous' && it.p.category !== category) continue
+      if (q && !it.key.includes(q)) continue
+      out.push(it.p)
+    }
+    return out
+  }, [searchIndex, deferredQuery, category])
 
   const changeQty = (id: string, delta: number) => {
-    const p = products.find((x) => x.id === id)
+    const p = prodById.get(id)
     setCart((c) =>
       c.flatMap((i) => {
         if (i.productId !== id) return [i]
@@ -306,7 +332,7 @@ function CaisseContent() {
           </div>
         ) : (
           cart.map((i) => {
-            const prod = products.find((p) => p.id === i.productId)
+            const prod = prodById.get(i.productId)
             return (
             <div key={i.productId} className="rounded-xl border border-gray-100 dark:border-white/10 bg-gray-50/60 dark:bg-white/5 p-3">
               <div className="flex items-start gap-2.5">
