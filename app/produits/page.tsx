@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { Camera, ImagePlus, Package, Pencil, Plus, Printer, Scissors, Search, Trash2, Wand2 } from 'lucide-react'
+import { Camera, ChevronLeft, ChevronRight, ImagePlus, Package, Pencil, Plus, Printer, Scissors, Search, Trash2, Wand2 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
 import ProductImage from '@/components/ProductImage'
@@ -43,6 +43,7 @@ function ProduitsContent() {
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null)
   const [cameraOpen, setCameraOpen] = useState(false)
   const [exportPct, setExportPct] = useState<number | null>(null)
+  const [page, setPage] = useState(1)
   const urlConsumed = useRef(false)
   const imageInputRef = useRef<HTMLInputElement>(null)
 
@@ -76,13 +77,23 @@ function ProduitsContent() {
     [products]
   )
 
-  const filtered = products.filter((p) => {
-    const okCat = category === 'Tous' || p.category === category
+  const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const okQuery =
-      !q || p.name.toLowerCase().includes(q) || p.barcode.includes(q) || p.brand.toLowerCase().includes(q)
-    return okCat && okQuery
-  })
+    return products.filter((p) => {
+      const okCat = category === 'Tous' || p.category === category
+      const okQuery = !q || p.name.toLowerCase().includes(q) || p.barcode.includes(q) || p.brand.toLowerCase().includes(q)
+      return okCat && okQuery
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, query, category])
+
+  // Pagination : indispensable pour les gros catalogues (ne pas rendre 50 000 lignes).
+  const PAGE_SIZE = 50
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const safePage = Math.min(page, pageCount)
+  const pageItems = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  useEffect(() => { setPage(1) }, [query, category])
 
   const openAdd = () => {
     setEditingId(null)
@@ -257,7 +268,7 @@ function ProduitsContent() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((p) => (
+              {pageItems.map((p) => (
                 <tr key={p.id} className="group border-b border-gray-50 dark:border-white/5 transition-colors hover:bg-amber-50/40 dark:hover:bg-white/5">
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
@@ -324,6 +335,17 @@ function ProduitsContent() {
             </tbody>
           </table>
         </div>
+        {pageCount > 1 && (
+          <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3 dark:border-white/10">
+            <p className="text-xs text-gray-500 dark:text-zinc-400 tabular-nums">{filtered.length} · {safePage}/{pageCount}</p>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setPage(1)} disabled={safePage === 1} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-500 disabled:opacity-40 dark:border-white/10">«</button>
+              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage === 1} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronLeft className="h-4 w-4" /></button>
+              <button onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={safePage === pageCount} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronRight className="h-4 w-4" /></button>
+              <button onClick={() => setPage(pageCount)} disabled={safePage === pageCount} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-500 disabled:opacity-40 dark:border-white/10">»</button>
+            </div>
+          </div>
+        )}
       </motion.div>
 
       {/* Add / edit modal */}

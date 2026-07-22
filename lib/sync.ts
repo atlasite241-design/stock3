@@ -1,6 +1,7 @@
 'use client'
 
 import { turso, tursoConfigured } from './turso'
+import { storageGet, storageSet } from './pstore'
 
 /**
  * Synchronisation localStorage ⇄ Turso (table `records`).
@@ -65,7 +66,7 @@ function upsertStmt(collection: string, id: string, storeId: string | null, data
 
 /** Pousse une collection (tous ses enregistrements) vers Turso. */
 async function pushOne(c: Collection, now: number): Promise<number> {
-  const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(c.key) : null
+  const raw = typeof window !== 'undefined' ? storageGet(c.key) : null
   if (!raw) return 0
   let parsed: unknown
   try {
@@ -124,7 +125,7 @@ function pushLog(msg: string) {
 export function localCounts(): { collection: string; n: number }[] {
   return COLLECTIONS.map((c) => {
     let n = 0
-    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(c.key) : null
+    const raw = typeof window !== 'undefined' ? storageGet(c.key) : null
     if (raw) {
       try {
         const p = JSON.parse(raw)
@@ -240,8 +241,8 @@ export async function pull(): Promise<void> {
 
     if (c.singleton) {
       const last = rows[rows.length - 1]
-      if (Number(last.deleted) === 0 && localStorage.getItem(c.key) !== last.data) {
-        localStorage.setItem(c.key, last.data)
+      if (Number(last.deleted) === 0 && storageGet(c.key) !== last.data) {
+        storageSet(c.key, last.data)
         changedCols.push(colName)
       }
       continue
@@ -249,7 +250,7 @@ export async function pull(): Promise<void> {
 
     let arr: Row[] = []
     try {
-      arr = JSON.parse(localStorage.getItem(c.key) || '[]')
+      arr = JSON.parse(storageGet(c.key) || '[]')
     } catch {
       arr = []
     }
@@ -268,7 +269,7 @@ export async function pull(): Promise<void> {
       }
     }
     if (colChanged) {
-      localStorage.setItem(c.key, JSON.stringify([...map.values()]))
+      storageSet(c.key, JSON.stringify([...map.values()]))
       changedCols.push(colName)
     }
   }
@@ -305,7 +306,7 @@ export async function resyncFromStart(): Promise<number> {
     const c = COL_BY_NAME.get(colName)
     if (!c) continue
     if (c.singleton) {
-      localStorage.setItem(c.key, rows[rows.length - 1].data)
+      storageSet(c.key, rows[rows.length - 1].data)
       total += 1
       continue
     }
@@ -315,7 +316,7 @@ export async function resyncFromStart(): Promise<number> {
         arr.push(JSON.parse(r.data))
       } catch {}
     }
-    localStorage.setItem(c.key, JSON.stringify(arr))
+    storageSet(c.key, JSON.stringify(arr))
     total += arr.length
   }
 
@@ -352,8 +353,8 @@ export async function bootstrapFromRemote(): Promise<boolean> {
       byKey.set(c.key, list)
     }
   }
-  for (const [key, arr] of byKey) localStorage.setItem(key, JSON.stringify(arr))
-  for (const [key, data] of singles) localStorage.setItem(key, data)
+  for (const [key, arr] of byKey) storageSet(key, JSON.stringify(arr))
+  for (const [key, data] of singles) storageSet(key, data)
   setCursor(maxTs)
   pushLog(`⇣ amorçage depuis Turso : ${res.rows.length} enregistrements`)
   return true
@@ -363,7 +364,7 @@ export async function bootstrapFromRemote(): Promise<boolean> {
 /** Vrai si la liste de produits locale est vide (appareil non hydraté). */
 function localProductsEmpty(): boolean {
   try {
-    const raw = localStorage.getItem('dp_products')
+    const raw = storageGet('dp_products')
     if (!raw) return true
     const arr = JSON.parse(raw)
     return !Array.isArray(arr) || arr.length === 0

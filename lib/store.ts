@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { bootstrapFromRemote, startSync, syncOnSave } from './sync'
 import { tursoConfigured } from './turso'
 import { getSession } from './auth'
+import { initProductCache, productsRemove, storageGet, storageSet } from './pstore'
 
 // ------------------------------------------------------------------
 // Types
@@ -644,7 +645,7 @@ export const uid = () => Date.now().toString(36) + Math.random().toString(36).sl
 
 function load<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(key)
+    const raw = storageGet(key)
     return raw ? (JSON.parse(raw) as T) : fallback
   } catch {
     return fallback
@@ -652,7 +653,8 @@ function load<T>(key: string, fallback: T): T {
 }
 
 function save(key: string, value: unknown) {
-  localStorage.setItem(key, JSON.stringify(value))
+  // La clé produits est routée vers IndexedDB (gros catalogues) ; le reste vers localStorage.
+  storageSet(key, JSON.stringify(value))
   window.dispatchEvent(new CustomEvent('droguerie-store-change', { detail: key }))
   // Write-through vers Turso (no-op tant que startSync() n'a pas été appelée,
   // ce qui neutralise l'amorçage/seed initial).
@@ -730,7 +732,7 @@ function iso(daysAgo: number, h = 10, m = 0) {
 export function ensureSeeded() {
   if (typeof window === 'undefined') return
 
-  if (!localStorage.getItem(K.products)) {
+  if (!storageGet(K.products)) {
     save(K.products, seedProducts.map((p, i) => ({ ...p, id: `p${i + 1}` })))
   }
   const products = load<Product[]>(K.products, [])
@@ -1010,6 +1012,7 @@ export function loadProducts(): Product[] {
 
 export function resetDemoData() {
   Object.values(K).forEach((k) => localStorage.removeItem(k))
+  productsRemove() // produits stockés dans IndexedDB
   ensureSeeded()
 }
 
@@ -1148,7 +1151,7 @@ export function deleteBackup(id: string) {
 export function exportAllJSON() {
   const data: Record<string, unknown> = {}
   Object.values(K).forEach((key) => {
-    const raw = localStorage.getItem(key)
+    const raw = storageGet(key)
     if (raw) data[key] = JSON.parse(raw)
   })
   downloadFile('droguerie-sauvegarde.json', JSON.stringify(data, null, 2), 'application/json')
@@ -1247,9 +1250,11 @@ export function useDroguerie() {
     }
 
     const boot = async () => {
-      // Appareil neuf (localStorage vide) + Turso configuré → rapatrier les vraies
+      // Charge d'abord le cache produits depuis IndexedDB (migre l'ancien localStorage).
+      await initProductCache()
+      // Appareil neuf (aucune donnée locale) + Turso configuré → rapatrier les vraies
       // données au lieu de générer des données de démo divergentes.
-      const fresh = !localStorage.getItem(K.products) && !localStorage.getItem(K.stores)
+      const fresh = !storageGet(K.products) && !localStorage.getItem(K.stores)
       if (fresh && tursoConfigured()) {
         try {
           const hadRemote = await bootstrapFromRemote()
