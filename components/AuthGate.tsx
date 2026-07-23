@@ -28,9 +28,9 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-white dark:bg-[#0a0a0f]">
         <Loader className="!min-h-0" />
-        {bootPhase && (
-          <p className="text-xs font-medium tracking-wide text-gray-400 dark:text-zinc-500">{bootPhase}</p>
-        )}
+        <p className="text-xs font-medium tracking-wide text-gray-400 dark:text-zinc-500">
+          {bootPhase || 'Ouverture de la session…'}
+        </p>
       </div>
     )
   }

@@ -5,6 +5,7 @@ import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { Cloud, Database, FileDown, FileSpreadsheet, FileUp, RefreshCcw, RotateCcw, Save, Trash2 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
+import ImportPicker from '@/components/ImportPicker'
 import Modal from '@/components/Modal'
 import { useToast } from '@/components/Toast'
 import {
@@ -30,6 +31,8 @@ function Content() {
   const [backups, setBackups] = useState<Backup[]>([])
   const [restoreTarget, setRestoreTarget] = useState<Backup | null>(null)
   const [importState, setImportState] = useState<{ msg: string; pct: number | null } | null>(null)
+  // Lignes lues du CSV, en attente du choix catégories / sous-catégories.
+  const [pending, setPending] = useState<ReturnType<typeof parseProductsCSV> | null>(null)
   const jsonInputRef = useRef<HTMLInputElement>(null)
   const csvInputRef = useRef<HTMLInputElement>(null)
 
@@ -76,6 +79,23 @@ function Content() {
     e.target.value = ''
   }
 
+  // Import de la sélection issue du choix catégories / sous-catégories.
+  const runImport = (rows: ReturnType<typeof parseProductsCSV>) => {
+    setPending(null)
+    setImportState({ msg: `${t('set_import_importing')} (${rows.length})`, pct: null })
+    setTimeout(() => {
+      try {
+        const { added, updated } = importProducts(rows)
+        toast(`✓ ${t('set_toast_import_added')} ${added} ${t('set_toast_import_added_suffix')} ${updated} ${t('set_toast_import_updated_suffix')}`)
+      } catch {
+        // Dépassement de quota du stockage navigateur sur un fichier trop volumineux.
+        toast(t('set_import_quota'), 'error')
+      } finally {
+        setImportState(null)
+      }
+    }, 40)
+  }
+
   const onImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -93,18 +113,10 @@ function Content() {
         let rows: ReturnType<typeof parseProductsCSV>
         try { rows = parseProductsCSV(String(reader.result)) } catch { setImportState(null); toast(t('set_toast_no_valid_product'), 'error'); return }
         if (rows.length === 0) { setImportState(null); toast(t('set_toast_no_valid_product'), 'error'); return }
-        setImportState({ msg: `${t('set_import_importing')} (${rows.length})`, pct: null })
-        setTimeout(() => {
-          try {
-            const { added, updated } = importProducts(rows)
-            toast(`✓ ${t('set_toast_import_added')} ${added} ${t('set_toast_import_added_suffix')} ${updated} ${t('set_toast_import_updated_suffix')}`)
-          } catch {
-            // Dépassement de quota localStorage sur un fichier trop volumineux.
-            toast(t('set_import_quota'), 'error')
-          } finally {
-            setImportState(null)
-          }
-        }, 40)
+        // On n'importe plus le fichier entier : l'utilisateur choisit d'abord les
+        // catégories, puis les sous-catégories à retenir.
+        setImportState(null)
+        setPending(rows)
       }, 40)
     }
     reader.readAsText(file)
@@ -112,6 +124,12 @@ function Content() {
 
   return (
     <>
+      <ImportPicker
+        open={pending !== null}
+        rows={pending ?? []}
+        onCancel={() => setPending(null)}
+        onConfirm={runImport}
+      />
       {importState && (
         <div className="fixed inset-x-3 bottom-3 z-[70] mx-auto max-w-md rounded-2xl border border-sky-200 bg-white/95 p-4 shadow-2xl backdrop-blur dark:border-sky-500/25 dark:bg-[#12121a]/95">
           <div className="flex items-center justify-between text-sm">

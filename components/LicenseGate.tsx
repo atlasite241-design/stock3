@@ -49,8 +49,9 @@ export default function LicenseGate({ children }: { children: React.ReactNode })
 
   if (!checked) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white dark:bg-[#0a0a0f]">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-white dark:bg-[#0a0a0f]">
         <Loader className="!min-h-0" />
+        <p className="text-xs font-medium tracking-wide text-gray-400 dark:text-zinc-500">Vérification de la licence…</p>
       </div>
     )
   }

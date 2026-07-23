@@ -1110,6 +1110,9 @@ export function parseProductsCSV(text: string): Omit<Product, 'id'>[] {
   const iName = idx('nom', 'name', 'produit')
   const iBarcode = idx('code', 'barcode')
   const iCat = idx('cat')
+  // « sous-catégorie » contient aussi « cat » : on la cherche séparément, sinon
+  // la sous-catégorie était purement et simplement perdue à l'import.
+  const iSub = header.findIndex((h) => h.includes('sous') || h.startsWith('sub'))
   const iBrand = idx('marque', 'brand')
   const iUnit = idx('unit')
   const iCost = idx('achat', 'cost', 'cout', 'coût')
@@ -1127,6 +1130,7 @@ export function parseProductsCSV(text: string): Omit<Product, 'id'>[] {
       name,
       barcode: iBarcode >= 0 ? cols[iBarcode] ?? '' : '',
       category: (iCat >= 0 && cols[iCat]) || 'Divers',
+      subcategory: iSub >= 0 ? cols[iSub] ?? '' : '',
       brand: iBrand >= 0 ? cols[iBrand] ?? '' : '',
       unit: (iUnit >= 0 && cols[iUnit]) || 'Pièce',
       cost: iCost >= 0 ? num(cols[iCost]) : 0,
