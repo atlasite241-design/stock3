@@ -1121,18 +1121,30 @@ export function parseProductsCSV(text: string): Omit<Product, 'id'>[] {
   const iMin = idx('min')
   if (iName < 0) return []
   const num = (v?: string) => parseFloat((v ?? '').replace(',', '.')) || 0
+  // Mutualisation des chaînes répétées (catégorie, sous-catégorie, marque, unité) :
+  // sur 50 000 lignes il n'existe que ~300 valeurs distinctes. Sans ça, chaque
+  // produit détient sa propre copie → 200 000 chaînes au lieu de ~300, ce qui
+  // faisait saturer la mémoire de l'onglet pendant l'import (plantage « This page
+  // couldn't load »).
+  const pool = new Map<string, string>()
+  const intern = (v: string) => {
+    const hit = pool.get(v)
+    if (hit !== undefined) return hit
+    pool.set(v, v)
+    return v
+  }
   const out: Omit<Product, 'id'>[] = []
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(sep).map((c) => c.trim())
-    const name = cols[iName]
+    const cols = lines[i].split(sep)
+    const name = (cols[iName] ?? '').trim()
     if (!name) continue
     out.push({
       name,
-      barcode: iBarcode >= 0 ? cols[iBarcode] ?? '' : '',
-      category: (iCat >= 0 && cols[iCat]) || 'Divers',
-      subcategory: iSub >= 0 ? cols[iSub] ?? '' : '',
-      brand: iBrand >= 0 ? cols[iBrand] ?? '' : '',
-      unit: (iUnit >= 0 && cols[iUnit]) || 'Pièce',
+      barcode: iBarcode >= 0 ? (cols[iBarcode] ?? '').trim() : '',
+      category: intern((iCat >= 0 && cols[iCat]?.trim()) || 'Divers'),
+      subcategory: iSub >= 0 ? intern((cols[iSub] ?? '').trim()) : '',
+      brand: iBrand >= 0 ? intern((cols[iBrand] ?? '').trim()) : '',
+      unit: intern((iUnit >= 0 && cols[iUnit]?.trim()) || 'Pièce'),
       cost: iCost >= 0 ? num(cols[iCost]) : 0,
       price: iPrice >= 0 ? num(cols[iPrice]) : 0,
       stock: iStock >= 0 ? Math.round(num(cols[iStock])) : 0,
