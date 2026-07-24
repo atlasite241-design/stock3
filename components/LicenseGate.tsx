@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { CheckCircle2, KeyRound, Loader2, ShieldCheck } from 'lucide-react'
-import Loader from './Loader'
 import { activateLicense, isLicensed } from '@/lib/license'
 import { useLanguage } from '@/lib/i18n'
 
@@ -14,17 +13,17 @@ import { useLanguage } from '@/lib/i18n'
  */
 export default function LicenseGate({ children }: { children: React.ReactNode }) {
   const { t, lang } = useLanguage()
-  const [checked, setChecked] = useState(false)
-  const [licensed, setLicensed] = useState(false)
+  // Vérification SYNCHRONE (localStorage) via initialiseur paresseux : aucun écran
+  // d'attente, donc plus de blocage possible sur « Vérification de la licence… ».
+  // LicenseGate n'est monté qu'après AuthGate (déjà 100 % côté client), pas de
+  // souci d'hydratation.
+  const [licensed, setLicensed] = useState<boolean>(() => {
+    try { return isLicensed() } catch { return false }
+  })
   const [key, setKey] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState<{ months: number; expiresAt: string } | null>(null)
-
-  useEffect(() => {
-    setLicensed(isLicensed())
-    setChecked(true)
-  }, [])
 
   // Notification pro : auto-continue après 4 s.
   useEffect(() => {
@@ -47,14 +46,6 @@ export default function LicenseGate({ children }: { children: React.ReactNode })
     }
   }
 
-  if (!checked) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-white dark:bg-[#0a0a0f]">
-        <Loader className="!min-h-0" />
-        <p className="text-xs font-medium tracking-wide text-gray-400 dark:text-zinc-500">Vérification de la licence…</p>
-      </div>
-    )
-  }
 
   if (licensed) return <>{children}</>
 
