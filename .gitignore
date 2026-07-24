@@ -26,3 +26,7 @@ yarn-error.log*
 license-keys-1000.txt
 Catalogue_complet.csv
 *.csv
+
+# Fichiers temporaires Excel
+~$*.xlsx
+~$*.xls
