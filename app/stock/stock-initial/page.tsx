@@ -97,29 +97,53 @@ function Content() {
     toast(`+1 ${p.name}`)
   }
 
+  // Applique des lignes [code-barres, quantité] à la saisie. Colonnes suivantes
+  // (Nom, Catégorie…) ignorées. En-tête sautée (le code contient « code/barre/… »).
+  const applyRows = (rows: (string | number)[][]) => {
+    const byBarcode = new Map<string, string>()
+    for (const p of products) if (p.barcode && !initializedIds.has(p.id)) byBarcode.set(p.barcode, p.id)
+    const next = { ...qty }
+    let n = 0
+    for (const cols of rows) {
+      if (!cols || cols.length < 2) continue
+      const code = String(cols[0] ?? '').replace(/"/g, '').trim()
+      const q = Math.round(parseFloat(String(cols[1] ?? '').replace(',', '.')) || 0)
+      const id = byBarcode.get(code)
+      if (id && q > 0 && !/code|barre|barcode|qte|quant/i.test(code)) { next[id] = q; n++ }
+    }
+    setQty(next)
+    toast(`✓ ${n} ${t('si_toast_imported')}`)
+  }
+
   const onImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const text = String(reader.result).replace(/^﻿/, '')
-      const lines = text.split(/\r?\n/).filter((l) => l.trim())
-      const byBarcode = new Map<string, string>()
-      for (const p of products) if (p.barcode && !initializedIds.has(p.id)) byBarcode.set(p.barcode, p.id)
-      const next = { ...qty }
-      let n = 0
-      for (const line of lines) {
-        const cols = line.split(/[;,\t]/).map((s) => s.trim())
-        if (cols.length < 2) continue
-        const code = cols[0].replace(/"/g, '')
-        const q = Math.round(parseFloat(cols[1].replace(',', '.')) || 0)
-        const id = byBarcode.get(code)
-        if (id && q > 0 && !/code|barre|barcode|qte|quant/i.test(code)) { next[id] = q; n++ }
+    const isExcel = /\.xlsx?$/i.test(file.name) || /sheet|excel/i.test(file.type)
+    if (isExcel) {
+      // Lecture directe d'un classeur Excel (.xlsx/.xls). La bibliothèque n'est
+      // chargée qu'ici (import dynamique) pour ne pas alourdir le reste de l'app.
+      const reader = new FileReader()
+      reader.onload = async () => {
+        try {
+          const XLSX = await import('xlsx')
+          const wb = XLSX.read(new Uint8Array(reader.result as ArrayBuffer), { type: 'array' })
+          const ws = wb.Sheets[wb.SheetNames[0]]
+          const rows = XLSX.utils.sheet_to_json<(string | number)[]>(ws, { header: 1, blankrows: false })
+          applyRows(rows)
+        } catch {
+          toast(t('si_toast_empty'), 'error')
+        }
       }
-      setQty(next)
-      toast(`✓ ${n} ${t('si_toast_imported')}`)
+      reader.readAsArrayBuffer(file)
+    } else {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const text = String(reader.result).replace(/^﻿/, '')
+        const rows = text.split(/\r?\n/).filter((l) => l.trim()).map((l) => l.split(/[;,\t]/))
+        applyRows(rows)
+      }
+      reader.readAsText(file)
     }
-    reader.readAsText(file)
     e.target.value = ''
   }
 
