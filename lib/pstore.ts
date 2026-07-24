@@ -25,14 +25,22 @@ const FLUSH_MS = 700
 function openDB(): Promise<IDBDatabase | null> {
   if (dbPromise) return dbPromise
   dbPromise = new Promise((resolve) => {
+    let done = false
+    const finish = (v: IDBDatabase | null) => { if (!done) { done = true; resolve(v) } }
     try {
-      if (typeof indexedDB === 'undefined') return resolve(null)
+      if (typeof indexedDB === 'undefined') return finish(null)
       const req = indexedDB.open(DB_NAME, 1)
       req.onupgradeneeded = () => { if (!req.result.objectStoreNames.contains(STORE)) req.result.createObjectStore(STORE) }
-      req.onsuccess = () => resolve(req.result)
-      req.onerror = () => resolve(null)
+      req.onsuccess = () => finish(req.result)
+      req.onerror = () => finish(null)
+      // Ouverture bloquée (une autre connexion garde une version antérieure) :
+      // sans ce handler, la promesse ne se résolvait jamais → boot figé sur
+      // « Lecture du catalogue local… ». On abandonne IndexedDB proprement.
+      req.onblocked = () => finish(null)
+      // Garde-temps : si IndexedDB ne répond pas, on continue sans lui.
+      setTimeout(() => finish(null), 6000)
     } catch {
-      resolve(null)
+      finish(null)
     }
   })
   return dbPromise
@@ -40,11 +48,14 @@ function openDB(): Promise<IDBDatabase | null> {
 
 function idbGet(db: IDBDatabase): Promise<string | null> {
   return new Promise((resolve) => {
+    let done = false
+    const finish = (v: string | null) => { if (!done) { done = true; resolve(v) } }
     try {
       const req = db.transaction(STORE, 'readonly').objectStore(STORE).get(PRODUCTS_KEY)
-      req.onsuccess = () => resolve((req.result as string) ?? null)
-      req.onerror = () => resolve(null)
-    } catch { resolve(null) }
+      req.onsuccess = () => finish((req.result as string) ?? null)
+      req.onerror = () => finish(null)
+      setTimeout(() => finish(null), 6000) // garde-temps : ne bloque jamais le boot
+    } catch { finish(null) }
   })
 }
 
