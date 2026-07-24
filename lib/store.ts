@@ -1306,6 +1306,33 @@ export function useDroguerieState() {
       // Charge d'abord le cache produits depuis IndexedDB (migre l'ancien localStorage).
       mark('idb', 'Lecture du catalogue local…')
       await initProductCache()
+
+      // Détection d'un CHANGEMENT DE BASE Turso (migration de compte/quota). Si la
+      // base configurée diffère de celle mémorisée, les données locales appartiennent
+      // à l'ancienne base : on les efface pour repartir proprement de la nouvelle
+      // (sinon l'appareil re-pousserait son ancien catalogue et regonflerait la
+      // nouvelle base). Automatique et sûr pour TOUS les appareils.
+      try {
+        const dbId = process.env.NEXT_PUBLIC_TURSO_DATABASE_URL || ''
+        if (dbId) {
+          const stored = localStorage.getItem('dp_db_id')
+          const localHasData = !!storageGet(K.products) || !!localStorage.getItem(K.stores)
+          // Base changée (id différent) OU données présentes sans id mémorisé
+          // (appareil d'avant cette détection, données d'une base antérieure).
+          const switched = stored ? stored !== dbId : localHasData
+          if (switched) {
+            mark('dbswitch', 'Nouvelle base : réinitialisation locale…')
+            for (const key of Object.values(K)) {
+              if (key === K.backups) continue // on garde les sauvegardes locales
+              if (key === K.products) productsRemove()
+              else localStorage.removeItem(key)
+            }
+            localStorage.removeItem('dp_sync_cursor')
+          }
+          localStorage.setItem('dp_db_id', dbId)
+        }
+      } catch { /* ignore : au pire on garde l'ancien local */ }
+
       // Appareil neuf (aucune donnée locale) + Turso configuré → rapatrier les vraies
       // données au lieu de générer des données de démo divergentes.
       const fresh = !storageGet(K.products) && !localStorage.getItem(K.stores)
