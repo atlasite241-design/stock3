@@ -1442,7 +1442,10 @@ export function useDroguerieState() {
     // O(N) : index par code-barres au lieu d'un .find() dans la boucle (évite le gel sur gros fichiers).
     let added = 0
     let updated = 0
-    const arr: Product[] = products.map((p) => ({ ...p }))
+    // Copie de surface (références) : on ne duplique PAS les 55 000 fiches
+    // existantes — seules celles réellement modifiées sont recréées. Le clone
+    // intégral doublait la mémoire du catalogue et faisait planter l'onglet.
+    const arr: Product[] = products.slice()
     const byBarcode = new Map<string, number>()
     arr.forEach((p, i) => { if (p.barcode) byBarcode.set(p.barcode, i) })
     for (const r of rows) {
