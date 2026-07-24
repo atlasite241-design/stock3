@@ -463,7 +463,7 @@ export function startSync() {
   setInterval(() => {
     if (typeof document !== 'undefined' && document.hidden) return
     safePull()
-  }, 20000)
+  }, 60000)
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) safePull()
