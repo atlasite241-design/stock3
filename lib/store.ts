@@ -1438,7 +1438,16 @@ export function useDroguerieState() {
     if (p) logActivity(`Produit supprimé : ${p.name}`)
   }
 
-  const importProducts = (rows: Omit<Product, 'id'>[]) => {
+  const importProducts = (rows: Omit<Product, 'id'>[], replace = false) => {
+    // Mode « remplacer » : on repart d'un catalogue vide. Indispensable pour
+    // définir un catalogue de démarrage sans garder en mémoire les dizaines de
+    // milliers d'anciens produits (fusion + anciens = pic mémoire fatal).
+    if (replace) {
+      const arr = rows.map((r) => ({ ...r, id: uid() }))
+      persistProducts(arr)
+      logActivity(`Import produits (remplacement) : ${arr.length} produits`)
+      return { added: arr.length, updated: 0 }
+    }
     // O(N) : index par code-barres au lieu d'un .find() dans la boucle (évite le gel sur gros fichiers).
     let added = 0
     let updated = 0

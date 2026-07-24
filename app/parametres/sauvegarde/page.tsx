@@ -80,12 +80,12 @@ function Content() {
   }
 
   // Import de la sélection issue du choix catégories / sous-catégories.
-  const runImport = (rows: ReturnType<typeof parseProductsCSV>) => {
+  const runImport = (rows: ReturnType<typeof parseProductsCSV>, replace: boolean) => {
     setPending(null)
     setImportState({ msg: `${t('set_import_importing')} (${rows.length})`, pct: null })
     setTimeout(() => {
       try {
-        const { added, updated } = importProducts(rows)
+        const { added, updated } = importProducts(rows, replace)
         toast(`✓ ${t('set_toast_import_added')} ${added} ${t('set_toast_import_added_suffix')} ${updated} ${t('set_toast_import_updated_suffix')}`)
       } catch {
         // Dépassement de quota du stockage navigateur sur un fichier trop volumineux.

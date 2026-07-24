@@ -31,7 +31,7 @@ export default function ImportPicker<T extends PickerRow>({
   open: boolean
   rows: T[]
   onCancel: () => void
-  onConfirm: (selected: T[]) => void
+  onConfirm: (selected: T[], replace: boolean) => void
 }) {
   const { t } = useLanguage()
   const [step, setStep] = useState<'cat' | 'sub' | 'prod'>('cat')
@@ -42,6 +42,7 @@ export default function ImportPicker<T extends PickerRow>({
   const [chosen, setChosen] = useState<Set<number>>(new Set())
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
+  const [replace, setReplace] = useState(true)
 
   const catName = (r: PickerRow) => (r.category || '').trim() || '—'
   const subName = (r: PickerRow) => (r.subcategory || '').trim() || '—'
@@ -146,11 +147,11 @@ export default function ImportPicker<T extends PickerRow>({
     setStep('prod')
   }
 
-  const confirm = () => onConfirm(rows.filter((_, i) => chosen.has(i)))
+  const confirm = () => onConfirm(rows.filter((_, i) => chosen.has(i)), replace)
 
   const reset = () => {
     setStep('cat'); setCats(new Set()); setSubs(new Set()); setChosen(new Set())
-    setCandidates([]); setQuery(''); setPage(1); setMaxPerSub(20)
+    setCandidates([]); setQuery(''); setPage(1); setMaxPerSub(20); setReplace(true)
   }
   const cancel = () => { reset(); onCancel() }
 
@@ -272,6 +273,18 @@ export default function ImportPicker<T extends PickerRow>({
           {selectedCount} {t('imp_pick_products')}
         </span>
       </div>
+
+      {step === 'prod' && (
+        <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3 dark:border-amber-500/20 dark:bg-amber-500/10">
+          <input type="checkbox" checked={replace} onChange={(e) => setReplace(e.target.checked)} className="mt-0.5 h-4 w-4 accent-amber-500" />
+          <span className="min-w-0 flex-1">
+            <span className="text-sm font-semibold text-gray-900 dark:text-white">{t('imp_pick_replace')}</span>
+            <span className="mt-0.5 block text-xs text-gray-500 dark:text-zinc-400">
+              {replace ? t('imp_pick_replace_hint') : t('imp_pick_merge_hint')}
+            </span>
+          </span>
+        </label>
+      )}
 
       <div className="mt-5 flex flex-wrap justify-end gap-3">
         <button onClick={cancel} className="btn-secondary">{t('imp_pick_cancel')}</button>
