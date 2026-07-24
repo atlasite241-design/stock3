@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useDeferredValue, useMemo, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { AlertTriangle, Boxes, Minus, PackageX, Plus, TrendingUp, Truck } from 'lucide-react'
+import { AlertTriangle, Boxes, ChevronLeft, ChevronRight, Minus, PackageX, Plus, Search, TrendingUp, Truck } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
 import { useToast } from '@/components/Toast'
@@ -11,22 +11,55 @@ import { fmtDH, useDroguerie, type Product } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 type Filter = 'tous' | 'faible' | 'rupture'
+const PAGE_SIZE = 50
 
 function StockContent() {
   const { ready, products, adjustStock } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
   const [filter, setFilter] = useState<Filter>('tous')
+  const [query, setQuery] = useState('')
+  const [page, setPage] = useState(1)
   const [restockTarget, setRestockTarget] = useState<Product | null>(null)
   const [restockQty, setRestockQty] = useState('10')
+
+  // Compteurs (un seul passage) — indépendants de la pagination/recherche.
+  const stats = useMemo(() => {
+    let low = 0, out = 0, value = 0
+    for (const p of products) {
+      if (p.stock === 0) out++
+      else if (p.stock <= p.minStock) low++
+      value += p.cost * p.stock
+    }
+    return { low, out, value }
+  }, [products])
+
+  const deferredQuery = useDeferredValue(query)
+
+  // Liste filtrée + triée + recherchée, mémorisée. Sans pagination, cette page
+  // rendait les 19 000+ lignes d'un coup → navigation lente vers /stock.
+  const filtered = useMemo(() => {
+    const q = deferredQuery.trim().toLowerCase()
+    const out: Product[] = []
+    for (const p of products) {
+      if (filter === 'faible' && !(p.stock > 0 && p.stock <= p.minStock)) continue
+      if (filter === 'rupture' && p.stock !== 0) continue
+      if (q && !(p.name.toLowerCase().includes(q) || p.barcode.includes(q))) continue
+      out.push(p)
+    }
+    out.sort((a, b) => a.stock - b.stock)
+    return out
+  }, [products, filter, deferredQuery])
 
   if (!ready) {
     return <Loader />
   }
 
-  const lowStock = products.filter((p) => p.stock > 0 && p.stock <= p.minStock)
-  const outOfStock = products.filter((p) => p.stock === 0)
-  const stockValue = products.reduce((a, p) => a + p.cost * p.stock, 0)
+  const lowStock = { length: stats.low }
+  const outOfStock = { length: stats.out }
+  const stockValue = stats.value
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const cards = [
     { label: t('stock_catalog_products'), value: String(products.length), icon: Boxes, cls: 'bg-amber-50 dark:bg-amber-500/10 text-amber-500' },
@@ -40,12 +73,6 @@ function StockContent() {
     { key: 'faible', label: `${t('stock_filter_low')} (${lowStock.length})` },
     { key: 'rupture', label: `${t('stock_filter_ruptures')} (${outOfStock.length})` },
   ]
-
-  const visible = [...products]
-    .filter((p) =>
-      filter === 'faible' ? p.stock > 0 && p.stock <= p.minStock : filter === 'rupture' ? p.stock === 0 : true
-    )
-    .sort((a, b) => a.stock - b.stock)
 
   const statut = (p: Product) =>
     p.stock === 0
@@ -91,12 +118,12 @@ function StockContent() {
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2">
+      {/* Filters + recherche */}
+      <div className="flex flex-wrap items-center gap-2">
         {filters.map((f) => (
           <button
             key={f.key}
-            onClick={() => setFilter(f.key)}
+            onClick={() => { setFilter(f.key); setPage(1) }}
             className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
               filter === f.key
                 ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-gray-900 shadow-lg shadow-amber-400/25'
@@ -106,6 +133,15 @@ function StockContent() {
             {f.label}
           </button>
         ))}
+        <div className="relative ml-auto min-w-[200px] flex-1 sm:max-w-xs">
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setPage(1) }}
+            placeholder={t('stock_col_product')}
+            className="input-field pl-10"
+          />
+        </div>
       </div>
 
       {/* Table */}
@@ -199,6 +235,15 @@ function StockContent() {
             </tbody>
           </table>
         </div>
+        {pageCount > 1 && (
+          <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3 dark:border-white/10">
+            <p className="text-xs text-gray-500 dark:text-zinc-400 tabular-nums">{filtered.length} · {page}/{pageCount}</p>
+            <div className="flex gap-1">
+              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronLeft className="h-4 w-4" /></button>
+              <button onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={page === pageCount} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronRight className="h-4 w-4" /></button>
+            </div>
+          </div>
+        )}
       </motion.div>
 
       {/* Restock modal */}

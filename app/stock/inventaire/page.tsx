@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -8,11 +8,14 @@ import {
   Barcode,
   Camera,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   ClipboardList,
   PackagePlus,
   PackageSearch,
   Printer,
   ScanLine,
+  Search,
   Square,
 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
@@ -36,7 +39,17 @@ function Content() {
   const [cameraOpen, setCameraOpen] = useState(false)
   const [flashIds, setFlashIds] = useState<Record<string, boolean>>({})
   const [notFoundCode, setNotFoundCode] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [page, setPage] = useState(1)
   const barcodeRef = useRef<HTMLInputElement>(null)
+  const PAGE_SIZE = 50
+
+  // Index code-barres O(1) pour la douchette (évite un find() sur 19 000 produits).
+  const prodByBarcode = useMemo(() => {
+    const m = new Map<string, (typeof products)[number]>()
+    for (const p of products) if (p.barcode) m.set(p.barcode, p)
+    return m
+  }, [products])
 
   useEffect(() => {
     if (ready && !initialized) {
@@ -55,11 +68,24 @@ function Content() {
     return <Loader />
   }
 
-  const rows = products.map((p) => {
-    const c = Math.max(0, Math.round(parseFloat((counted[p.id] ?? '').replace(',', '.')) || 0))
-    return { product: p, counted: c, delta: c - p.stock }
-  })
-  const diffs = rows.filter((r) => r.delta !== 0)
+  // Écarts calculés sur TOUT le catalogue (pour la validation), en un passage.
+  const cnt = (p: (typeof products)[number]) => Math.max(0, Math.round(parseFloat((counted[p.id] ?? '').replace(',', '.')) || 0))
+  const diffs = products
+    .map((p) => ({ product: p, counted: cnt(p), delta: cnt(p) - p.stock }))
+    .filter((r) => r.delta !== 0)
+
+  // Affichage paginé + recherche : sans ça, les 19 000 lignes (une saisie par
+  // ligne) étaient toutes rendues → navigation lente vers l'inventaire.
+  const deferredQuery = useDeferredValue(query)
+  const filtered = (() => {
+    const q = deferredQuery.trim().toLowerCase()
+    if (!q) return products
+    return products.filter((p) => p.name.toLowerCase().includes(q) || p.barcode.includes(q))
+  })()
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const rows = filtered
+    .slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+    .map((p) => ({ product: p, counted: cnt(p), delta: cnt(p) - p.stock }))
 
   const validate = () => {
     applyInventory(diffs.map((r) => ({ productId: r.product.id, counted: r.counted })))
@@ -76,7 +102,7 @@ function Content() {
   const handleScan = (code: string) => {
     const c = code.trim()
     if (!c) return
-    const p = products.find((x) => x.barcode === c)
+    const p = prodByBarcode.get(c)
     if (!p) {
       setNotFoundCode(c)
       return
@@ -185,6 +211,17 @@ function Content() {
         transition={{ delay: 0.05, duration: 0.4 }}
         className="glass-card print-area overflow-hidden"
       >
+        <div className="border-b border-gray-100 px-4 py-3 dark:border-white/10 no-print">
+          <div className="relative max-w-xs">
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setPage(1) }}
+              placeholder={t('pinv_col_product')}
+              className="input-field pl-10"
+            />
+          </div>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px]">
             <thead>
@@ -237,6 +274,15 @@ function Content() {
             </tbody>
           </table>
         </div>
+        {pageCount > 1 && (
+          <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3 dark:border-white/10 no-print">
+            <p className="text-xs text-gray-500 dark:text-zinc-400 tabular-nums">{filtered.length} · {page}/{pageCount}</p>
+            <div className="flex gap-1">
+              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronLeft className="h-4 w-4" /></button>
+              <button onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={page === pageCount} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronRight className="h-4 w-4" /></button>
+            </div>
+          </div>
+        )}
       </motion.div>
 
       {/* Camera scanner */}
