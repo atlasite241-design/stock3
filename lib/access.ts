@@ -93,6 +93,7 @@ export const ROUTE_PERM: Record<string, string> = {
   '/parametres/reinitialisation': 'set.reset_stats',
   '/parametres/licences': 'set.company',
   '/parametres/administration': 'set.users',
+  '/sync': 'set.backup',
 }
 
 export const basePath = (href: string) => href.split('?')[0]

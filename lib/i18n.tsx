@@ -2231,6 +2231,7 @@ const DICT = {
   lic_continue: { fr: 'Commencer', ar: 'ابدأ' },
   // Admin — clés de licence
   nav_settings_licenses: { fr: 'Clés de licence', ar: 'مفاتيح الترخيص' },
+  nav_settings_sync: { fr: 'Synchronisation', ar: 'المزامنة' },
   nav_settings_admin: { fr: 'Administration', ar: 'الإدارة' },
   // Centre d'administration
   adm_title: { fr: "Centre d'Administration", ar: 'مركز الإدارة' },
