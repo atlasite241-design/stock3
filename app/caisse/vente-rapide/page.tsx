@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import JsBarcode from 'jsbarcode'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { Printer, Search, Sparkles } from 'lucide-react'
@@ -9,6 +10,19 @@ import Barcode128 from '@/components/Barcode128'
 import { ean13CheckDigit } from '@/components/EAN13'
 import { useDroguerie } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
+
+// Génère le SVG (chaîne) d'un code-barres CODE128 pour l'impression isolée.
+function barcodeSvg(value: string): string {
+  try {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    JsBarcode(el, value, { format: 'CODE128', height: 40, width: 1.5, fontSize: 12, displayValue: true, margin: 0, background: '#ffffff', lineColor: '#000000' })
+    return el.outerHTML
+  } catch {
+    return ''
+  }
+}
+
+const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
 
 // Code-barres EAN-13 dérivé de façon déterministe depuis l'id du client
 // (préfixe marocain 611 + 9 chiffres issus d'un hash + clé de contrôle).
@@ -44,6 +58,46 @@ function Content() {
     return Array.from({ length: n }, (_, i) => ({ key: `${c.id}-${i}`, client: c, code }))
   })
 
+  // Impression isolée : chaque étiquette = une petite page (≈54×30 mm), sans
+  // en-tête/pied navigateur ni page A4 vide. Idéal pour une imprimante d'étiquettes
+  // ou à découper. On imprime dans un iframe caché pour ne pas toucher à la page.
+  const printLabels = () => {
+    if (labels.length === 0) return
+    const store = escapeHtml(settings.storeName || 'Droguerie Pro')
+    const cells = labels.map(({ client, code }) => `
+      <div class="label">
+        <div class="store">${store}</div>
+        <div class="name">${escapeHtml(client.name)}</div>
+        ${barcodeSvg(code)}
+      </div>`).join('')
+    const html = `<!doctype html><html><head><meta charset="utf-8"><style>
+      @page { size: 54mm 30mm; margin: 0; }
+      * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
+      html, body { background: #fff; }
+      .label { width: 54mm; height: 30mm; display: flex; flex-direction: column;
+               align-items: center; justify-content: center; gap: 1mm; padding: 1.5mm;
+               page-break-after: always; }
+      .store { font-size: 7pt; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+      .name { font-size: 9pt; font-weight: 700; text-align: center; line-height: 1.1; }
+      svg { max-width: 100%; height: auto; }
+    </style></head><body>${cells}</body></html>`
+
+    const iframe = document.createElement('iframe')
+    iframe.style.position = 'fixed'
+    iframe.style.right = '0'
+    iframe.style.bottom = '0'
+    iframe.style.width = '0'
+    iframe.style.height = '0'
+    iframe.style.border = '0'
+    document.body.appendChild(iframe)
+    const doc = iframe.contentWindow?.document
+    if (!doc) { document.body.removeChild(iframe); return }
+    doc.open(); doc.write(html); doc.close()
+    const finish = () => { try { iframe.contentWindow?.focus(); iframe.contentWindow?.print() } finally { setTimeout(() => document.body.removeChild(iframe), 1000) } }
+    // Laisse le temps aux SVG de se poser.
+    setTimeout(finish, 250)
+  }
+
   if (!ready) return <Loader />
 
   return (
@@ -56,7 +110,7 @@ function Content() {
         <div className="flex flex-wrap gap-3">
           <button onClick={() => setAll(1)} className="btn-secondary !h-9 text-xs">{t('vr_all_1')}</button>
           <button onClick={() => setAll(0)} className="btn-secondary !h-9 text-xs">{t('vr_all_0')}</button>
-          <button onClick={() => window.print()} disabled={labels.length === 0} className="btn-primary disabled:opacity-50">
+          <button onClick={printLabels} disabled={labels.length === 0} className="btn-primary disabled:opacity-50">
             <Printer className="h-4 w-4" />
             {t('vr_print')} ({labels.length})
           </button>
