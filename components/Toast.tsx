@@ -37,14 +37,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={push}>
       {children}
-      <div className="pointer-events-none fixed right-4 top-20 z-[100] flex w-[320px] max-w-[calc(100vw-2rem)] flex-col gap-2">
+      <div className="pointer-events-none fixed bottom-4 left-1/2 z-[100] flex w-[320px] max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-col-reverse gap-2">
         <AnimatePresence>
           {toasts.map((t) => (
             <motion.div
               key={t.id}
-              initial={{ opacity: 0, x: 48 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 48 }}
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 24 }}
               className={`flex items-center gap-2.5 rounded-xl border bg-white dark:bg-[#12121a] px-4 py-3 shadow-xl ${
                 t.type === 'success' ? 'border-emerald-200 dark:border-emerald-500/20' : 'border-rose-200 dark:border-rose-500/20'
               }`}
