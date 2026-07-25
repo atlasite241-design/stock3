@@ -66,10 +66,13 @@ function play(notes: Note[]) {
 }
 
 const RECIPES: Record<SoundType, Note[]> = {
-  // Bright two-note rising chime — confirmations, ajouts, enregistrements
+  // Arpège majeur doux (Do–Mi–Sol–Do) qui s'épanouit en accord — chaleureux et
+  // agréable : confirmations, ajouts, enregistrements.
   success: [
-    { freq: 660, start: 0, dur: 0.12, type: 'sine' },
-    { freq: 990, start: 0.1, dur: 0.16, type: 'sine' },
+    { freq: 523.25, start: 0, dur: 0.5, type: 'sine', gain: 0.05 }, // Do5
+    { freq: 659.25, start: 0.06, dur: 0.46, type: 'sine', gain: 0.045 }, // Mi5
+    { freq: 783.99, start: 0.12, dur: 0.5, type: 'sine', gain: 0.05 }, // Sol5
+    { freq: 1046.5, start: 0.18, dur: 0.55, type: 'sine', gain: 0.038 }, // Do6 (éclat)
   ],
   // Low descending buzz — erreurs / actions bloquées
   error: [
