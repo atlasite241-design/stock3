@@ -30,3 +30,6 @@ Catalogue_complet.csv
 # Fichiers temporaires Excel
 ~$*.xlsx
 ~$*.xls
+
+# Archives ZIP locales
+*.zip
