@@ -84,20 +84,18 @@ function Content() {
       svg { max-width: 100%; height: auto; }
     </style></head><body>${cells}</body></html>`
 
-    // Fenêtre dédiée (URL « about:blank », pas d'en-tête de l'app). Repli iframe si bloquée.
-    const win = window.open('', '_blank', 'width=420,height=320')
-    if (win) {
-      win.document.open(); win.document.write(html); win.document.close()
-      setTimeout(() => { win.focus(); win.print(); setTimeout(() => win.close(), 400) }, 300)
-      return
-    }
+    // Iframe caché (aucune fenêtre visible) : impression fiable, sans pop-up.
     const iframe = document.createElement('iframe')
-    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'
+    iframe.setAttribute('aria-hidden', 'true')
+    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden'
     document.body.appendChild(iframe)
     const doc = iframe.contentWindow?.document
     if (!doc) { document.body.removeChild(iframe); return }
     doc.open(); doc.write(html); doc.close()
-    setTimeout(() => { try { iframe.contentWindow?.focus(); iframe.contentWindow?.print() } finally { setTimeout(() => document.body.removeChild(iframe), 1000) } }, 300)
+    setTimeout(() => {
+      try { iframe.contentWindow?.focus(); iframe.contentWindow?.print() } catch {}
+      setTimeout(() => { try { document.body.removeChild(iframe) } catch {} }, 1000)
+    }, 300)
   }
 
   if (!ready) return <Loader />
