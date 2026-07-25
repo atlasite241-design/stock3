@@ -5,7 +5,8 @@ import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { Printer, Search, Sparkles } from 'lucide-react'
 import AppShell from '@/components/AppShell'
-import EAN13, { ean13CheckDigit } from '@/components/EAN13'
+import Barcode128 from '@/components/Barcode128'
+import { ean13CheckDigit } from '@/components/EAN13'
 import { useDroguerie } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
@@ -29,7 +30,7 @@ function Content() {
     const q = query.trim().toLowerCase()
     return clients
       .filter((c) => !q || c.name.toLowerCase().includes(q) || (c.phone ?? '').includes(q) || (c.city ?? '').toLowerCase().includes(q))
-      .map((c) => ({ c, code: clientEan(c.id) }))
+      .map((c) => ({ c, code: c.code || clientEan(c.id) }))
   }, [clients, query])
 
   const setAll = (n: number) => {
@@ -71,10 +72,12 @@ function Content() {
       {/* Clients table */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.4 }} className="glass-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px]">
+          <table className="w-full min-w-[900px]">
             <thead>
               <tr className="border-b border-gray-100 dark:border-white/10 text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500">
                 <th className="px-5 py-3.5">{t('vr_col_client')}</th>
+                <th className="px-5 py-3.5">{t('clin_phone')}</th>
+                <th className="px-5 py-3.5">{t('cli_col_city')}</th>
                 <th className="px-5 py-3.5">{t('vr_col_code')}</th>
                 <th className="px-5 py-3.5">{t('vr_col_barcode')}</th>
                 <th className="px-5 py-3.5">{t('vr_col_labels')}</th>
@@ -93,14 +96,13 @@ function Content() {
                           {c.name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('')}
                         </div>
                       )}
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{c.name}</p>
-                        <p className="text-xs text-gray-400 dark:text-zinc-500 tabular-nums">{c.phone || '—'}{c.city ? ` · ${c.city}` : ''}</p>
-                      </div>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{c.name}</p>
                     </div>
                   </td>
+                  <td className="px-5 py-3 text-sm text-gray-600 dark:text-zinc-400 tabular-nums">{c.phone || '—'}</td>
+                  <td className="px-5 py-3 text-sm text-gray-600 dark:text-zinc-400">{c.city || '—'}</td>
                   <td className="px-5 py-3 font-mono text-xs text-gray-600 dark:text-zinc-300 tabular-nums">{c.code || code}</td>
-                  <td className="px-5 py-3"><EAN13 code={code} height={26} moduleWidth={1.3} /></td>
+                  <td className="px-5 py-3"><Barcode128 value={code} height={26} width={1.3} fontSize={10} /></td>
                   <td className="px-5 py-3">
                     <input
                       type="number"
@@ -114,7 +116,7 @@ function Content() {
                 </tr>
               ))}
               {rows.length === 0 && (
-                <tr><td colSpan={4} className="px-5 py-10 text-center text-sm text-gray-400 dark:text-zinc-500">{t('vr_no_clients')}</td></tr>
+                <tr><td colSpan={6} className="px-5 py-10 text-center text-sm text-gray-400 dark:text-zinc-500">{t('vr_no_clients')}</td></tr>
               )}
             </tbody>
           </table>
@@ -133,8 +135,7 @@ function Content() {
               <div key={key} className="flex flex-col items-center gap-1 rounded-lg border border-dashed border-gray-300 dark:border-white/15 p-3 text-center">
                 <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500 dark:text-zinc-400">{settings.storeName}</p>
                 <p className="line-clamp-1 w-full text-xs font-semibold text-gray-900 dark:text-white">{client.name}</p>
-                <EAN13 code={code} height={34} moduleWidth={1.4} />
-                {client.code && <p className="font-mono text-[10px] text-gray-500 dark:text-zinc-400">{client.code}</p>}
+                <Barcode128 value={code} height={34} width={1.4} fontSize={12} />
               </div>
             ))}
           </div>
