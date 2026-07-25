@@ -106,7 +106,7 @@ function ClientsContent() {
     .filter((c) => typeFilter === 'Tous' || c.clientType === typeFilter)
     .filter((c) => {
       const q = query.trim().toLowerCase()
-      return !q || c.name.toLowerCase().includes(q) || c.phone.includes(q) || c.city.toLowerCase().includes(q)
+      return !q || c.name.toLowerCase().includes(q) || c.phone.includes(q) || c.city.toLowerCase().includes(q) || (c.code ?? '').toLowerCase().includes(q)
     })
     .sort((a, b) => {
       const dir = sortDir === 'asc' ? 1 : -1
@@ -358,7 +358,11 @@ function ClientsContent() {
                         )}
                         <div>
                           <p className="text-sm font-semibold text-gray-900 dark:text-white">{c.name}</p>
-                          <p className="text-xs text-gray-400 dark:text-zinc-500 tabular-nums">{c.phone || '—'}</p>
+                          <p className="text-xs text-gray-400 dark:text-zinc-500 tabular-nums">
+                            {c.code && <span className="font-mono text-amber-600 dark:text-amber-400">{c.code}</span>}
+                            {c.code && c.phone ? ' · ' : ''}
+                            {c.phone || (c.code ? '' : '—')}
+                          </p>
                         </div>
                       </div>
                     </td>
