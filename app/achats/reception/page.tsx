@@ -18,7 +18,7 @@ const STATE_OPTIONS: { key: PurchaseItem['receptionState']; labelKey: TKey }[] =
 ]
 
 function Content() {
-  const { ready, purchases, validateReception, updatePurchase } = useDroguerie()
+  const { ready, purchases, validateReception, updatePurchase, depots } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
   const [query, setQuery] = useState('')
@@ -181,7 +181,12 @@ function Content() {
               </div>
               <div>
                 <label className="field-label">{t('recep_depot')}</label>
-                <input type="text" value={depot} onChange={(e) => setDepot(e.target.value)} className="input-field" />
+                <Select
+                  value={depot}
+                  onChange={setDepot}
+                  placeholder={t('recep_depot_choose')}
+                  options={[{ value: '', label: t('recep_depot_choose') }, ...depots.map((d) => ({ value: d.name, label: d.name }))]}
+                />
               </div>
               <div>
                 <label className="field-label">{t('po_supplier_ref_label')}</label>
