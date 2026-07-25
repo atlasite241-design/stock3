@@ -14,7 +14,7 @@ type Filter = 'tous' | 'faible' | 'rupture'
 const PAGE_SIZE = 50
 
 function StockContent() {
-  const { ready, products, adjustStock } = useDroguerie()
+  const { ready, products, adjustStock, restockProduct } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
   const [filter, setFilter] = useState<Filter>('tous')
@@ -22,6 +22,7 @@ function StockContent() {
   const [page, setPage] = useState(1)
   const [restockTarget, setRestockTarget] = useState<Product | null>(null)
   const [restockQty, setRestockQty] = useState('10')
+  const [restockNote, setRestockNote] = useState('')
 
   // Compteurs (un seul passage) — indépendants de la pagination/recherche.
   const stats = useMemo(() => {
@@ -84,10 +85,12 @@ function StockContent() {
   const confirmRestock = () => {
     if (!restockTarget) return
     const qty = Math.max(1, Math.round(parseFloat(restockQty.replace(',', '.')) || 0))
-    adjustStock(restockTarget.id, qty)
+    // Réappro = mouvement « Entrée » (distinct de l'ajustement ±1), avec motif.
+    restockProduct(restockTarget.id, qty, restockNote.trim() || 'Réapprovisionnement')
     toast(`✓ ${restockTarget.name} : +${qty} ${t('stock_toast_restocked')}`)
     setRestockTarget(null)
     setRestockQty('10')
+    setRestockNote('')
   }
 
   return (
@@ -268,6 +271,17 @@ function StockContent() {
             autoFocus
           />
         </div>
+        <div className="mt-3">
+          <label className="field-label">{t('stock_restock_reason')}</label>
+          <input
+            type="text"
+            value={restockNote}
+            onChange={(e) => setRestockNote(e.target.value)}
+            placeholder={t('stock_restock_reason_ph')}
+            className="input-field"
+          />
+        </div>
+        <p className="mt-2 text-xs text-gray-400 dark:text-zinc-500">{t('stock_restock_hint')}</p>
         <div className="mt-5 grid grid-cols-2 gap-3">
           <button onClick={() => setRestockTarget(null)} className="btn-secondary">
             {t('stock_cancel')}

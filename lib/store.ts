@@ -1572,6 +1572,13 @@ export function useDroguerieState() {
     addMovement(id, 'ajustement', delta, note)
   }
 
+  // Réapprovisionnement : entrée de stock (type « entree »), distincte de
+  // l'ajustement ±1 — meilleure traçabilité dans les mouvements et rapports.
+  const restockProduct = (id: string, qty: number, note = 'Réapprovisionnement') => {
+    if (qty <= 0) return
+    addMovement(id, 'entree', qty, note || 'Réapprovisionnement')
+  }
+
   const applyInventory = (counts: { productId: string; counted: number }[]) => {
     let curProducts = products
     let curMovements = movements
@@ -2646,6 +2653,7 @@ export function useDroguerieState() {
     initializeStock,
     activeStoreInitialized,
     adjustStock,
+    restockProduct,
     applyInventory,
     recordSale,
     recordReturn,
