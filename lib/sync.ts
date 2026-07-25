@@ -77,6 +77,36 @@ function upsertStmtRaw(collection: string, id: string, storeId: string | null, d
 // 60 000+ chaînes JSON en mémoire faisait planter l'onglet lors d'un gros import.
 const pushedSnapshot = new Map<string, Map<string, string>>()
 
+// L'empreinte est PERSISTÉE en localStorage : sans ça, elle repartait vide à
+// chaque chargement de page → le 1er push de session renvoyait TOUT le catalogue
+// (des dizaines de milliers d'écritures), puis chaque appareil re-lisait ces
+// lignes au pull. Persistée, on ne pousse que ce qui a réellement changé depuis
+// la dernière session.
+const SIG_PREFIX = 'dp_pushsig_'
+
+function loadSnapshots() {
+  if (typeof localStorage === 'undefined') return
+  for (const c of COLLECTIONS) {
+    try {
+      const raw = localStorage.getItem(SIG_PREFIX + c.collection)
+      if (raw) pushedSnapshot.set(c.collection, new Map(JSON.parse(raw) as [string, string][]))
+    } catch {
+      /* empreinte illisible : on repart de zéro pour cette collection */
+    }
+  }
+}
+
+function saveSnapshot(collection: string) {
+  if (typeof localStorage === 'undefined') return
+  const snap = pushedSnapshot.get(collection)
+  if (!snap) return
+  try {
+    localStorage.setItem(SIG_PREFIX + collection, JSON.stringify([...snap]))
+  } catch {
+    /* quota : tant pis, l'empreinte mémoire suffit pour cette session */
+  }
+}
+
 // Signature compacte d'une chaîne : « longueur|hash32 ». La longueur ajoutée au
 // hash rend les collisions négligeables tout en tenant en ~12 octets (vs ~300).
 function sig(s: string): string {
@@ -131,7 +161,10 @@ async function pushOne(c: Collection, now: number): Promise<number> {
   }
 
   // Enregistré seulement après succès : un échec fera repartir l'envoi complet.
-  if (nextSnapshot) pushedSnapshot.set(c.collection, nextSnapshot)
+  if (nextSnapshot) {
+    pushedSnapshot.set(c.collection, nextSnapshot)
+    saveSnapshot(c.collection) // persiste pour ne pas tout re-pousser à la prochaine session
+  }
   return total
 }
 
@@ -324,23 +357,30 @@ async function pullInner(): Promise<void> {
       arr = []
     }
     const map = new Map<string, Row>(arr.filter((x) => x && x.id).map((x) => [x.id as string, x]))
+    // Empreinte de la collection : on la met à jour avec les enregistrements reçus
+    // pour NE PAS les re-pousser ensuite (ils sont déjà en remote).
+    let snap = pushedSnapshot.get(colName)
+    if (!snap) { snap = new Map<string, string>(); pushedSnapshot.set(colName, snap) }
     let colChanged = false
     for (const r of rows) {
       const id = String(r.id)
       if (Number(r.deleted) === 1) {
         if (map.delete(id)) colChanged = true
+        snap.delete(id)
       } else {
         const existing = map.get(id)
         if (!existing || JSON.stringify(existing) !== r.data) {
           map.set(id, JSON.parse(r.data))
           colChanged = true
         }
+        snap.set(id, sig(r.data)) // reçu de remote → déjà synchronisé
       }
     }
     if (colChanged) {
       storageSet(c.key, JSON.stringify([...map.values()]))
       changedCols.push(colName)
     }
+    saveSnapshot(colName)
   }
 
   setCursor(maxTs)
@@ -447,6 +487,29 @@ function localProductsEmpty(): boolean {
 export function startSync() {
   if (syncState.started || typeof window === 'undefined' || !tursoConfigured()) return
   syncState.started = true
+
+  // Empreinte anti-re-push : on charge celle de la session précédente. Pour les
+  // collections sans empreinte (1re fois après cette mise à jour), on l'initialise
+  // depuis le local — SAUF les collections « sales » (modifs non encore poussées).
+  // Sans ça, le 1er push de session renvoyait TOUT le catalogue à chaque ouverture.
+  loadSnapshots()
+  const dirty = new Set(loadPending())
+  for (const c of COLLECTIONS) {
+    if (c.singleton || pushedSnapshot.has(c.collection) || dirty.has(c.collection)) continue
+    const raw = storageGet(c.key)
+    if (!raw) continue
+    try {
+      const arr = JSON.parse(raw)
+      if (!Array.isArray(arr)) continue
+      const m = new Map<string, string>()
+      for (const rec of arr) if (rec && rec.id) m.set(String(rec.id), sig(JSON.stringify(rec)))
+      pushedSnapshot.set(c.collection, m)
+      saveSnapshot(c.collection)
+    } catch {
+      /* collection illisible : on la laissera se pousser normalement */
+    }
+  }
+
   window.addEventListener('online', () => void flushDirty())
   void flushDirty()
   // Auto-réparation : si le local n'a aucun produit, on télécharge tout depuis
