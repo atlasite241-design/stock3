@@ -124,7 +124,10 @@ export default function Select({
             style={{
               position: 'fixed',
               left: pos.left,
-              width: pos.width,
+              // Largeur mini = le bouton, mais le menu s'élargit pour afficher le
+              // texte complet (ex. « Conforme ») sans dépasser le bord de l'écran.
+              minWidth: pos.width,
+              maxWidth: Math.max(pos.width, window.innerWidth - pos.left - 12),
               ...(pos.flip
                 ? { bottom: window.innerHeight - pos.top + 6 }
                 : { top: pos.top + 6 }),
