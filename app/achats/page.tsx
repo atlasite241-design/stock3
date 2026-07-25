@@ -372,7 +372,9 @@ function Content() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3 pt-1">
+          {/* Barre d'action collante : toujours visible même quand la liste de
+              produits rend le formulaire très long. */}
+          <div className="sticky bottom-0 -mx-5 -mb-5 grid grid-cols-2 gap-3 border-t border-gray-100 bg-white px-5 py-3 dark:border-white/10 dark:bg-[#12121a] sm:-mx-6 sm:-mb-6 sm:px-6 sm:py-4">
             <button onClick={() => setNewOpen(false)} className="btn-secondary">
               {t('po_cancel')}
             </button>
