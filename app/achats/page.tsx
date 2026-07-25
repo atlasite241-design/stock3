@@ -338,11 +338,11 @@ function Content() {
                     <tr key={l.productId} className="border-b border-gray-50 dark:border-white/5">
                       <td className="px-3 py-2 text-xs text-gray-500 dark:text-zinc-400">{l.barcode || '—'}</td>
                       <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">{l.name}</td>
-                      <td className="px-3 py-2 text-center tabular-nums">{l.qty}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{fmtDH(l.cost)}</td>
-                      <td className="px-3 py-2 text-center tabular-nums">{l.discount ?? 0}%</td>
-                      <td className="px-3 py-2 text-center tabular-nums">{l.tva ?? 0}%</td>
-                      <td className="px-3 py-2 text-right font-bold tabular-nums">{fmtDH(lineTotal(l))}</td>
+                      <td className="px-3 py-2 text-center tabular-nums text-gray-700 dark:text-zinc-200">{l.qty}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-zinc-200">{fmtDH(l.cost)}</td>
+                      <td className="px-3 py-2 text-center tabular-nums text-gray-600 dark:text-zinc-400">{l.discount ?? 0}%</td>
+                      <td className="px-3 py-2 text-center tabular-nums text-gray-600 dark:text-zinc-400">{l.tva ?? 0}%</td>
+                      <td className="px-3 py-2 text-right font-bold tabular-nums text-gray-900 dark:text-white">{fmtDH(lineTotal(l))}</td>
                       <td className="px-3 py-2 text-right">
                         <button onClick={() => setLines(lines.filter((x) => x.productId !== l.productId))} className="rounded p-1 text-gray-400 dark:text-zinc-500 hover:bg-rose-50 hover:text-rose-500">
                           <Trash2 className="h-4 w-4" />
