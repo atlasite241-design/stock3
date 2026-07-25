@@ -32,7 +32,7 @@ export default function Barcode128({
         fontSize,
         displayValue,
         margin: 0,
-        background: 'transparent',
+        background: '#ffffff',
         lineColor: '#000000',
       })
     } catch {
@@ -40,5 +40,11 @@ export default function Barcode128({
     }
   }, [value, height, width, fontSize, displayValue])
 
-  return <svg ref={ref} className="max-w-full" />
+  // Fond blanc obligatoire : un code-barres doit rester noir sur blanc pour être
+  // visible (mode sombre) ET lisible par un scanner.
+  return (
+    <span className="inline-block rounded bg-white p-1">
+      <svg ref={ref} className="block max-w-full" />
+    </span>
+  )
 }
