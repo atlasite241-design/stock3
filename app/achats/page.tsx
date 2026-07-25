@@ -285,18 +285,12 @@ function Content() {
               />
             </div>
             <div>
-              <label className="field-label">{t('po_supplier_ref_label')}</label>
-              <input type="text" value={supplierRef} onChange={(e) => setSupplierRef(e.target.value)} className="input-field" />
-            </div>
-            <div>
               <label className="field-label">{t('po_expected_date_label')}</label>
               <input type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} className="input-field" />
             </div>
-            <div>
-              <label className="field-label">{t('po_global_discount')}</label>
-              <input type="number" min="0" max="100" value={globalDiscount} onChange={(e) => setGlobalDiscount(e.target.value)} className="input-field" />
-            </div>
           </div>
+          {/* Réf. fournisseur et remise globale ne sont plus saisies ici : elles sont
+              renseignées à la Réception, à partir du bon de livraison réel. */}
           <div>
             <label className="field-label">{t('po_note_label')}</label>
             <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="input-field resize-none" />

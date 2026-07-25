@@ -18,7 +18,7 @@ const STATE_OPTIONS: { key: PurchaseItem['receptionState']; labelKey: TKey }[] =
 ]
 
 function Content() {
-  const { ready, purchases, validateReception } = useDroguerie()
+  const { ready, purchases, validateReception, updatePurchase } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
   const [query, setQuery] = useState('')
@@ -27,6 +27,10 @@ function Content() {
   const [rows, setRows] = useState<Record<string, { qty: string; state: PurchaseItem['receptionState']; note: string }>>({})
   const [employee, setEmployee] = useState('')
   const [depot, setDepot] = useState('')
+  // Réf. fournisseur + remise globale : renseignées à la réception (à partir du
+  // bon de livraison réel du fournisseur), plus à la création de la commande.
+  const [supplierRef, setSupplierRef] = useState('')
+  const [globalDiscount, setGlobalDiscount] = useState('0')
 
   if (!ready) {
     return <Loader />
@@ -43,6 +47,8 @@ function Content() {
     setReceiveTarget(p)
     setEmployee('')
     setDepot('')
+    setSupplierRef(p.supplierRef ?? '')
+    setGlobalDiscount(String(p.globalDiscount ?? 0))
     const init: Record<string, { qty: string; state: PurchaseItem['receptionState']; note: string }> = {}
     p.items.forEach((i) => {
       const remaining = Math.max(0, i.qty - (i.receivedQty ?? 0))
@@ -60,6 +66,9 @@ function Content() {
       toast(t('recep_nothing_to_receive'), 'error')
       return
     }
+    // Enregistre la réf. fournisseur et la remise réelle avant de valider.
+    const gd = Math.max(0, Math.min(100, parseFloat(globalDiscount.replace(',', '.')) || 0))
+    updatePurchase(receiveTarget.id, { supplierRef: supplierRef.trim() || undefined, globalDiscount: gd || undefined })
     validateReception(receiveTarget.id, received, { employee, depot })
     toast(`✓ ${receiveTarget.ref} ${t('recep_toast_validated')}`)
     setReceiveTarget(null)
@@ -173,6 +182,14 @@ function Content() {
               <div>
                 <label className="field-label">{t('recep_depot')}</label>
                 <input type="text" value={depot} onChange={(e) => setDepot(e.target.value)} className="input-field" />
+              </div>
+              <div>
+                <label className="field-label">{t('po_supplier_ref_label')}</label>
+                <input type="text" value={supplierRef} onChange={(e) => setSupplierRef(e.target.value)} placeholder={t('recep_supplier_ref_ph')} className="input-field" />
+              </div>
+              <div>
+                <label className="field-label">{t('po_global_discount')}</label>
+                <input type="number" min="0" max="100" value={globalDiscount} onChange={(e) => setGlobalDiscount(e.target.value)} className="input-field" />
               </div>
             </div>
 

@@ -1204,6 +1204,7 @@ const DICT = {
   recep_state_endommage: { fr: 'Endommagé', ar: 'تالف' },
   recep_employee: { fr: 'Employé', ar: 'الموظف' },
   recep_depot: { fr: 'Dépôt', ar: 'المستودع' },
+  recep_supplier_ref_ph: { fr: 'N° du bon de livraison fournisseur', ar: 'رقم سند التسليم للمورد' },
   recep_validate: { fr: 'Valider la réception', ar: 'تأكيد الاستلام' },
   recep_toast_validated: { fr: 'Réception validée — stock mis à jour', ar: 'تم تأكيد الاستلام — تم تحديث المخزون' },
   recep_status_partial: { fr: 'Cette commande est déjà partiellement reçue.', ar: 'هذا الأمر مستلم جزئياً بالفعل.' },
