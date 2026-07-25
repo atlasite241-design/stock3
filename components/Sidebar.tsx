@@ -237,17 +237,18 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
     return () => window.removeEventListener('droguerie-cart-change', read)
   }, [])
 
-  // Auto-expand the group containing the current page
+  // Auto-expand the group containing the current page (accordéon : seul ce groupe).
   useEffect(() => {
     const group = NAV.find((n) => n.children?.some((c) => basePath(c.href) === pathname))
     if (group && !expanded.includes(group.labelKey)) {
-      setExpanded((e) => [...e, group.labelKey])
+      setExpanded([group.labelKey])
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
 
+  // Accordéon : ouvrir un groupe ferme les autres. Reclic sur le groupe ouvert = fermé.
   const toggle = (label: string) =>
-    setExpanded((e) => (e.includes(label) ? e.filter((x) => x !== label) : [...e, label]))
+    setExpanded((e) => (e.includes(label) ? [] : [label]))
 
   const groupActive = (item: NavItem) =>
     item.children?.some((c) => basePath(c.href) === pathname) ?? false
