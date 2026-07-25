@@ -87,6 +87,7 @@ export interface Sale {
 
 export interface Client {
   id: string
+  code?: string
   name: string
   phone: string
   email: string
@@ -1844,6 +1845,7 @@ export function useDroguerieState() {
   ) => {
     const client: Client = {
       id: uid(),
+      code: data.code?.trim() || undefined,
       name: data.name,
       phone: data.phone,
       email: data.email ?? '',

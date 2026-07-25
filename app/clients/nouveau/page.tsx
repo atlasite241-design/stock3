@@ -12,6 +12,7 @@ import { removeWhiteBackground } from '@/lib/image'
 import { useLanguage } from '@/lib/i18n'
 
 const EMPTY_FORM = {
+  code: '',
   name: '',
   phone: '',
   email: '',
@@ -62,6 +63,7 @@ function Content() {
   }
 
   const buildPayload = () => ({
+    code: form.code.trim(),
     name: form.name.trim(),
     phone: form.phone.trim(),
     email: form.email.trim(),
@@ -242,6 +244,15 @@ function Content() {
                 { value: '60', label: t('clin_term_60') },
                 { value: '90', label: t('clin_term_90') },
               ]}
+            />
+          </div>
+          <div>
+            <label className="field-label">{t('clin_code')}</label>
+            <input
+              value={form.code}
+              onChange={(e) => setForm({ ...form, code: e.target.value })}
+              placeholder={t('clin_code_ph')}
+              className="input-field"
             />
           </div>
           <div className="sm:col-span-2">
