@@ -194,7 +194,7 @@ export interface StockMovement {
   date: string
   productId: string
   productName: string
-  type: 'entree' | 'sortie' | 'ajustement' | 'vente' | 'reception' | 'retour' | 'inventaire' | 'transfert_out' | 'transfert_in' | 'stock_initial'
+  type: 'entree' | 'reappro' | 'sortie' | 'ajustement' | 'vente' | 'reception' | 'retour' | 'inventaire' | 'transfert_out' | 'transfert_in' | 'stock_initial'
   qty: number
   note: string
   storeId?: string
@@ -636,6 +636,7 @@ export const PAYMENT_META: Record<Sale['payment'], { label: string; chip: string
 
 export const MOVEMENT_META: Record<StockMovement['type'], { label: string; chip: string }> = {
   entree: { label: 'Entrée', chip: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
+  reappro: { label: 'Réapprovisionnement', chip: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
   sortie: { label: 'Sortie', chip: 'border-rose-200 bg-rose-50 text-rose-700' },
   ajustement: { label: 'Ajustement', chip: 'border-sky-200 bg-sky-50 text-sky-700' },
   vente: { label: 'Vente', chip: 'border-amber-200 bg-amber-50 text-amber-700' },
@@ -1576,7 +1577,7 @@ export function useDroguerieState() {
   // l'ajustement ±1 — meilleure traçabilité dans les mouvements et rapports.
   const restockProduct = (id: string, qty: number, note = 'Réapprovisionnement') => {
     if (qty <= 0) return
-    addMovement(id, 'entree', qty, note || 'Réapprovisionnement')
+    addMovement(id, 'reappro', qty, note || 'Réapprovisionnement')
   }
 
   const applyInventory = (counts: { productId: string; counted: number }[]) => {

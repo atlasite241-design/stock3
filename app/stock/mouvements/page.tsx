@@ -50,7 +50,8 @@ function Content() {
   ]
 
   const visible = movements.filter((m) => {
-    const okType = filter === 'tous' || m.type === filter
+    // Le réapprovisionnement est une entrée de stock → il apparaît aussi sous « Entrées ».
+    const okType = filter === 'tous' || m.type === filter || (filter === 'entree' && m.type === 'reappro')
     const q = query.trim().toLowerCase()
     return okType && (!q || m.productName.toLowerCase().includes(q) || m.note.toLowerCase().includes(q))
   })
