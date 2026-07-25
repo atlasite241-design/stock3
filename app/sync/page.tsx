@@ -30,11 +30,13 @@ export default function SyncPage() {
   }
 
   useEffect(() => {
+    // Un SEUL comptage au montage. L'ancien appel toutes les 2 s relançait un
+    // COUNT(*) sur toute la table (~20 000 lignes lues) → ~36 M lignes/heure si
+    // la page restait ouverte. Les compteurs se rafraîchissent maintenant via le
+    // bouton « Rafraîchir les compteurs ». Le tick ne fait qu'un re-rendu léger
+    // pour montrer le journal de synchro en direct (aucune requête DB).
     void refresh()
-    const id = setInterval(() => {
-      setTick((t) => t + 1)
-      void refresh()
-    }, 2000)
+    const id = setInterval(() => setTick((t) => t + 1), 2000)
     return () => clearInterval(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

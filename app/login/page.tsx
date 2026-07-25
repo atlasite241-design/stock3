@@ -284,7 +284,7 @@ function LoginForm({
       } catch {
         /* réseau : on réessaie au tick suivant */
       }
-    }, 3000)
+    }, 6000) // 6 s (au lieu de 3) : détecte l'approbation sans lire la table trop souvent
     return () => clearInterval(id)
   }, [mode, pendingName])
 
