@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
@@ -250,6 +250,22 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
   const toggle = (label: string) =>
     setExpanded((e) => (e.includes(label) ? [] : [label]))
 
+  // Quand un groupe s'ouvre, on fait défiler la barre latérale (son conteneur
+  // uniquement, pas la page) pour révéler ses sous-menus — utile pour « Paramètres »
+  // et « Utilisateurs » qui sont tout en bas.
+  const navRef = useRef<HTMLElement>(null)
+  const groupRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  useEffect(() => {
+    const key = expanded[0]
+    const nav = navRef.current
+    const el = key ? groupRefs.current[key] : null
+    if (!nav || !el) return
+    requestAnimationFrame(() => {
+      const delta = el.getBoundingClientRect().bottom - nav.getBoundingClientRect().bottom
+      if (delta > 0) nav.scrollTo({ top: nav.scrollTop + delta + 12, behavior: 'smooth' })
+    })
+  }, [expanded])
+
   const groupActive = (item: NavItem) =>
     item.children?.some((c) => basePath(c.href) === pathname) ?? false
 
@@ -286,7 +302,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
+        <nav ref={navRef} className="flex-1 overflow-y-auto px-3 py-4">
           <div className="space-y-1">
             {visibleNav.map((item) => {
               if (!item.children) {
@@ -317,7 +333,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
               const isOpen = expanded.includes(item.labelKey)
               const active = groupActive(item)
               return (
-                <div key={item.labelKey}>
+                <div key={item.labelKey} ref={(el) => { groupRefs.current[item.labelKey] = el }}>
                   <button
                     onClick={() => toggle(item.labelKey)}
                     className={`group flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition-colors ${
