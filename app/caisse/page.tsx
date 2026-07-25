@@ -196,15 +196,21 @@ function CaisseContent() {
   )
   const deferredQuery = useDeferredValue(query)
 
-  const filtered = useMemo(() => {
+  // On n'affiche qu'un nombre limité de cartes : rendre les 25 000 fiches (chacune
+  // avec une image) figeait la caisse plusieurs minutes. La caisse s'utilise au
+  // scan / à la recherche — au-delà, on invite à préciser.
+  const MAX_CARDS = 60
+  const { filtered, totalMatches } = useMemo(() => {
     const q = deferredQuery.trim().toLowerCase()
     const out: typeof products = []
+    let total = 0
     for (const it of searchIndex) {
       if (category !== 'Tous' && it.p.category !== category) continue
       if (q && !it.key.includes(q)) continue
-      out.push(it.p)
+      total++
+      if (out.length < MAX_CARDS) out.push(it.p)
     }
-    return out
+    return { filtered: out, totalMatches: total }
   }, [searchIndex, deferredQuery, category])
 
   const changeQty = (id: string, delta: number) => {
@@ -622,6 +628,11 @@ function CaisseContent() {
               <p className="col-span-full py-10 text-center text-sm text-gray-400 dark:text-zinc-500">{t('pos_no_product_found')}</p>
             )}
           </div>
+          {totalMatches > MAX_CARDS && (
+            <p className="mt-3 text-center text-xs text-gray-400 dark:text-zinc-500">
+              {t('pos_showing_first')} {MAX_CARDS} {t('pos_of')} {totalMatches} — {t('pos_refine_search')}
+            </p>
+          )}
         </div>
 
         {/* RIGHT — cart (desktop / tablet landscape sidebar) */}
