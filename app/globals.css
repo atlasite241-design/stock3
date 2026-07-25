@@ -50,6 +50,27 @@ html {
 body {
   @apply bg-[#fafaf7] text-gray-900 antialiased dark:bg-[#0a0a0f];
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  /* Application « bureau » : on empêche la sélection accidentelle du texte et des
+     menus (surlignage) partout. La saisie reste possible dans les champs (voir
+     l'exception ci-dessous). */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* On réautorise la sélection là où elle est utile : champs de saisie, zones
+   éditables, et tout élément explicitement marqué `.selectable`. */
+input,
+textarea,
+select,
+[contenteditable='true'],
+.selectable {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
 }
 
 .dark ::-webkit-scrollbar-thumb {
