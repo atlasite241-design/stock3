@@ -1687,7 +1687,7 @@ const DICT = {
   clin_no: { fr: 'Non', ar: 'لا' },
   clin_payment_term: { fr: 'Délai de paiement', ar: 'أجل الدفع' },
   clin_code: { fr: 'Code client', ar: 'رمز العميل' },
-  clin_code_ph: { fr: 'ex: CLT-001', ar: 'مثال: CLT-001' },
+  clin_code_auto: { fr: 'Généré automatiquement', ar: 'يُنشأ تلقائيًا' },
   clin_term_7: { fr: '7 jours', ar: '7 أيام' },
   clin_term_15: { fr: '15 jours', ar: '15 يوماً' },
   clin_term_30: { fr: '30 jours', ar: '30 يوماً' },

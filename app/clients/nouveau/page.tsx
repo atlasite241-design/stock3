@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { ImagePlus, Save, Scissors, User, UserPlus, X } from 'lucide-react'
@@ -12,7 +12,6 @@ import { removeWhiteBackground } from '@/lib/image'
 import { useLanguage } from '@/lib/i18n'
 
 const EMPTY_FORM = {
-  code: '',
   name: '',
   phone: '',
   email: '',
@@ -28,11 +27,22 @@ const EMPTY_FORM = {
 }
 
 function Content() {
-  const { addClient } = useDroguerie()
+  const { addClient, clients } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
   const router = useRouter()
   const [form, setForm] = useState(EMPTY_FORM)
+
+  // Code client généré automatiquement : CLT- + numéro incrémenté (5 chiffres).
+  // Recalculé quand la liste change → le client suivant obtient le code suivant.
+  const nextCode = useMemo(() => {
+    let max = 0
+    for (const c of clients) {
+      const m = /^CLT-(\d+)$/.exec((c.code ?? '').trim())
+      if (m) max = Math.max(max, parseInt(m[1], 10))
+    }
+    return 'CLT-' + String(max + 1).padStart(5, '0')
+  }, [clients])
   const imageInputRef = useRef<HTMLInputElement>(null)
 
   const onImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,7 +73,7 @@ function Content() {
   }
 
   const buildPayload = () => ({
-    code: form.code.trim(),
+    code: nextCode,
     name: form.name.trim(),
     phone: form.phone.trim(),
     email: form.email.trim(),
@@ -158,13 +168,13 @@ function Content() {
             />
           </div>
           <div>
-            <label className="field-label">{t('clin_email')}</label>
+            <label className="field-label">{t('clin_code')}</label>
             <input
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              placeholder="client@exemple.com"
-              className="input-field"
+              type="text"
+              value={nextCode}
+              readOnly
+              className="input-field cursor-default opacity-70"
+              title={t('clin_code_auto')}
             />
           </div>
           <div>
@@ -247,11 +257,12 @@ function Content() {
             />
           </div>
           <div>
-            <label className="field-label">{t('clin_code')}</label>
+            <label className="field-label">{t('clin_email')}</label>
             <input
-              value={form.code}
-              onChange={(e) => setForm({ ...form, code: e.target.value })}
-              placeholder={t('clin_code_ph')}
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              placeholder="client@exemple.com"
               className="input-field"
             />
           </div>
