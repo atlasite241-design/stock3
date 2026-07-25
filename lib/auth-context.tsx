@@ -73,6 +73,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const s = makeSession(u)
     setSession(s)
     setSessionState(s)
+    // Marque une connexion ACTIVE (par ce clic) → le splash ne s'affiche qu'ici,
+    // pas à chaque rechargement où la session est déjà valide.
+    try { sessionStorage.setItem('dp_just_logged_in', '1') } catch {}
   }
 
   const logout = () => {

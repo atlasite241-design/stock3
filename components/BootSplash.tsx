@@ -17,10 +17,15 @@ export default function BootSplash() {
   const [minElapsed, setMinElapsed] = useState(false)
   const startedRef = useRef(false)
 
-  // Déclenche le splash au moment de l'identification (et réarme après déconnexion).
+  // Splash affiché UNIQUEMENT juste après l'action de connexion (drapeau posé par
+  // establishSession), pas à chaque rechargement où la session est déjà valide.
   useEffect(() => {
     if (!authed) { startedRef.current = false; setVisible(false); return }
     if (startedRef.current) return
+    let justLoggedIn = false
+    try { justLoggedIn = sessionStorage.getItem('dp_just_logged_in') === '1' } catch {}
+    if (!justLoggedIn) { startedRef.current = true; return } // reload avec session → pas de splash
+    try { sessionStorage.removeItem('dp_just_logged_in') } catch {}
     startedRef.current = true
     setVisible(true)
     setMinElapsed(false)
