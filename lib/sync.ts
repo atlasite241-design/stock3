@@ -422,12 +422,19 @@ export async function resyncFromStart(): Promise<number> {
       continue
     }
     const arr: unknown[] = []
+    const snap = new Map<string, string>()
     for (const r of rows) {
       try {
-        arr.push(JSON.parse(r.data))
+        const rec = JSON.parse(r.data) as Row
+        arr.push(rec)
+        if (rec && rec.id) snap.set(String(rec.id), sig(r.data))
       } catch {}
     }
     storageSet(c.key, JSON.stringify(arr))
+    // Local reconstruit à l'identique du remote → empreinte reconstruite pour NE
+    // PAS re-pousser tout après une re-synchronisation.
+    pushedSnapshot.set(colName, snap)
+    saveSnapshot(colName)
     total += arr.length
   }
 
@@ -449,6 +456,7 @@ export async function bootstrapFromRemote(): Promise<boolean> {
 
   const byKey = new Map<string, unknown[]>()
   const singles = new Map<string, string>()
+  const snaps = new Map<string, Map<string, string>>() // collection -> empreinte
   let maxTs = 0
   for (const r of res.rows as unknown as (RemoteRow & { updated_at: number })[]) {
     maxTs = Math.max(maxTs, Number(r.updated_at))
@@ -459,13 +467,19 @@ export async function bootstrapFromRemote(): Promise<boolean> {
     } else {
       const list = byKey.get(c.key) ?? []
       try {
-        list.push(JSON.parse(String(r.data)))
+        const rec = JSON.parse(String(r.data)) as Row
+        list.push(rec)
+        let s = snaps.get(c.collection)
+        if (!s) { s = new Map(); snaps.set(c.collection, s) }
+        if (rec && rec.id) s.set(String(rec.id), sig(String(r.data)))
       } catch {}
       byKey.set(c.key, list)
     }
   }
   for (const [key, arr] of byKey) storageSet(key, JSON.stringify(arr))
   for (const [key, data] of singles) storageSet(key, data)
+  // Empreinte reconstruite = pas de re-push complet après l'amorçage.
+  for (const [collection, snap] of snaps) { pushedSnapshot.set(collection, snap); saveSnapshot(collection) }
   setCursor(maxTs)
   pushLog(`⇣ amorçage depuis Turso : ${res.rows.length} enregistrements`)
   return true

@@ -1465,6 +1465,27 @@ export function useDroguerieState() {
     if (p) logActivity(`Produit supprimé : ${p.name}`)
   }
 
+  // Ajoute aux collections `categories`/`subcategories` celles présentes dans les
+  // produits importés mais absentes — évite que la page Catégories diverge du
+  // catalogue réel (sous-catégorie au format « Catégorie › Sous-catégorie »).
+  const reconcileAttributes = (rows: Omit<Product, 'id'>[]) => {
+    const catNames = new Set(categories.map((c) => c.name))
+    const subNames = new Set(subcategories.map((s) => s.name))
+    const newCats: Attribute[] = []
+    const newSubs: Attribute[] = []
+    for (const r of rows) {
+      const cat = (r.category || '').trim()
+      if (cat && !catNames.has(cat)) { catNames.add(cat); newCats.push({ id: uid(), name: cat }) }
+      const sub = (r.subcategory || '').trim()
+      if (cat && sub) {
+        const full = `${cat} › ${sub}`
+        if (!subNames.has(full)) { subNames.add(full); newSubs.push({ id: uid(), name: full }) }
+      }
+    }
+    if (newCats.length) persistCategories([...categories, ...newCats])
+    if (newSubs.length) persistSubcategories([...subcategories, ...newSubs])
+  }
+
   const importProducts = (rows: Omit<Product, 'id'>[], replace = false) => {
     // Mode « remplacer » : on repart d'un catalogue vide. Indispensable pour
     // définir un catalogue de démarrage sans garder en mémoire les dizaines de
@@ -1487,6 +1508,7 @@ export function useDroguerieState() {
         }
       }
       persistProducts(arr)
+      reconcileAttributes(rows)
       logActivity(`Import produits (remplacement) : ${arr.length} produits`)
       return { added: arr.length, updated: 0 }
     }
@@ -1512,6 +1534,7 @@ export function useDroguerieState() {
       }
     }
     persistProducts(arr)
+    reconcileAttributes(rows)
     logActivity(`Import produits : ${added} ajoutés, ${updated} mis à jour`)
     return { added, updated }
   }
