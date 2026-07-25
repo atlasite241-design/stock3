@@ -99,7 +99,7 @@ function Content() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-5 py-3 font-mono text-xs text-gray-600 dark:text-zinc-300 tabular-nums">{code}</td>
+                  <td className="px-5 py-3 font-mono text-xs text-gray-600 dark:text-zinc-300 tabular-nums">{c.code || code}</td>
                   <td className="px-5 py-3"><EAN13 code={code} height={26} moduleWidth={1.3} /></td>
                   <td className="px-5 py-3">
                     <input
@@ -134,6 +134,7 @@ function Content() {
                 <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500 dark:text-zinc-400">{settings.storeName}</p>
                 <p className="line-clamp-1 w-full text-xs font-semibold text-gray-900 dark:text-white">{client.name}</p>
                 <EAN13 code={code} height={34} moduleWidth={1.4} />
+                {client.code && <p className="font-mono text-[10px] text-gray-500 dark:text-zinc-400">{client.code}</p>}
               </div>
             ))}
           </div>
