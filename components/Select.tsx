@@ -12,7 +12,7 @@ export interface SelectOption {
 // nombre d'éléments rendus : sans ça, un menu de 25 000 produits mettait plusieurs
 // secondes à s'ouvrir (rendu de 25 000 boutons).
 const SEARCH_THRESHOLD = 20
-const RENDER_CAP = 100
+const RENDER_CAP = 100 // premier lot affiché ; le défilement en charge davantage
 
 export default function Select({
   value,
@@ -29,6 +29,7 @@ export default function Select({
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [cap, setCap] = useState(RENDER_CAP) // nombre d'éléments rendus (grandit au défilement)
   const ref = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
@@ -56,15 +57,24 @@ export default function Select({
     for (const o of normalized) {
       if (q && !o.label.toLowerCase().includes(q)) continue
       total++
-      if (out.length < RENDER_CAP) out.push(o)
+      if (out.length < cap) out.push(o)
     }
     return { shown: out, total }
-  }, [normalized, query])
+  }, [normalized, query, cap])
+
+  // Charge la suite quand on approche du bas de la liste (défilement).
+  const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 80) setCap((c) => c + RENDER_CAP)
+  }
 
   useEffect(() => {
     if (open && withSearch) requestAnimationFrame(() => searchRef.current?.focus())
-    if (!open) setQuery('')
+    if (!open) { setQuery(''); setCap(RENDER_CAP) }
   }, [open, withSearch])
+
+  // La recherche réinitialise le lot affiché.
+  useEffect(() => { setCap(RENDER_CAP) }, [query])
 
   return (
     <div ref={ref} className={`relative ${className}`}>
@@ -95,7 +105,7 @@ export default function Select({
               />
             </div>
           )}
-          <div className="max-h-60 overflow-y-auto">
+          <div className="max-h-60 overflow-y-auto" onScroll={onScroll}>
             {shown.map((o) => (
               <button
                 key={o.value}
@@ -120,7 +130,7 @@ export default function Select({
           </div>
           {total > shown.length && (
             <p className="px-3 py-1.5 text-center text-[11px] text-gray-400 dark:text-zinc-500">
-              {shown.length} / {total} — précise ta recherche
+              {shown.length} / {total} — défile ou recherche
             </p>
           )}
         </div>

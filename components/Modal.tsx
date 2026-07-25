@@ -10,12 +10,15 @@ export default function Modal({
   title,
   children,
   maxWidth = 'max-w-lg',
+  closeOnBackdrop = true,
 }: {
   open: boolean
   onClose: () => void
   title: string
   children: React.ReactNode
   maxWidth?: string
+  // false = un clic à l'extérieur ne ferme pas (évite de perdre un formulaire en cours).
+  closeOnBackdrop?: boolean
 }) {
   return (
     <AnimatePresence>
@@ -26,7 +29,7 @@ export default function Modal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
-            onClick={onClose}
+            onClick={closeOnBackdrop ? onClose : undefined}
           />
           <motion.div
             initial={{ opacity: 0, y: 40 }}

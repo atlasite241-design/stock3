@@ -264,7 +264,7 @@ function Content() {
       </motion.div>
 
       {/* New / edit order modal */}
-      <Modal open={newOpen} onClose={() => setNewOpen(false)} title={editingId ? t('po_edit_title') : t('po_new_supplier_order')} maxWidth="max-w-3xl">
+      <Modal open={newOpen} onClose={() => setNewOpen(false)} title={editingId ? t('po_edit_title') : t('po_new_supplier_order')} maxWidth="max-w-3xl" closeOnBackdrop={false}>
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
@@ -319,7 +319,7 @@ function Content() {
           </div>
 
           {lines.length > 0 && (
-            <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-white/10">
+            <div className="max-h-[32vh] overflow-auto rounded-xl border border-gray-100 dark:border-white/10">
               <table className="w-full min-w-[640px] text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-left text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500">
@@ -355,33 +355,34 @@ function Content() {
             </div>
           )}
 
-          {lines.length > 0 && (
-            <div className="space-y-1 rounded-xl bg-gradient-to-r from-amber-50 dark:from-amber-500/10 to-yellow-50 dark:to-yellow-500/5 p-4">
-              <div className="flex justify-between text-sm text-gray-600 dark:text-zinc-400">
-                <span>{t('po_subtotal_ht')}</span>
-                <span className="tabular-nums">{fmtDH(subTotalHT)}</span>
+          {/* Pied collant : totaux + boutons toujours visibles, même quand la liste
+              de produits (qui défile dans sa propre zone ci-dessus) est longue. */}
+          <div className="sticky bottom-0 -mx-5 -mb-5 space-y-3 border-t border-gray-100 bg-white px-5 py-3 dark:border-white/10 dark:bg-[#12121a] sm:-mx-6 sm:-mb-6 sm:px-6 sm:py-4">
+            {lines.length > 0 && (
+              <div className="space-y-1 rounded-xl bg-gradient-to-r from-amber-50 dark:from-amber-500/10 to-yellow-50 dark:to-yellow-500/5 p-3">
+                <div className="flex justify-between text-sm text-gray-600 dark:text-zinc-400">
+                  <span>{t('po_subtotal_ht')}</span>
+                  <span className="tabular-nums">{fmtDH(subTotalHT)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-gray-600 dark:text-zinc-400">
+                  <span>{t('po_tva_total')}</span>
+                  <span className="tabular-nums">{fmtDH(tvaTotal)}</span>
+                </div>
+                <div className="flex justify-between border-t border-amber-200/50 dark:border-white/10 pt-1.5 text-base font-bold text-gray-900 dark:text-white">
+                  <span>{t('po_total_ttc')}</span>
+                  <span className="tabular-nums">{fmtDH(totalTTC)}</span>
+                </div>
               </div>
-              <div className="flex justify-between text-sm text-gray-600 dark:text-zinc-400">
-                <span>{t('po_tva_total')}</span>
-                <span className="tabular-nums">{fmtDH(tvaTotal)}</span>
-              </div>
-              <div className="flex justify-between border-t border-amber-200/50 dark:border-white/10 pt-1.5 text-base font-bold text-gray-900 dark:text-white">
-                <span>{t('po_total_ttc')}</span>
-                <span className="tabular-nums">{fmtDH(totalTTC)}</span>
-              </div>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setNewOpen(false)} className="btn-secondary">
+                {t('po_cancel')}
+              </button>
+              <button onClick={saveOrder} className="btn-primary">
+                <Truck className="h-4 w-4" />
+                {editingId ? t('po_save') : t('po_create_order')}
+              </button>
             </div>
-          )}
-
-          {/* Barre d'action collante : toujours visible même quand la liste de
-              produits rend le formulaire très long. */}
-          <div className="sticky bottom-0 -mx-5 -mb-5 grid grid-cols-2 gap-3 border-t border-gray-100 bg-white px-5 py-3 dark:border-white/10 dark:bg-[#12121a] sm:-mx-6 sm:-mb-6 sm:px-6 sm:py-4">
-            <button onClick={() => setNewOpen(false)} className="btn-secondary">
-              {t('po_cancel')}
-            </button>
-            <button onClick={saveOrder} className="btn-primary">
-              <Truck className="h-4 w-4" />
-              {editingId ? t('po_save') : t('po_create_order')}
-            </button>
           </div>
         </div>
       </Modal>
