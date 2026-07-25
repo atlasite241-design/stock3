@@ -298,7 +298,7 @@ function Content() {
 
           <div>
             <label className="field-label">{t('po_add_products')}</label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-end gap-2">
               <Select
                 value={lineProduct}
                 onChange={setLineProduct}
@@ -309,9 +309,18 @@ function Content() {
                   ...products.map((p) => ({ value: p.id, label: `${p.name} (${t('po_buy_abbr')} ${fmtDH(p.cost)})` })),
                 ]}
               />
-              <input type="number" min="1" value={lineQty} onChange={(e) => setLineQty(e.target.value)} placeholder={t('po_col_qty')} className="input-field w-20" />
-              <input type="number" min="0" value={lineDiscount} onChange={(e) => setLineDiscount(e.target.value)} placeholder={t('po_col_discount')} className="input-field w-20" />
-              <input type="number" min="0" value={lineTva} onChange={(e) => setLineTva(e.target.value)} placeholder={t('po_col_tva')} className="input-field w-20" />
+              <div className="w-20">
+                <span className="mb-1 block text-[11px] font-medium text-gray-500 dark:text-zinc-400">{t('po_col_qty')}</span>
+                <input type="number" min="1" value={lineQty} onChange={(e) => setLineQty(e.target.value)} className="input-field w-full" />
+              </div>
+              <div className="w-20">
+                <span className="mb-1 block text-[11px] font-medium text-gray-500 dark:text-zinc-400">{t('po_col_discount')}</span>
+                <input type="number" min="0" value={lineDiscount} onChange={(e) => setLineDiscount(e.target.value)} className="input-field w-full" />
+              </div>
+              <div className="w-20">
+                <span className="mb-1 block text-[11px] font-medium text-gray-500 dark:text-zinc-400">{t('po_col_tva')}</span>
+                <input type="number" min="0" value={lineTva} onChange={(e) => setLineTva(e.target.value)} className="input-field w-full" />
+              </div>
               <button onClick={addLine} className="btn-secondary shrink-0 !px-3">
                 <Plus className="h-4 w-4" />
               </button>
