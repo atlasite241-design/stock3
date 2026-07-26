@@ -79,6 +79,12 @@ export const ROUTE_PERM: Record<string, string> = {
   '/magasins': 'set.store',
   '/magasins/nouveau': 'set.store',
   '/magasins/depots': 'set.store',
+  '/magasins/zones': 'loc.view',
+  '/magasins/allees': 'loc.view',
+  '/magasins/rayons': 'loc.view',
+  '/magasins/etageres': 'loc.view',
+  '/magasins/niveaux': 'loc.view',
+  '/magasins/emplacements': 'loc.view',
   '/magasins/utilisateurs': 'set.users',
   '/magasins/parametres': 'set.store',
   // Utilisateurs

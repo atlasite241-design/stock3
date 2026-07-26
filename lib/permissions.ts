@@ -129,6 +129,17 @@ export const PERMISSION_CATALOG: PermCategory[] = [
     ],
   },
   {
+    key: 'loc', fr: 'Emplacements', ar: 'المواقع', icon: 'MapPin',
+    perms: [
+      { key: 'loc.view', fr: 'Voir les emplacements', ar: 'عرض المواقع' },
+      { key: 'loc.create', fr: 'Créer un emplacement', ar: 'إنشاء موقع' },
+      { key: 'loc.edit', fr: 'Modifier un emplacement', ar: 'تعديل موقع' },
+      { key: 'loc.delete', fr: 'Supprimer un emplacement', ar: 'حذف موقع' },
+      { key: 'loc.move', fr: 'Déplacer un produit', ar: 'نقل منتج' },
+      { key: 'loc.print', fr: 'Imprimer les emplacements', ar: 'طباعة المواقع' },
+    ],
+  },
+  {
     key: 'set', fr: 'Paramètres', ar: 'الإعدادات', icon: 'Settings',
     perms: [
       { key: 'set.company', fr: 'Paramètres société', ar: 'إعدادات الشركة' },
@@ -172,6 +183,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<RoleName, string[]> = {
     'prod.view', 'prod.add', 'prod.edit', 'prod.delete', 'prod.scan', 'prod.print_label', 'prod.view_buy', 'prod.view_sell',
     ...cat('purch'),
     ...cat('stock'),
+    ...cat('loc'),
     'supp.view', 'supp.balances', 'supp.payments',
     'report.stock', 'report.purchases',
   ],
