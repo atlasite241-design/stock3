@@ -215,6 +215,9 @@ export function effectivePermissions(
   role: RoleName,
   rolePermissions?: Record<string, string[]>
 ): Set<string> {
+  // L'Administrateur a TOUJOURS toutes les permissions (y compris celles ajoutées
+  // après une personnalisation enregistrée) — il ne peut pas être verrouillé.
+  if (role === 'Administrateur') return new Set(ALL_PERMISSION_KEYS)
   if (Array.isArray(userPermissions)) return new Set(userPermissions)
   const fromRole = rolePermissions?.[role] ?? ROLE_DEFAULT_PERMISSIONS[role] ?? []
   return new Set(fromRole)
