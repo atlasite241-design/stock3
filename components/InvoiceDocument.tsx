@@ -9,6 +9,8 @@ export interface DocLine {
   unit?: string
   puHT: number
   tvaPct: number
+  /** Code emplacement (WMS) — affiché sur les bons de préparation/livraison. */
+  emplacement?: string
 }
 
 // --- Montant en toutes lettres (français, dirhams + centimes) ---
@@ -73,6 +75,7 @@ export default function InvoiceDocument({
   lines,
   paid,
   showBalance = false,
+  showEmplacement = false,
   settingsOverride,
 }: {
   title: string
@@ -85,6 +88,7 @@ export default function InvoiceDocument({
   lines: DocLine[]
   paid?: number
   showBalance?: boolean
+  showEmplacement?: boolean
   settingsOverride?: Settings
 }) {
   const { settings: storeSettings, activeStore } = useDroguerie()
@@ -182,6 +186,7 @@ export default function InvoiceDocument({
         <thead>
           <tr className="bg-amber-400 text-left text-white">
             <th className="border border-amber-500 px-2 py-1.5 font-bold italic">{t('fdoc_col_products')}</th>
+            {showEmplacement && <th className="border border-amber-500 px-2 py-1.5 font-bold italic">{t('wms_emplacement')}</th>}
             <th className="border border-amber-500 px-2 py-1.5 text-center font-bold italic">{t('fdoc_col_qty')}</th>
             <th className="border border-amber-500 px-2 py-1.5 text-center font-bold italic">{t('fdoc_col_unit')}</th>
             <th className="border border-amber-500 px-2 py-1.5 text-right font-bold italic">{t('fdoc_col_pu_ht')}</th>
@@ -193,6 +198,7 @@ export default function InvoiceDocument({
           {lines.map((l, idx) => (
             <tr key={idx}>
               <td className="border border-gray-200 px-2 py-1.5">{l.label}</td>
+              {showEmplacement && <td className="border border-gray-200 px-2 py-1.5 font-mono text-[11px] text-gray-700">{l.emplacement || '-'}</td>}
               <td className="border border-gray-200 px-2 py-1.5 text-center tabular-nums">{l.qty}</td>
               <td className="border border-gray-200 px-2 py-1.5 text-center text-gray-500">{l.unit || '-'}</td>
               <td className="border border-gray-200 px-2 py-1.5 text-right tabular-nums">{fmtDH(l.puHT)}</td>
@@ -203,6 +209,7 @@ export default function InvoiceDocument({
           {Array.from({ length: emptyRows }).map((_, idx) => (
             <tr key={`e${idx}`}>
               <td className="border border-gray-200 px-2 py-1.5">&nbsp;</td>
+              {showEmplacement && <td className="border border-gray-200 px-2 py-1.5" />}
               <td className="border border-gray-200 px-2 py-1.5" />
               <td className="border border-gray-200 px-2 py-1.5" />
               <td className="border border-gray-200 px-2 py-1.5" />

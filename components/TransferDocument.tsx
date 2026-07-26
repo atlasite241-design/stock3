@@ -4,8 +4,9 @@ import { transferQty, useDroguerie, type Transfer } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 export default function TransferDocument({ transfer }: { transfer: Transfer }) {
-  const { settings, stores, depots } = useDroguerie()
+  const { settings, stores, depots, allProducts } = useDroguerie()
   const { t } = useLanguage()
+  const empOf = (productId: string) => allProducts.find((x) => x.id === productId)?.emplacementComplet
 
   const storeLabel = (storeId: string, depotId?: string) => {
     const s = stores.find((x) => x.id === storeId)
@@ -70,6 +71,7 @@ export default function TransferDocument({ transfer }: { transfer: Transfer }) {
           <tr className="bg-amber-400 text-left text-white">
             <th className="border border-amber-500 px-2 py-1.5 font-bold italic">{t('trf_col_barcode')}</th>
             <th className="border border-amber-500 px-2 py-1.5 font-bold italic">{t('trf_col_name')}</th>
+            <th className="border border-amber-500 px-2 py-1.5 font-bold italic">{t('wms_emplacement')}</th>
             <th className="border border-amber-500 px-2 py-1.5 text-center font-bold italic">{t('trf_total_qty')}</th>
           </tr>
         </thead>
@@ -78,6 +80,7 @@ export default function TransferDocument({ transfer }: { transfer: Transfer }) {
             <tr key={idx}>
               <td className="border border-gray-200 px-2 py-1.5 font-mono text-[11px]">{it.barcode || '—'}</td>
               <td className="border border-gray-200 px-2 py-1.5">{it.name}</td>
+              <td className="border border-gray-200 px-2 py-1.5 font-mono text-[11px]">{empOf(it.productId) || '—'}</td>
               <td className="border border-gray-200 px-2 py-1.5 text-center font-semibold tabular-nums">{Number(it[qtyKey]) || 0}</td>
             </tr>
           ))}
@@ -86,10 +89,11 @@ export default function TransferDocument({ transfer }: { transfer: Transfer }) {
               <td className="border border-gray-200 px-2 py-1.5">&nbsp;</td>
               <td className="border border-gray-200 px-2 py-1.5" />
               <td className="border border-gray-200 px-2 py-1.5" />
+              <td className="border border-gray-200 px-2 py-1.5" />
             </tr>
           ))}
           <tr>
-            <td className="border border-gray-200 px-2 py-1.5 text-right font-bold" colSpan={2}>{t('trf_total_qty')}</td>
+            <td className="border border-gray-200 px-2 py-1.5 text-right font-bold" colSpan={3}>{t('trf_total_qty')}</td>
             <td className="border border-gray-200 px-2 py-1.5 text-center font-black tabular-nums">{totalQty}</td>
           </tr>
         </tbody>

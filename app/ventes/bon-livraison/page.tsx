@@ -10,7 +10,7 @@ import { useDroguerie, type Sale } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 function Content() {
-  const { ready, sales, settings } = useDroguerie()
+  const { ready, sales, settings, products } = useDroguerie()
   const { t } = useLanguage()
   const [query, setQuery] = useState('')
   const [bl, setBl] = useState<Sale | null>(null)
@@ -18,6 +18,8 @@ function Content() {
   if (!ready) {
     return <Loader />
   }
+
+  const empOf = (productId: string) => products.find((x) => x.id === productId)?.emplacementComplet
 
   const visible = [...sales]
     .sort((a, b) => b.date.localeCompare(a.date))
@@ -133,6 +135,7 @@ function Content() {
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-white/10 text-left text-[11px] font-bold uppercase text-gray-400 dark:text-zinc-500">
                     <th className="py-2">{t('bl_designation')}</th>
+                    <th className="py-2">{t('wms_emplacement')}</th>
                     <th className="py-2 text-right">{t('bl_delivered_qty')}</th>
                   </tr>
                 </thead>
@@ -140,6 +143,7 @@ function Content() {
                   {bl.items.map((i) => (
                     <tr key={i.productId} className="border-b border-gray-100 dark:border-white/10">
                       <td className="py-2 text-gray-800 dark:text-zinc-100">{i.name}</td>
+                      <td className="py-2 font-mono text-[11px] text-amber-600 dark:text-amber-400">{empOf(i.productId) || '—'}</td>
                       <td className="py-2 text-right font-semibold tabular-nums">{i.qty}</td>
                     </tr>
                   ))}
