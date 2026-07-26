@@ -30,6 +30,7 @@ export const ROUTE_PERM: Record<string, string> = {
   '/stock/par-magasin': 'stock.view',
   '/stock/inventaire': 'stock.inventory',
   '/stock/reapprovisionnement': 'stock.view',
+  '/stock/consultation': 'stock.view',
   '/stock/mouvements': 'stock.movements',
   '/stock/transferts': 'stock.transfer',
   '/stock/transferts/nouveau': 'stock.transfer',
@@ -87,6 +88,7 @@ export const ROUTE_PERM: Record<string, string> = {
   '/magasins/niveaux': 'loc.view',
   '/magasins/emplacements': 'loc.view',
   '/magasins/plan': 'loc.view',
+  '/magasins/impression': 'loc.print',
   '/magasins/utilisateurs': 'set.users',
   '/magasins/parametres': 'set.store',
   // Utilisateurs
