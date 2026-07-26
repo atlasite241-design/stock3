@@ -43,6 +43,38 @@ export interface Depot {
   responsable: string
 }
 
+// ---- Emplacements de stockage (WMS) : hiérarchie Zone → Allée → Rayon → Étagère
+//      → Niveau → Position. Chaque niveau porte un `code` court (A, 02, 03…) et
+//      référence son parent. Le code complet d'emplacement est dérivé de la chaîne.
+export interface Zone { id: string; storeId: string; code: string; name: string }
+export interface Allee { id: string; storeId: string; zoneId: string; code: string; name?: string }
+export interface Rayon { id: string; storeId: string; alleeId: string; code: string; name?: string }
+export interface Etagere { id: string; storeId: string; rayonId: string; code: string; name?: string }
+export interface Niveau { id: string; storeId: string; etagereId: string; code: string; name?: string }
+export interface Position { id: string; storeId: string; niveauId: string; code: string; name?: string }
+// Emplacement = feuille de l'arbre : combinaison résolue + code complet + produit éventuel.
+export interface Emplacement {
+  id: string
+  storeId: string
+  positionId: string
+  code: string // MAG01-A-02-03-04-02-015
+  productId?: string
+}
+
+// Code magasin normalisé (MAG01, MAG02…) à partir de l'index du magasin.
+export function storeShortCode(index: number): string {
+  return 'MAG' + String(index + 1).padStart(2, '0')
+}
+
+// Assemble le code complet d'emplacement à partir des codes de chaque niveau.
+export function buildEmplacementCode(parts: {
+  storeCode: string; zone?: string; allee?: string; rayon?: string; etagere?: string; niveau?: string; position?: string
+}): string {
+  return [parts.storeCode, parts.zone, parts.allee, parts.rayon, parts.etagere, parts.niveau, parts.position]
+    .filter((p) => p != null && String(p).trim() !== '')
+    .join('-')
+}
+
 export interface Product {
   id: string
   name: string
@@ -560,6 +592,13 @@ const K = {
   credits: 'dp_credits',
   stores: 'dp_stores',
   depots: 'dp_depots',
+  zones: 'dp_zones',
+  allees: 'dp_allees',
+  rayons: 'dp_rayons',
+  etageres: 'dp_etageres',
+  niveaux: 'dp_niveaux',
+  positions: 'dp_positions',
+  emplacements: 'dp_emplacements',
   activeStore: 'dp_active_store',
   transfers: 'dp_transfers',
 }
@@ -1244,6 +1283,13 @@ export function useDroguerieState() {
   const [moneyTransfers, setMoneyTransfers] = useState<MoneyTransfer[]>([])
   const [stores, setStores] = useState<Store[]>([])
   const [depots, setDepots] = useState<Depot[]>([])
+  const [zones, setZones] = useState<Zone[]>([])
+  const [allees, setAllees] = useState<Allee[]>([])
+  const [rayons, setRayons] = useState<Rayon[]>([])
+  const [etageres, setEtageres] = useState<Etagere[]>([])
+  const [niveaux, setNiveaux] = useState<Niveau[]>([])
+  const [positions, setPositions] = useState<Position[]>([])
+  const [emplacements, setEmplacements] = useState<Emplacement[]>([])
   const [transfers, setTransfers] = useState<Transfer[]>([])
   const [activeStoreId, setActiveStoreIdState] = useState<string>('')
   const [ready, setReady] = useState(false)
@@ -1293,6 +1339,13 @@ export function useDroguerieState() {
       setMoneyTransfers(load(K.moneyTransfers, []))
       setStores(load(K.stores, []))
       setDepots(load(K.depots, []))
+      setZones(load(K.zones, []))
+      setAllees(load(K.allees, []))
+      setRayons(load(K.rayons, []))
+      setEtageres(load(K.etageres, []))
+      setNiveaux(load(K.niveaux, []))
+      setPositions(load(K.positions, []))
+      setEmplacements(load(K.emplacements, []))
       setTransfers(load(K.transfers, []))
       setActiveStoreIdState(getActiveStoreId())
       setSettings({ ...DEFAULT_SETTINGS, ...load<Partial<Settings>>(K.settings, {}) })
@@ -1408,6 +1461,13 @@ export function useDroguerieState() {
   const persistMoneyTransfers = useCallback(makeScopedPersist<MoneyTransfer>(K.moneyTransfers, setMoneyTransfers), [])
   const persistStores = useCallback(makePersist<Store[]>(K.stores, setStores), [])
   const persistDepots = useCallback(makePersist<Depot[]>(K.depots, setDepots), [])
+  const persistZones = useCallback(makePersist<Zone[]>(K.zones, setZones), [])
+  const persistAllees = useCallback(makePersist<Allee[]>(K.allees, setAllees), [])
+  const persistRayons = useCallback(makePersist<Rayon[]>(K.rayons, setRayons), [])
+  const persistEtageres = useCallback(makePersist<Etagere[]>(K.etageres, setEtageres), [])
+  const persistNiveaux = useCallback(makePersist<Niveau[]>(K.niveaux, setNiveaux), [])
+  const persistPositions = useCallback(makePersist<Position[]>(K.positions, setPositions), [])
+  const persistEmplacements = useCallback(makePersist<Emplacement[]>(K.emplacements, setEmplacements), [])
   const persistTransfers = useCallback(makePersist<Transfer[]>(K.transfers, setTransfers), [])
   /* eslint-enable react-hooks/exhaustive-deps */
 
@@ -2378,6 +2438,55 @@ export function useDroguerieState() {
     persistDepots(depots.map((d) => (d.id === id ? { ...d, ...data } : d)))
   const deleteDepot = (id: string) => persistDepots(depots.filter((d) => d.id !== id))
 
+  // ---- Emplacements (WMS) : hiérarchie Zone → Allée → Rayon → Étagère → Niveau
+  //      → Position. Intégrité gérée ici (pas de FK SQL) : on empêche de supprimer
+  //      un élément qui a des enfants. `locateResult` : { ok } ou { ok:false, error:'children' }.
+  const addZone = (data: Omit<Zone, 'id'>): Zone => { const z = { ...data, id: uid() }; persistZones([z, ...zones]); return z }
+  const updateZone = (id: string, data: Partial<Zone>) => persistZones(zones.map((z) => (z.id === id ? { ...z, ...data } : z)))
+  const deleteZone = (id: string) => {
+    if (allees.some((a) => a.zoneId === id)) return { ok: false as const, error: 'children' as const }
+    persistZones(zones.filter((z) => z.id !== id)); return { ok: true as const }
+  }
+
+  const addAllee = (data: Omit<Allee, 'id'>): Allee => { const a = { ...data, id: uid() }; persistAllees([a, ...allees]); return a }
+  const updateAllee = (id: string, data: Partial<Allee>) => persistAllees(allees.map((a) => (a.id === id ? { ...a, ...data } : a)))
+  const deleteAllee = (id: string) => {
+    if (rayons.some((r) => r.alleeId === id)) return { ok: false as const, error: 'children' as const }
+    persistAllees(allees.filter((a) => a.id !== id)); return { ok: true as const }
+  }
+
+  const addRayon = (data: Omit<Rayon, 'id'>): Rayon => { const r = { ...data, id: uid() }; persistRayons([r, ...rayons]); return r }
+  const updateRayon = (id: string, data: Partial<Rayon>) => persistRayons(rayons.map((r) => (r.id === id ? { ...r, ...data } : r)))
+  const deleteRayon = (id: string) => {
+    if (etageres.some((e) => e.rayonId === id)) return { ok: false as const, error: 'children' as const }
+    persistRayons(rayons.filter((r) => r.id !== id)); return { ok: true as const }
+  }
+
+  const addEtagere = (data: Omit<Etagere, 'id'>): Etagere => { const e = { ...data, id: uid() }; persistEtageres([e, ...etageres]); return e }
+  const updateEtagere = (id: string, data: Partial<Etagere>) => persistEtageres(etageres.map((e) => (e.id === id ? { ...e, ...data } : e)))
+  const deleteEtagere = (id: string) => {
+    if (niveaux.some((n) => n.etagereId === id)) return { ok: false as const, error: 'children' as const }
+    persistEtageres(etageres.filter((e) => e.id !== id)); return { ok: true as const }
+  }
+
+  const addNiveau = (data: Omit<Niveau, 'id'>): Niveau => { const n = { ...data, id: uid() }; persistNiveaux([n, ...niveaux]); return n }
+  const updateNiveau = (id: string, data: Partial<Niveau>) => persistNiveaux(niveaux.map((n) => (n.id === id ? { ...n, ...data } : n)))
+  const deleteNiveau = (id: string) => {
+    if (positions.some((p) => p.niveauId === id)) return { ok: false as const, error: 'children' as const }
+    persistNiveaux(niveaux.filter((n) => n.id !== id)); return { ok: true as const }
+  }
+
+  const addPosition = (data: Omit<Position, 'id'>): Position => { const p = { ...data, id: uid() }; persistPositions([p, ...positions]); return p }
+  const updatePosition = (id: string, data: Partial<Position>) => persistPositions(positions.map((p) => (p.id === id ? { ...p, ...data } : p)))
+  const deletePosition = (id: string) => {
+    if (emplacements.some((e) => e.positionId === id)) return { ok: false as const, error: 'children' as const }
+    persistPositions(positions.filter((p) => p.id !== id)); return { ok: true as const }
+  }
+
+  const addEmplacement = (data: Omit<Emplacement, 'id'>): Emplacement => { const e = { ...data, id: uid() }; persistEmplacements([e, ...emplacements]); return e }
+  const updateEmplacement = (id: string, data: Partial<Emplacement>) => persistEmplacements(emplacements.map((e) => (e.id === id ? { ...e, ...data } : e)))
+  const deleteEmplacement = (id: string) => persistEmplacements(emplacements.filter((e) => e.id !== id))
+
   // ---- Stock transfers ----
   const storeName = (id: string) => stores.find((s) => s.id === id)?.name ?? ''
 
@@ -2638,6 +2747,15 @@ export function useDroguerieState() {
     addDepot,
     updateDepot,
     deleteDepot,
+    // Emplacements (WMS) — listes brutes (filtrées par storeId dans les pages) + actions.
+    zones, allees, rayons, etageres, niveaux, positions, emplacements,
+    addZone, updateZone, deleteZone,
+    addAllee, updateAllee, deleteAllee,
+    addRayon, updateRayon, deleteRayon,
+    addEtagere, updateEtagere, deleteEtagere,
+    addNiveau, updateNiveau, deleteNiveau,
+    addPosition, updatePosition, deletePosition,
+    addEmplacement, updateEmplacement, deleteEmplacement,
     // Transferts (cross-store: not filtered — pages match source or dest).
     transfers,
     addTransfer,

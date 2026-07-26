@@ -44,6 +44,13 @@ export const COLLECTIONS: Collection[] = [
   { collection: 'moneyTransfers', key: 'dp_money_transfers' },
   { collection: 'stores', key: 'dp_stores' },
   { collection: 'depots', key: 'dp_depots' },
+  { collection: 'zones', key: 'dp_zones' },
+  { collection: 'allees', key: 'dp_allees' },
+  { collection: 'rayons', key: 'dp_rayons' },
+  { collection: 'etageres', key: 'dp_etageres' },
+  { collection: 'niveaux', key: 'dp_niveaux' },
+  { collection: 'positions', key: 'dp_positions' },
+  { collection: 'emplacements', key: 'dp_emplacements' },
   { collection: 'transfers', key: 'dp_transfers' },
   { collection: 'settings', key: 'dp_settings', singleton: true },
 ]

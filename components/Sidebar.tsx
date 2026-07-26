@@ -167,6 +167,7 @@ const NAV: NavItem[] = [
       { href: '/magasins', labelKey: 'nav_stores_list' },
       { href: '/magasins/nouveau', labelKey: 'nav_stores_new' },
       { href: '/magasins/depots', labelKey: 'nav_stores_depots' },
+      { href: '/magasins/zones', labelKey: 'nav_stores_zones' },
       { href: '/magasins/utilisateurs', labelKey: 'nav_stores_users' },
       { href: '/magasins/parametres', labelKey: 'nav_stores_settings' },
     ],
