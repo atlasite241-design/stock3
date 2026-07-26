@@ -93,6 +93,14 @@ export interface Product {
   reserved?: number
   lot?: string
   serial?: string
+  // Localisation (WMS) : chaîne d'emplacement + code complet auto (MAG01-A-02-…).
+  zoneId?: string
+  alleeId?: string
+  rayonId?: string
+  etagereId?: string
+  niveauId?: string
+  positionId?: string
+  emplacementComplet?: string
 }
 
 /** Physical stock minus quantities reserved by pending transfers. */

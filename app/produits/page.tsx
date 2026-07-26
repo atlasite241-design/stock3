@@ -3,13 +3,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { Camera, ChevronLeft, ChevronRight, ImagePlus, Package, Pencil, Plus, Printer, Scissors, Search, Trash2, Wand2 } from 'lucide-react'
+import { Camera, ChevronLeft, ChevronRight, ImagePlus, MapPin, Package, Pencil, Plus, Printer, Scissors, Search, Trash2, Wand2 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
 import ProductImage from '@/components/ProductImage'
 import CameraScanner from '@/components/CameraScanner'
 import { generateEan13 } from '@/components/EAN13'
 import Select from '@/components/Select'
+import LocationPicker, { type ProductLocation } from '@/components/LocationPicker'
 import { useToast } from '@/components/Toast'
 import { exportProductsCSVAsync, fmtDH, useDroguerie, type Product } from '@/lib/store'
 import { removeWhiteBackground } from '@/lib/image'
@@ -30,7 +31,7 @@ const EMPTY_FORM = {
 }
 
 function ProduitsContent() {
-  const { ready, products, categories, subcategories, brands, units, addProduct, updateProduct, deleteProduct } =
+  const { ready, products, categories, subcategories, brands, units, activeStoreId, addProduct, updateProduct, deleteProduct } =
     useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
@@ -40,6 +41,7 @@ function ProduitsContent() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
+  const [loc, setLoc] = useState<ProductLocation>({})
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null)
   const [cameraOpen, setCameraOpen] = useState(false)
   const [exportPct, setExportPct] = useState<number | null>(null)
@@ -81,7 +83,7 @@ function ProduitsContent() {
     const q = query.trim().toLowerCase()
     return products.filter((p) => {
       const okCat = category === 'Tous' || p.category === category
-      const okQuery = !q || p.name.toLowerCase().includes(q) || p.barcode.includes(q) || p.brand.toLowerCase().includes(q)
+      const okQuery = !q || p.name.toLowerCase().includes(q) || p.barcode.includes(q) || p.brand.toLowerCase().includes(q) || (p.emplacementComplet ?? '').toLowerCase().includes(q)
       return okCat && okQuery
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -98,6 +100,7 @@ function ProduitsContent() {
   const openAdd = () => {
     setEditingId(null)
     setForm(EMPTY_FORM)
+    setLoc({})
     setModalOpen(true)
   }
 
@@ -115,6 +118,10 @@ function ProduitsContent() {
       stock: String(p.stock),
       minStock: String(p.minStock),
       image: p.image ?? '',
+    })
+    setLoc({
+      zoneId: p.zoneId, alleeId: p.alleeId, rayonId: p.rayonId, etagereId: p.etagereId,
+      niveauId: p.niveauId, positionId: p.positionId, emplacementComplet: p.emplacementComplet,
     })
     setModalOpen(true)
   }
@@ -158,6 +165,9 @@ function ProduitsContent() {
       stock: Math.max(0, Math.round(num(form.stock))),
       minStock: Math.max(0, Math.round(num(form.minStock))),
       image: form.image || undefined,
+      // Localisation (WMS)
+      zoneId: loc.zoneId, alleeId: loc.alleeId, rayonId: loc.rayonId, etagereId: loc.etagereId,
+      niveauId: loc.niveauId, positionId: loc.positionId, emplacementComplet: loc.emplacementComplet,
     }
     if (editingId) {
       updateProduct(editingId, data)
@@ -278,6 +288,11 @@ function ProduitsContent() {
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{p.name}</p>
                         <p className="font-mono text-xs text-gray-400 dark:text-zinc-500">{p.barcode || '—'}</p>
+                        {p.emplacementComplet && (
+                          <p className="mt-0.5 flex items-center gap-1 font-mono text-[11px] text-amber-600 dark:text-amber-400">
+                            <MapPin className="h-3 w-3" />{p.emplacementComplet}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -514,6 +529,16 @@ function ProduitsContent() {
               />
             </div>
           </div>
+
+          {/* Emplacement de stockage (WMS) */}
+          <div className="rounded-xl border border-amber-200/60 bg-amber-50/40 p-3 dark:border-amber-500/20 dark:bg-amber-500/[0.06]">
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+              <MapPin className="h-3.5 w-3.5" />
+              {t('wms_emplacement')}
+            </p>
+            <LocationPicker storeId={activeStoreId} value={loc} onChange={setLoc} />
+          </div>
+
           <div className="grid grid-cols-2 gap-3 pt-2">
             <button onClick={() => setModalOpen(false)} className="btn-secondary">
               {t('prod_cancel')}
