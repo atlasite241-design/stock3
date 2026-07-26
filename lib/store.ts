@@ -2495,6 +2495,22 @@ export function useDroguerieState() {
   const updateEmplacement = (id: string, data: Partial<Emplacement>) => persistEmplacements(emplacements.map((e) => (e.id === id ? { ...e, ...data } : e)))
   const deleteEmplacement = (id: string) => persistEmplacements(emplacements.filter((e) => e.id !== id))
 
+  // Résout la chaîne d'emplacement d'un produit (codes + noms) pour l'affichage
+  // (recherche, scan, réappro, inventaire). Retourne null si non localisé.
+  const resolveLocation = (p?: Product | null) => {
+    if (!p) return null
+    const z = zones.find((x) => x.id === p.zoneId)
+    const a = allees.find((x) => x.id === p.alleeId)
+    const r = rayons.find((x) => x.id === p.rayonId)
+    const e = etageres.find((x) => x.id === p.etagereId)
+    const n = niveaux.find((x) => x.id === p.niveauId)
+    const po = positions.find((x) => x.id === p.positionId)
+    if (!z && !p.emplacementComplet) return null
+    return { code: p.emplacementComplet ?? '', zone: z, allee: a, rayon: r, etagere: e, niveau: n, position: po }
+  }
+  // Clé de tri « parcours physique » : les produits non localisés en dernier.
+  const locationSortKey = (p: Product) => p.emplacementComplet || '~~~~~~'
+
   // ---- Stock transfers ----
   const storeName = (id: string) => stores.find((s) => s.id === id)?.name ?? ''
 
@@ -2764,6 +2780,7 @@ export function useDroguerieState() {
     addNiveau, updateNiveau, deleteNiveau,
     addPosition, updatePosition, deletePosition,
     addEmplacement, updateEmplacement, deleteEmplacement,
+    resolveLocation, locationSortKey,
     // Transferts (cross-store: not filtered — pages match source or dest).
     transfers,
     addTransfer,

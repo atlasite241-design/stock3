@@ -29,6 +29,7 @@ export const ROUTE_PERM: Record<string, string> = {
   '/stock/stock-initial': 'stock.entry',
   '/stock/par-magasin': 'stock.view',
   '/stock/inventaire': 'stock.inventory',
+  '/stock/reapprovisionnement': 'stock.view',
   '/stock/mouvements': 'stock.movements',
   '/stock/transferts': 'stock.transfer',
   '/stock/transferts/nouveau': 'stock.transfer',

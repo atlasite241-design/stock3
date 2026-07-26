@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  MapPin,
   PackagePlus,
   PackageSearch,
   Printer,
@@ -26,9 +27,10 @@ import { useDroguerie } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 function Content() {
-  const { ready, products, applyInventory } = useDroguerie()
+  const { ready, products, applyInventory, locationSortKey } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
+  const [byLocation, setByLocation] = useState(false)
   const router = useRouter()
 
   const [counted, setCounted] = useState<Record<string, string>>({})
@@ -79,8 +81,9 @@ function Content() {
   const deferredQuery = useDeferredValue(query)
   const filtered = (() => {
     const q = deferredQuery.trim().toLowerCase()
-    if (!q) return products
-    return products.filter((p) => p.name.toLowerCase().includes(q) || p.barcode.includes(q))
+    const base = !q ? products : products.filter((p) => p.name.toLowerCase().includes(q) || p.barcode.includes(q))
+    if (!byLocation) return base
+    return [...base].sort((a, b) => locationSortKey(a).localeCompare(locationSortKey(b), 'fr') || a.name.localeCompare(b.name, 'fr'))
   })()
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const rows = filtered
@@ -211,8 +214,8 @@ function Content() {
         transition={{ delay: 0.05, duration: 0.4 }}
         className="glass-card print-area overflow-hidden"
       >
-        <div className="border-b border-gray-100 px-4 py-3 dark:border-white/10 no-print">
-          <div className="relative max-w-xs">
+        <div className="flex flex-wrap items-center gap-3 border-b border-gray-100 px-4 py-3 dark:border-white/10 no-print">
+          <div className="relative max-w-xs flex-1 min-w-[200px]">
             <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               value={query}
@@ -221,6 +224,10 @@ function Content() {
               className="input-field pl-10"
             />
           </div>
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-600 dark:text-zinc-400">
+            <input type="checkbox" checked={byLocation} onChange={(e) => { setByLocation(e.target.checked); setPage(1) }} className="h-4 w-4 accent-amber-500" />
+            {t('pinv_sort_location')}
+          </label>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px]">
@@ -244,7 +251,9 @@ function Content() {
                 >
                   <td className="px-5 py-3">
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">{p.name}</p>
-                    <p className="text-xs text-gray-400 dark:text-zinc-500">{p.category}</p>
+                    {byLocation && p.emplacementComplet
+                      ? <p className="flex items-center gap-1 font-mono text-[11px] text-amber-600 dark:text-amber-400"><MapPin className="h-3 w-3" />{p.emplacementComplet}</p>
+                      : <p className="text-xs text-gray-400 dark:text-zinc-500">{p.category}</p>}
                   </td>
                   <td className="px-5 py-3 text-sm font-bold text-gray-700 dark:text-zinc-300 tabular-nums">{p.stock}</td>
                   <td className="px-5 py-3">
