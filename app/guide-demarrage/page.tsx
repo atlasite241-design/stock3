@@ -45,7 +45,18 @@ const PHASES: Phase[] = [
     ],
   },
   {
-    n: '4', accent: 'border-rose-500', title: { fr: '★ Stock initial (mise en service)', ar: '★ المخزون الأولي (التشغيل)' },
+    n: '4', accent: 'border-teal-500', title: { fr: 'Emplacements de stockage (WMS)', ar: 'مواقع التخزين (WMS)' },
+    hint: { fr: 'Optionnel — pour organiser physiquement l’entrepôt', ar: 'اختياري — لتنظيم المستودع فعليًا' },
+    steps: [
+      { id: 'sLoc1', fr: '**Magasins › Zones / Allées / Rayons / Étagères / Niveaux / Emplacements** — construire la hiérarchie (code court + nom).', ar: '**المتاجر › المناطق / الممرات / الرفوف / الأرفف / المستويات / المواقع** — بناء التسلسل (رمز مختصر + اسم).' },
+      { id: 'sLoc2', fr: '**Produits › fiche produit** — affecter l’emplacement via le sélecteur en cascade (code auto **MAG01-A-02-…**).', ar: '**المنتجات › بطاقة المنتج** — تحديد الموقع عبر القائمة المتسلسلة (رمز تلقائي **MAG01-A-02-…**).' },
+      { id: 'sLoc3', fr: '**Magasins › Rangement (scan)** — scanner un produit et l’affecter / le déplacer vers un emplacement.', ar: '**المتاجر › الترتيب (مسح)** — مسح منتج وتحديد/نقل موقعه.' },
+      { id: 'sLoc4', fr: '**Magasins › Plan du magasin** — visualiser l’occupation (occupé / à réappro / vide), cliquer pour explorer.', ar: '**المتاجر › مخطط المتجر** — عرض الإشغال (مشغول / للتموين / فارغ)، والنقر للاستكشاف.' },
+      { id: 'sLoc5', fr: '**Stock › Consultation (scan)** — scanner pour voir la fiche complète + emplacement. Codes repris sur Réappro, Inventaire, bons & **Magasins › Impression**.', ar: '**المخزون › الاستعلام (مسح)** — المسح لعرض البطاقة الكاملة + الموقع. تظهر الرموز في التموين والجرد والسندات و**المتاجر › الطباعة**.' },
+    ],
+  },
+  {
+    n: '5', accent: 'border-rose-500', title: { fr: '★ Stock initial (mise en service)', ar: '★ المخزون الأولي (التشغيل)' },
     hint: { fr: "Le point de départ de l'inventaire", ar: 'نقطة انطلاق الجرد' },
     steps: [
       { id: 's4a', fr: '**Stock › Stock initial** — saisir la **quantité de départ** : au clavier, à la **douchette** (+1 par scan) ou par **import CSV** (code-barres ; quantité).', ar: '**المخزون › المخزون الأولي** — إدخال **الكمية الأولية**: بلوحة المفاتيح، بالماسح (+1 لكل مسح) أو عبر **استيراد CSV** (الرمز؛ الكمية).' },
@@ -55,20 +66,20 @@ const PHASES: Phase[] = [
     ],
   },
   {
-    n: '5', accent: 'border-emerald-500', title: { fr: 'Approvisionnement (réachats)', ar: 'التموين (إعادة الشراء)' },
+    n: '6', accent: 'border-emerald-500', title: { fr: 'Approvisionnement (réachats)', ar: 'التموين (إعادة الشراء)' },
     steps: [
       { id: 's5a', fr: '**Fournisseurs** — créer les fournisseurs.', ar: '**الموردون** — إنشاء الموردين.' },
       { id: 's5b', fr: '**Achats** — Bon de commande → **Bon de réception** (le stock augmente) → Facture fournisseur → Paiement.', ar: '**المشتريات** — سند طلبية ← **سند استلام** (يرتفع المخزون) ← فاتورة المورد ← الدفع.' },
     ],
   },
   {
-    n: '6', accent: 'border-amber-500', title: { fr: 'Ouverture de caisse', ar: 'فتح الصندوق' },
+    n: '7', accent: 'border-amber-500', title: { fr: 'Ouverture de caisse', ar: 'فتح الصندوق' },
     steps: [
       { id: 's6a', fr: '**Caisse › Ouvrir la caisse** — saisir le **fond de caisse**. Obligatoire avant d’encaisser.', ar: '**الصندوق › فتح الصندوق** — إدخال **رصيد البداية**. إلزامي قبل التحصيل.' },
     ],
   },
   {
-    n: '7', accent: 'border-rose-500', title: { fr: '★ Ventes & facturation', ar: '★ المبيعات والفوترة' },
+    n: '8', accent: 'border-rose-500', title: { fr: '★ Ventes & facturation', ar: '★ المبيعات والفوترة' },
     steps: [
       { id: 's7a', fr: '**Point de vente (POS) › Nouvelle vente** — scanner les produits, quantités/remises, client, mode de paiement, puis **Encaisser** → ticket ou facture.', ar: '**نقطة البيع › بيع جديد** — مسح المنتجات، الكميات/الخصومات، العميل، طريقة الدفع، ثم **التحصيل** ← تذكرة أو فاتورة.' },
       { id: 's7b', fr: '**Ventes › Devis** — créer un devis, générer le PDF, puis **Convertir en vente** (→ facture).', ar: '**المبيعات › عروض الأسعار** — إنشاء عرض، توليد PDF، ثم **التحويل إلى بيع** (← فاتورة).' },
@@ -76,7 +87,7 @@ const PHASES: Phase[] = [
     ],
   },
   {
-    n: '8', accent: 'border-indigo-500', title: { fr: 'Clôture, trésorerie & rapports', ar: 'الإقفال والخزينة والتقارير' },
+    n: '9', accent: 'border-indigo-500', title: { fr: 'Clôture, trésorerie & rapports', ar: 'الإقفال والخزينة والتقارير' },
     steps: [
       { id: 's8a', fr: '**Caisse › Dépenses / Recettes / Transfert d’argent** — trésorerie du jour.', ar: '**الصندوق › المصاريف / المداخيل / تحويل الأموال** — خزينة اليوم.' },
       { id: 's8b', fr: '**Caisse › Fin de journée** puis **Fermer la caisse** — comptage, écart, clôture.', ar: '**الصندوق › نهاية اليوم** ثم **إغلاق الصندوق** — الإحصاء، الفارق، الإقفال.' },
@@ -84,7 +95,7 @@ const PHASES: Phase[] = [
     ],
   },
   {
-    n: '9', accent: 'border-cyan-500', title: { fr: 'Sécurité & données', ar: 'الأمان والبيانات' },
+    n: '10', accent: 'border-cyan-500', title: { fr: 'Sécurité & données', ar: 'الأمان والبيانات' },
     steps: [
       { id: 's9a', fr: '**Paramètres › Sauvegarde** — sauvegarde/restauration, synchronisation.', ar: '**الإعدادات › النسخ الاحتياطي** — النسخ/الاستعادة، المزامنة.' },
       { id: 's9b', fr: '**Utilisateurs › Journal d’activité** — audit (qui a fait quoi, ancienne → nouvelle valeur).', ar: '**المستخدمون › سجل النشاط** — التدقيق (من فعل ماذا، القيمة القديمة ← الجديدة).' },
