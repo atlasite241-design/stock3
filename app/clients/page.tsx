@@ -358,11 +358,7 @@ function ClientsContent() {
                         )}
                         <div>
                           <p className="text-sm font-semibold text-gray-900 dark:text-white">{c.name}</p>
-                          <p className="text-xs text-gray-400 dark:text-zinc-500 tabular-nums">
-                            {c.code && <span className="font-mono text-amber-600 dark:text-amber-400">{c.code}</span>}
-                            {c.code && c.phone ? ' · ' : ''}
-                            {c.phone || (c.code ? '' : '—')}
-                          </p>
+                          {c.code && <p className="font-mono text-xs text-amber-600 dark:text-amber-400">{c.code}</p>}
                         </div>
                       </div>
                     </td>
