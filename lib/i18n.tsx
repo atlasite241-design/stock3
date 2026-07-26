@@ -466,6 +466,7 @@ const DICT = {
   nav_stores_emplacements: { fr: 'Emplacements', ar: 'المواقع' },
   nav_stores_plan: { fr: 'Plan du magasin', ar: 'مخطط المتجر' },
   nav_stores_impression: { fr: 'Impression emplacements', ar: 'طباعة المواقع' },
+  nav_stores_rangement: { fr: 'Rangement (scan)', ar: 'الترتيب (مسح)' },
   nav_stores_users: { fr: 'Utilisateurs du magasin', ar: 'مستخدمو المتجر' },
   // ---- Emplacements (WMS) ----
   wms_zones_title: { fr: 'Zones', ar: 'المناطق' },
@@ -503,6 +504,19 @@ const DICT = {
   consult_cost: { fr: 'Coût', ar: 'التكلفة' },
   consult_unit: { fr: 'Unité', ar: 'الوحدة' },
   consult_no_location: { fr: 'Aucun emplacement défini pour ce produit', ar: 'لا يوجد موقع محدد لهذا المنتج' },
+  // ---- Rangement / déplacement (put-away) ----
+  put_title: { fr: 'Rangement', ar: 'الترتيب' },
+  put_subtitle: { fr: 'Scannez un produit et affectez-lui un nouvel emplacement', ar: 'امسح منتجًا وحدد له موقعًا جديدًا' },
+  put_scan_ph: { fr: 'Scanner le produit à ranger…', ar: 'امسح المنتج المراد ترتيبه…' },
+  put_idle: { fr: 'Scannez un produit pour le ranger', ar: 'امسح منتجًا لترتيبه' },
+  put_stock: { fr: 'Stock disponible', ar: 'المخزون المتاح' },
+  put_current: { fr: 'Emplacement actuel', ar: 'الموقع الحالي' },
+  put_new_location: { fr: 'Nouvel emplacement', ar: 'الموقع الجديد' },
+  put_save: { fr: 'Enregistrer le rangement', ar: 'حفظ الترتيب' },
+  put_clear: { fr: 'Vider', ar: 'إفراغ' },
+  put_removed: { fr: 'aucun emplacement', ar: 'بدون موقع' },
+  put_history: { fr: 'Rangements de la session', ar: 'عمليات هذه الجلسة' },
+  put_history_empty: { fr: 'Aucun rangement effectué pour l’instant.', ar: 'لم تتم أي عملية ترتيب بعد.' },
   // ---- Impression par emplacement ----
   impr_title: { fr: 'Impression par emplacement', ar: 'الطباعة حسب الموقع' },
   impr_subtitle: { fr: 'Listes de produits regroupées par zone, allée ou rayon', ar: 'قوائم المنتجات مجمّعة حسب المنطقة أو الممر أو الرف' },
