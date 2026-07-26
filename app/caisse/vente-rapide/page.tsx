@@ -12,10 +12,10 @@ import { useDroguerie } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 // Génère le SVG (chaîne) d'un code-barres CODE128 pour l'impression isolée.
-function barcodeSvg(value: string): string {
+function barcodeSvg(value: string, height = 40): string {
   try {
     const el = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-    JsBarcode(el, value, { format: 'CODE128', height: 40, width: 1.5, fontSize: 12, displayValue: true, margin: 0, background: '#ffffff', lineColor: '#000000' })
+    JsBarcode(el, value, { format: 'CODE128', height, width: 1.4, fontSize: 12, displayValue: true, margin: 0, background: '#ffffff', lineColor: '#000000' })
     return el.outerHTML
   } catch {
     return ''
@@ -58,29 +58,32 @@ function Content() {
     return Array.from({ length: n }, (_, i) => ({ key: `${c.id}-${i}`, client: c, code }))
   })
 
-  // Impression isolée : chaque étiquette = une petite page (≈54×30 mm), sans
-  // en-tête/pied navigateur ni page A4 vide. Idéal pour une imprimante d'étiquettes
-  // ou à découper. On imprime dans un iframe caché pour ne pas toucher à la page.
+  // Impression Zebra — MÊME mécanisme que la page Produits › Codes-barres : chaque
+  // étiquette = une page à la taille EXACTE du format enregistré (settings), @page
+  // margin 0. Sur l'imprimante Zebra (ZDesigner) avec marges « aucune », la page =
+  // l'étiquette → aucun en-tête/pied du navigateur.
   const printLabels = () => {
     if (labels.length === 0) return
+    const w = Math.max(10, settings.labelWidthMm ?? 40)
+    const h = Math.max(10, settings.labelHeightMm ?? 30)
+    const bcH = Math.min(60, Math.round(h * 1.4))
     const store = escapeHtml(settings.storeName || 'Droguerie Pro')
     const cells = labels.map(({ client, code }) => `
       <div class="label">
         <div class="store">${store}</div>
         <div class="name">${escapeHtml(client.name)}</div>
-        ${barcodeSvg(code)}
+        ${barcodeSvg(code, bcH)}
       </div>`).join('')
-    // <title> vide : sinon le navigateur affiche le titre de l'app dans l'en-tête.
     const html = `<!doctype html><html><head><meta charset="utf-8"><title></title><style>
-      @page { size: 54mm 30mm; margin: 0; }
+      @page { size: ${w}mm ${h}mm; margin: 0; }
       * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
-      html, body { background: #fff; }
-      .label { width: 54mm; height: 30mm; display: flex; flex-direction: column;
-               align-items: center; justify-content: center; gap: 1mm; padding: 1.5mm;
-               page-break-after: always; }
+      html, body { color: #000; background: #fff; }
+      .label { width: ${w}mm; height: ${h}mm; display: flex; flex-direction: column;
+               align-items: center; justify-content: center; gap: 0.5mm; padding: 1mm;
+               text-align: center; overflow: hidden; page-break-after: always; }
       .label:last-child { page-break-after: auto; }
-      .store { font-size: 7pt; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
-      .name { font-size: 9pt; font-weight: 700; text-align: center; line-height: 1.1; }
+      .store { font-size: 6pt; font-weight: 700; text-transform: uppercase; line-height: 1; }
+      .name { font-size: 7pt; font-weight: 600; line-height: 1.05; max-height: 5mm; overflow: hidden; }
       svg { max-width: 100%; height: auto; }
     </style></head><body>${cells}</body></html>`
 
@@ -106,6 +109,9 @@ function Content() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">{t('vr_title')}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{t('vr_subtitle')}</p>
+          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+            Format {settings.labelWidthMm ?? 40} × {settings.labelHeightMm ?? 30} mm · à l'impression : imprimante Zebra (ZDesigner), marges « aucune », échelle 100 %.
+          </p>
         </div>
         <div className="flex flex-wrap gap-3">
           <button onClick={() => setAll(1)} className="btn-secondary !h-9 text-xs">{t('vr_all_1')}</button>
