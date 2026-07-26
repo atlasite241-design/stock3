@@ -4,6 +4,7 @@ import {
   BarChart3,
   Boxes,
   ClipboardList,
+  MapPin,
   Package,
   Settings,
   ShoppingCart,
@@ -16,7 +17,7 @@ import { PERMISSION_CATALOG, type Lang } from '@/lib/permissions'
 import { useLanguage } from '@/lib/i18n'
 
 const CATEGORY_ICON: Record<string, LucideIcon> = {
-  Package, ShoppingCart, Wallet, Users, Truck, ClipboardList, Boxes, BarChart3, Settings,
+  Package, ShoppingCart, Wallet, Users, Truck, ClipboardList, Boxes, BarChart3, Settings, MapPin,
 }
 
 /**

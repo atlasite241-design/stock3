@@ -10,6 +10,7 @@ import {
   Briefcase,
   CheckSquare,
   ClipboardList,
+  MapPin,
   Package,
   Save,
   Settings,
@@ -58,7 +59,7 @@ const ROLE_ICON: Record<RoleName, LucideIcon> = {
   Vendeur: ShoppingCart,
 }
 const CATEGORY_ICON: Record<string, LucideIcon> = {
-  Package, ShoppingCart, Wallet, Users, Truck, ClipboardList, Boxes, BarChart3, Settings,
+  Package, ShoppingCart, Wallet, Users, Truck, ClipboardList, Boxes, BarChart3, Settings, MapPin,
 }
 
 function Content() {
