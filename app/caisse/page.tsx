@@ -887,6 +887,31 @@ function CaisseContent() {
 
               <div className="my-3 border-t border-dashed border-gray-300" />
 
+              {/* Ventilation par taux de TVA */}
+              <p className="font-bold uppercase text-gray-800">{t('posr_vat_breakdown')}</p>
+              <div className="mt-1 flex justify-between font-bold text-gray-700">
+                <span className="w-12 shrink-0">{t('posr_vat_rate')}</span>
+                <span className="flex-1 text-right">{t('posr_vat_ht')}</span>
+                <span className="flex-1 text-right">{t('posr_vat_tva')}</span>
+                <span className="flex-1 text-right">{t('posr_vat_ttc')}</span>
+              </div>
+              {(() => {
+                const rate = settings.tva ?? 20
+                const ttc = receipt.total
+                const ht = ttc / (1 + rate / 100)
+                const tva = ttc - ht
+                return (
+                  <div className="flex justify-between text-gray-700">
+                    <span className="w-12 shrink-0 tabular-nums">{rate}%</span>
+                    <span className="flex-1 text-right tabular-nums">{ht.toFixed(2)}</span>
+                    <span className="flex-1 text-right tabular-nums">{tva.toFixed(2)}</span>
+                    <span className="flex-1 text-right tabular-nums">{ttc.toFixed(2)}</span>
+                  </div>
+                )
+              })()}
+
+              <div className="my-3 border-t border-dashed border-gray-300" />
+
               <p className="text-gray-700">
                 {t('posr_items_count')} {receipt.items.reduce((a, i) => a + i.qty, 0).toFixed(2)}
               </p>
