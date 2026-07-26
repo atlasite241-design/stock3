@@ -174,6 +174,7 @@ const NAV: NavItem[] = [
       { href: '/magasins/etageres', labelKey: 'nav_stores_etageres' },
       { href: '/magasins/niveaux', labelKey: 'nav_stores_niveaux' },
       { href: '/magasins/emplacements', labelKey: 'nav_stores_emplacements' },
+      { href: '/magasins/plan', labelKey: 'nav_stores_plan' },
       { href: '/magasins/utilisateurs', labelKey: 'nav_stores_users' },
       { href: '/magasins/parametres', labelKey: 'nav_stores_settings' },
     ],
