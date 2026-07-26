@@ -39,6 +39,7 @@ function Content() {
     const p = sourceProducts.find((x) => x.id === productId)
     return p ? availableStock(p) : 0
   }
+  const empOf = (productId: string) => sourceProducts.find((x) => x.id === productId)?.emplacementComplet
 
   const matches =
     search.trim().length > 0
@@ -151,7 +152,10 @@ function Content() {
                     onClick={() => addItem(p.id)}
                     className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition hover:bg-amber-50 dark:hover:bg-amber-500/10"
                   >
-                    <span className="min-w-0 flex-1 truncate text-gray-800 dark:text-zinc-100">{p.name}</span>
+                    <span className="min-w-0 flex-1 truncate text-gray-800 dark:text-zinc-100">
+                      {p.name}
+                      {p.emplacementComplet && <span className="ml-2 font-mono text-[11px] text-amber-600 dark:text-amber-400">{p.emplacementComplet}</span>}
+                    </span>
                     <span className="shrink-0 text-xs text-gray-400">{availableStock(p)}</span>
                   </button>
                 ))}
@@ -178,7 +182,10 @@ function Content() {
                 return (
                   <tr key={it.productId} className="border-b border-gray-50 last:border-0 dark:border-white/5">
                     <td className="px-3 py-2 font-mono text-xs text-gray-500 dark:text-zinc-400">{it.barcode || '—'}</td>
-                    <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">{it.name}</td>
+                    <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
+                      {it.name}
+                      {empOf(it.productId) && <span className="ml-2 font-mono text-[11px] text-amber-600 dark:text-amber-400">{empOf(it.productId)}</span>}
+                    </td>
                     <td className={`px-3 py-2 text-right font-semibold tabular-nums ${avail <= 0 ? 'text-rose-500' : 'text-gray-700 dark:text-zinc-300'}`}>{avail}</td>
                     <td className="px-3 py-2 text-right">
                       <input

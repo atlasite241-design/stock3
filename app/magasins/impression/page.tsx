@@ -60,6 +60,21 @@ function Content() {
     return [...map.values()].sort((x, y) => x.title.localeCompare(y.title, 'fr'))
   }, [located, level, storeCode, resolveLocation])
 
+  // Rapport global (indépendant des filtres) : taux de localisation & occupation.
+  const report = useMemo(() => {
+    const all = products.filter((p) => !activeStoreId || !p.storeId || p.storeId === activeStoreId)
+    const loc = all.filter((p) => p.emplacementComplet)
+    const reappro = loc.filter((p) => availableStock(p) <= p.minStock)
+    const emplacements = new Set(loc.map((p) => p.emplacementComplet))
+    return {
+      total: all.length,
+      located: loc.length,
+      rate: all.length ? Math.round((loc.length / all.length) * 100) : 0,
+      spots: emplacements.size,
+      reappro: reappro.length,
+    }
+  }, [products, activeStoreId])
+
   if (!ready) return <Loader />
 
   const zoneOpts = [{ value: '', label: t('impr_all_zones') }, ...zones.filter((z) => z.storeId === activeStoreId).sort((a, b) => a.code.localeCompare(b.code, 'fr')).map((z) => ({ value: z.id, label: `${z.code}${z.name ? ' · ' + z.name : ''}` }))]
@@ -85,6 +100,22 @@ function Content() {
           <Printer className="h-4 w-4" />{t('impr_print')}
         </button>
       </motion.div>
+
+      {/* Rapport d'emplacement */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+        {[
+          { v: report.total, l: t('impr_rpt_total'), c: 'text-gray-900 dark:text-white' },
+          { v: report.located, l: t('impr_rpt_located'), c: 'text-emerald-600 dark:text-emerald-400' },
+          { v: `${report.rate}%`, l: t('impr_rpt_rate'), c: 'text-amber-600 dark:text-amber-400' },
+          { v: report.spots, l: t('impr_rpt_spots'), c: 'text-gray-900 dark:text-white' },
+          { v: report.reappro, l: t('impr_rpt_reappro'), c: 'text-rose-500' },
+        ].map((s, i) => (
+          <div key={i} className="glass-card p-4 text-center">
+            <p className={`text-2xl font-extrabold tabular-nums ${s.c}`}>{s.v}</p>
+            <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-zinc-500">{s.l}</p>
+          </div>
+        ))}
+      </div>
 
       {/* Options */}
       <div className="glass-card flex flex-wrap items-end gap-4 p-4 no-print">

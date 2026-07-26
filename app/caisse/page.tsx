@@ -12,6 +12,7 @@ import {
   Camera,
   CreditCard,
   Layers,
+  MapPin,
   Minus,
   PauseCircle,
   PlayCircle,
@@ -617,6 +618,11 @@ function CaisseContent() {
                 </div>
                 <div className="p-3">
                   <p className="line-clamp-2 min-h-[40px] text-sm font-semibold text-gray-900 dark:text-white">{p.name}</p>
+                  {p.emplacementComplet && (
+                    <p className="mt-0.5 flex items-center gap-0.5 truncate font-mono text-[10px] text-amber-600 dark:text-amber-400">
+                      <MapPin className="h-2.5 w-2.5 shrink-0" />{p.emplacementComplet}
+                    </p>
+                  )}
                   <div className="mt-1 flex items-end justify-between gap-2">
                     <p className="text-base font-bold text-amber-600 dark:text-amber-400 tabular-nums">{fmtDH(p.price)}</p>
                     {p.barcode && <span className="shrink-0 truncate text-[10px] text-gray-400 dark:text-zinc-500">{p.barcode.slice(-8)}</span>}

@@ -18,7 +18,7 @@ const STATE_OPTIONS: { key: PurchaseItem['receptionState']; labelKey: TKey }[] =
 ]
 
 function Content() {
-  const { ready, purchases, validateReception, updatePurchase, depots } = useDroguerie()
+  const { ready, purchases, validateReception, updatePurchase, depots, products } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
   const [query, setQuery] = useState('')
@@ -35,6 +35,8 @@ function Content() {
   if (!ready) {
     return <Loader />
   }
+
+  const empOf = (productId: string) => products.find((x) => x.id === productId)?.emplacementComplet
 
   const pending = purchases
     .filter((p) => p.status === 'en_attente' || p.status === 'partiellement_recue')
@@ -216,7 +218,12 @@ function Content() {
                     const remaining = Math.max(0, i.qty - (i.receivedQty ?? 0))
                     return (
                       <tr key={i.productId} className="border-b border-gray-50 dark:border-white/5">
-                        <td className="px-3 py-2.5 font-medium text-gray-900 dark:text-white">{i.name}</td>
+                        <td className="px-3 py-2.5 font-medium text-gray-900 dark:text-white">
+                          {i.name}
+                          {empOf(i.productId) && (
+                            <span className="ml-2 font-mono text-[11px] text-amber-600 dark:text-amber-400">→ {empOf(i.productId)}</span>
+                          )}
+                        </td>
                         <td className="px-3 py-2.5 text-center tabular-nums text-gray-600 dark:text-zinc-400">{i.qty}</td>
                         <td className="px-3 py-2.5 text-center tabular-nums text-gray-600 dark:text-zinc-400">{i.receivedQty ?? 0}</td>
                         <td className="px-3 py-2.5">
