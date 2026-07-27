@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { Banknote, FileWarning, Printer, Search } from 'lucide-react'
@@ -8,13 +8,13 @@ import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
 import Select from '@/components/Select'
 import InvoiceDocument from '@/components/InvoiceDocument'
-import { printNode } from '@/lib/printNode'
+import { printInvoicePdf } from '@/lib/invoicePdf'
 import { useToast } from '@/components/Toast'
 import { fmtDH, useDroguerie, type Purchase } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 function Content() {
-  const { ready, purchases, payPurchase, settings } = useDroguerie()
+  const { ready, purchases, payPurchase, settings, activeStore } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
   const [query, setQuery] = useState('')
@@ -23,7 +23,6 @@ function Content() {
   const [payAmount, setPayAmount] = useState('')
   const [method, setMethod] = useState<'especes' | 'carte' | 'virement' | 'cheque'>('especes')
   const [printTarget, setPrintTarget] = useState<Purchase | null>(null)
-  const printRef = useRef<HTMLDivElement>(null)
 
   if (!ready) {
     return <Loader />
@@ -230,7 +229,7 @@ function Content() {
       <Modal open={!!printTarget} onClose={() => setPrintTarget(null)} title={`${t('inv_invoice_title')} — ${printTarget?.ref ?? ''}`} maxWidth="max-w-2xl">
         {printTarget && (
           <>
-            <div ref={printRef} className="max-h-[60vh] overflow-y-auto rounded-xl border border-gray-100 dark:border-white/10">
+            <div className="max-h-[60vh] overflow-y-auto rounded-xl border border-gray-100 dark:border-white/10">
               <InvoiceDocument
                 title={t('fdoc_invoice')}
                 docNumber={invoiceNumberOf(printTarget)}
@@ -249,7 +248,30 @@ function Content() {
                 showBalance
               />
             </div>
-            <button onClick={() => printNode(printRef.current?.querySelector('.print-area') as HTMLElement)} className="btn-primary mt-4 w-full">
+            <button
+              onClick={() => printInvoicePdf({
+                title: t('fdoc_invoice'),
+                docNumber: invoiceNumberOf(printTarget),
+                number: printTarget.ref,
+                date: printTarget.date,
+                partyLabel: t('fdoc_supplier'),
+                partyName: printTarget.supplierName,
+                lines: printTarget.items.map((i) => ({
+                  label: i.name,
+                  qty: i.qty,
+                  unit: i.sku,
+                  puHT: i.cost,
+                  tvaPct: i.tva ?? 0,
+                })),
+                paid: printTarget.paid,
+                showBalance: true,
+                settings,
+                store: activeStore,
+                t,
+                fileName: `${invoiceNumberOf(printTarget)}.pdf`,
+              })}
+              className="btn-primary mt-4 w-full"
+            >
               <Printer className="h-4 w-4" />
               {t('inv_print')}
             </button>
