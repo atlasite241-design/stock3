@@ -373,17 +373,6 @@ function Content() {
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="field-label">{t('soc_date_format')}</label>
-                  <Select
-                    value={form.dateFormat}
-                    onChange={(v) => setForm({ ...form, dateFormat: v as Settings['dateFormat'] })}
-                    options={[
-                      { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY' },
-                      { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD' },
-                    ]}
-                  />
-                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="field-label">{t('set_currency')}</label>
