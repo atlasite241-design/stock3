@@ -1702,7 +1702,7 @@ export function useDroguerieState() {
   }
 
   // ---- Sales ----
-  const recordSale = (items: SaleItem[], payment: Sale['payment'], client?: Client | null): Sale => {
+  const recordSale = (items: SaleItem[], payment: Sale['payment'], client?: Client | null, depotId?: string): Sale => {
     const total = items.reduce((s, i) => s + i.price * i.qty, 0)
     const profit = items.reduce((s, i) => {
       const p = products.find((x) => x.id === i.productId)
@@ -1734,6 +1734,8 @@ export function useDroguerieState() {
         type: 'vente' as const,
         qty: -i.qty,
         note: `Vente ${sale.id.slice(-5)}`,
+        storeId: activeStoreRef.current,
+        depotId: depotId || undefined,
       })),
       ...movements,
     ])

@@ -58,7 +58,7 @@ const ticketBarcode = (s: Sale) => {
 }
 
 function CaisseContent() {
-  const { ready, products, clients, settings, recordSale, currentSession, openSession } = useDroguerie()
+  const { ready, products, clients, settings, depots, activeStoreId, recordSale, currentSession, openSession } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
 
@@ -67,6 +67,13 @@ function CaisseContent() {
   const [query, setQuery] = useState('')
   const [payment, setPayment] = useState<Sale['payment']>('especes')
   const [clientId, setClientId] = useState('')
+  const [saleDepotId, setSaleDepotId] = useState('')
+  // Dépôts du magasin actif (pour vendre depuis un dépôt donné).
+  const storeDepots = useMemo(() => depots.filter((d) => d.storeId === activeStoreId), [depots, activeStoreId])
+  // Restaure le dépôt de caisse choisi (persistant entre sessions).
+  useEffect(() => {
+    try { const v = localStorage.getItem('dp_pos_depot'); if (v) setSaleDepotId(v) } catch {}
+  }, [])
   const [receipt, setReceipt] = useState<Sale | null>(null)
   // Espèces remises par le client (pour calculer le rendu affiché sur le ticket).
   const [receiptReceived, setReceiptReceived] = useState<number | undefined>(undefined)
@@ -286,7 +293,7 @@ function CaisseContent() {
         return
       }
     }
-    const sale = recordSale(cart, payment, client)
+    const sale = recordSale(cart, payment, client, saleDepotId || undefined)
     playSound('cash')
     setReceipt(sale)
     setReceiptReceived(payment === 'especes' ? receivedAmount : undefined)
@@ -418,6 +425,18 @@ function CaisseContent() {
             ]}
           />
         </div>
+
+        {storeDepots.length > 0 && (
+          <div className="mt-3">
+            <p className="field-label">{t('pos_depot_label')}</p>
+            <Select
+              value={saleDepotId}
+              onChange={(v) => { setSaleDepotId(v); try { localStorage.setItem('dp_pos_depot', v) } catch {} }}
+              placeholder={t('pos_depot_none')}
+              options={[{ value: '', label: t('pos_depot_none') }, ...storeDepots.map((d) => ({ value: d.id, label: d.name }))]}
+            />
+          </div>
+        )}
 
         <p className="mt-3 text-xs text-gray-400 dark:text-zinc-500">
           {t('pos_received_hint')}
