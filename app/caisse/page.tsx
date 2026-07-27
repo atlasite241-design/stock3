@@ -68,6 +68,8 @@ function CaisseContent() {
   const [payment, setPayment] = useState<Sale['payment']>('especes')
   const [clientId, setClientId] = useState('')
   const [receipt, setReceipt] = useState<Sale | null>(null)
+  // Espèces remises par le client (pour calculer le rendu affiché sur le ticket).
+  const [receiptReceived, setReceiptReceived] = useState<number | undefined>(undefined)
   const [zoomProduct, setZoomProduct] = useState<Product | null>(null)
   const [creditWarn, setCreditWarn] = useState<{ received?: number; after: number; client: Client } | null>(null)
   const [cameraOpen, setCameraOpen] = useState(false)
@@ -287,6 +289,7 @@ function CaisseContent() {
     const sale = recordSale(cart, payment, client)
     playSound('cash')
     setReceipt(sale)
+    setReceiptReceived(payment === 'especes' ? receivedAmount : undefined)
     setCart([])
     setClientId('')
     setPayment('especes')
@@ -876,14 +879,25 @@ function CaisseContent() {
                 <span>{t('posr_stamp_duty')}</span>
                 <span className="tabular-nums">0,00 DH</span>
               </div>
-              <div className="mt-1 flex justify-between font-bold uppercase text-amber-600">
-                <span>{PAYMENT_META[receipt.payment].label}</span>
-                <span className="tabular-nums">{fmtDH(receipt.total)}</span>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>{t('posr_change')}</span>
-                <span className="tabular-nums">0,00</span>
-              </div>
+              {(() => {
+                // Rendu = espèces reçues − total (0 si paiement exact ou autre mode).
+                const tendered = receipt.payment === 'especes' && receiptReceived !== undefined && receiptReceived > receipt.total
+                  ? receiptReceived
+                  : receipt.total
+                const change = Math.max(0, tendered - receipt.total)
+                return (
+                  <>
+                    <div className="mt-1 flex justify-between font-bold uppercase text-amber-600">
+                      <span>{PAYMENT_META[receipt.payment].label}</span>
+                      <span className="tabular-nums">{fmtDH(tendered)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>{t('posr_change')}</span>
+                      <span className="tabular-nums">{fmtDH(change)}</span>
+                    </div>
+                  </>
+                )
+              })()}
 
               <div className="my-3 border-t border-dashed border-gray-300" />
 
