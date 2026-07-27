@@ -934,7 +934,8 @@ function CaisseContent() {
                 {t('posr_cashier')} {receipt.clientName ? receipt.clientName : 'ADMIN'}
               </p>
 
-              <p className="mt-3 text-center font-semibold">{t('posr_thanks')}</p>
+              {/* Message configurable dans Paramètres › Impression. */}
+              <p className="mt-3 text-center font-semibold">{settings.ticketMessage?.trim() || t('posr_thanks').replace(/\*\*/g, '')}</p>
 
               <div className="mt-3 space-y-0.5 text-center text-[10px] text-gray-500">
                 <p className="font-bold uppercase text-gray-700">{settings.storeName}</p>
