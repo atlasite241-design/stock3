@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { FileText, Printer, Search } from 'lucide-react'
@@ -12,10 +12,11 @@ import { fmtDH, PAYMENT_META, useDroguerie, type Sale } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 function Content() {
-  const { ready, sales, settings, activeStore } = useDroguerie()
+  const { ready, sales, settings } = useDroguerie()
   const { t } = useLanguage()
   const [query, setQuery] = useState('')
   const [invoice, setInvoice] = useState<Sale | null>(null)
+  const printRef = useRef<HTMLDivElement>(null)
 
   if (!ready) {
     return <Loader />
@@ -123,7 +124,7 @@ function Content() {
       <Modal open={!!invoice} onClose={() => setInvoice(null)} title={t('fac_title')} maxWidth="max-w-2xl">
         {invoice && (
           <>
-            <div className="max-h-[60vh] overflow-y-auto rounded-xl border border-gray-100 dark:border-white/10">
+            <div ref={printRef} className="max-h-[60vh] overflow-y-auto rounded-xl border border-gray-100 dark:border-white/10">
               <InvoiceDocument
                 title={t('fdoc_invoice')}
                 docNumber={invoiceNumber(invoice)}
@@ -139,23 +140,7 @@ function Content() {
               />
             </div>
             <button
-              onClick={() => printInvoicePdf({
-                title: t('fdoc_invoice'),
-                docNumber: invoiceNumber(invoice),
-                date: invoice.date,
-                partyLabel: t('fdoc_client'),
-                partyName: invoice.clientName ?? t('bl_walk_in_client'),
-                lines: invoice.items.map((i) => ({
-                  label: i.name,
-                  qty: i.qty,
-                  puHT: i.price / (1 + settings.tva / 100),
-                  tvaPct: settings.tva,
-                })),
-                settings,
-                store: activeStore,
-                t,
-                fileName: `${invoiceNumber(invoice)}.pdf`,
-              })}
+              onClick={() => printInvoicePdf(printRef.current?.querySelector('.print-area') as HTMLElement)}
               className="btn-primary mt-4 w-full"
             >
               <Printer className="h-4 w-4" />
