@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { Eye, Gavel, Globe, Info, Mail, Phone, Printer, Receipt, Save, Store, Tag, UploadCloud } from 'lucide-react'
+import { Eye, Gavel, Globe, Info, Mail, Phone, Printer, Receipt, Save, ScrollText, Store, Tag, UploadCloud } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import InvoiceDocument from '@/components/InvoiceDocument'
 import EAN13 from '@/components/EAN13'
@@ -17,7 +17,7 @@ function Content() {
   const { t } = useLanguage()
   const toast = useToast()
   const [form, setForm] = useState(settings)
-  const [previewTab, setPreviewTab] = useState<'facture' | 'etiquette'>('facture')
+  const [previewTab, setPreviewTab] = useState<'facture' | 'etiquette' | 'ticket'>('facture')
   const logoInputRef = useRef<HTMLInputElement>(null)
   const signatureInputRef = useRef<HTMLInputElement>(null)
 
@@ -25,6 +25,16 @@ function Content() {
   const sampleLabel = { name: 'Peinture blanche 5L', price: 185, barcode: '6111234500017' }
   const labelW = Math.max(10, form.labelWidthMm ?? 40)
   const labelH = Math.max(10, form.labelHeightMm ?? 30)
+
+  // Vente d'exemple pour prévisualiser le ticket de caisse.
+  const ticketItems = [
+    { name: 'Peinture blanche 5L', qty: 2, price: 185 },
+    { name: 'Diluant 1L', qty: 1, price: 35 },
+  ]
+  const ticketTotal = ticketItems.reduce((a, i) => a + i.price * i.qty, 0)
+  const ticketHT = ticketTotal / (1 + (form.tva || 0) / 100)
+  const ticketTVA = ticketTotal - ticketHT
+  const ticketWidth = form.printFormat === 'ticket80' ? 300 : 230
 
   useEffect(() => {
     if (ready) setForm(settings)
@@ -362,11 +372,11 @@ function Content() {
 
             {/* Onglets Facture / Étiquette */}
             <div className="flex gap-1 border-b border-gray-100 p-2 dark:border-white/10">
-              {([['facture', Receipt, t('soc_tab_invoice')], ['etiquette', Tag, t('soc_tab_label')]] as const).map(([key, Icon, label]) => (
+              {([['facture', Receipt, t('soc_tab_invoice')], ['etiquette', Tag, t('soc_tab_label')], ['ticket', ScrollText, t('soc_tab_ticket')]] as const).map(([key, Icon, label]) => (
                 <button
                   key={key}
                   onClick={() => setPreviewTab(key)}
-                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition ${previewTab === key ? 'bg-amber-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100 dark:text-zinc-400 dark:hover:bg-white/10'}`}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-semibold transition ${previewTab === key ? 'bg-amber-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100 dark:text-zinc-400 dark:hover:bg-white/10'}`}
                 >
                   <Icon className="h-4 w-4" />{label}
                 </button>
@@ -391,7 +401,7 @@ function Content() {
                 </div>
                 <p className="mt-3 text-center text-[11px] italic text-gray-400 dark:text-zinc-500">{t('soc_preview_note')}</p>
               </div>
-            ) : (
+            ) : previewTab === 'etiquette' ? (
               <div className="p-4">
                 {/* Dimensions modifiables (mm) — partagées avec l'impression Zebra */}
                 <div className="grid grid-cols-2 gap-3">
@@ -422,6 +432,44 @@ function Content() {
                   <Printer className="h-4 w-4" />{t('soc_label_print_test')}
                 </button>
                 <p className="mt-3 text-center text-[11px] italic text-gray-400 dark:text-zinc-500">{t('soc_label_note')}</p>
+              </div>
+            ) : (
+              <div className="p-4">
+                {/* Aperçu du ticket de caisse (reflète les réglages en direct) */}
+                <div className="flex justify-center rounded-xl bg-gray-100 p-4 dark:bg-white/5">
+                  <div className="bg-white px-3 py-4 font-mono text-[11px] leading-tight text-black shadow-lg" style={{ width: `${ticketWidth}px` }}>
+                    <p className="text-center text-base font-black tracking-tight">{form.storeName}</p>
+                    <p className="text-center text-[9px] uppercase tracking-widest text-gray-500">- Market -</p>
+                    <div className="my-2 border-t border-dashed border-gray-300" />
+                    <p className="text-center">{form.address}</p>
+                    <p className="text-center">{form.phone}</p>
+                    <p className="mt-2 text-center font-bold">{t('soc_ticket_sale')}</p>
+                    <div className="my-2 border-t border-dashed border-gray-300" />
+                    <div className="flex justify-between font-bold">
+                      <span>{t('posr_col_qty')}</span><span className="flex-1 px-2">{t('posr_col_articles')}</span><span>{t('posr_col_pt')}</span>
+                    </div>
+                    {ticketItems.map((i, idx) => (
+                      <div key={idx} className="flex justify-between gap-1">
+                        <span className="w-6 shrink-0">{i.qty.toFixed(2)}</span>
+                        <span className="min-w-0 flex-1 truncate px-1">{i.name}</span>
+                        <span className="shrink-0 tabular-nums">{(i.price * i.qty).toFixed(2)}</span>
+                      </div>
+                    ))}
+                    <div className="my-2 border-t border-dashed border-gray-300" />
+                    <div className="flex justify-between text-sm font-black"><span>{t('posr_total_ttc')}</span><span className="tabular-nums">{fmtDH(ticketTotal)}</span></div>
+                    <div className="my-2 border-t border-dashed border-gray-300" />
+                    <div className="flex justify-between text-gray-600"><span>{t('posr_stamp_duty')}</span><span>0,00 DH</span></div>
+                    <div className="flex justify-between font-bold uppercase text-amber-600"><span>{t('pos_pay_especes')}</span><span className="tabular-nums">{fmtDH(ticketTotal)}</span></div>
+                    <div className="flex justify-between text-gray-600"><span>{t('posr_change')}</span><span>0,00</span></div>
+                    <div className="my-2 border-t border-dashed border-gray-300" />
+                    <p className="font-bold uppercase">{t('posr_vat_breakdown')}</p>
+                    <div className="flex justify-between font-bold"><span className="w-8">{t('posr_vat_rate')}</span><span className="flex-1 text-right">{t('posr_vat_ht')}</span><span className="flex-1 text-right">{t('posr_vat_tva')}</span><span className="flex-1 text-right">{t('posr_vat_ttc')}</span></div>
+                    <div className="flex justify-between"><span className="w-8 tabular-nums">{form.tva}%</span><span className="flex-1 text-right tabular-nums">{ticketHT.toFixed(2)}</span><span className="flex-1 text-right tabular-nums">{ticketTVA.toFixed(2)}</span><span className="flex-1 text-right tabular-nums">{ticketTotal.toFixed(2)}</span></div>
+                    <div className="my-2 border-t border-dashed border-gray-300" />
+                    <p className="mt-2 text-center font-semibold">{form.ticketMessage?.trim() || t('posr_thanks').replace(/\*\*/g, '')}</p>
+                  </div>
+                </div>
+                <p className="mt-3 text-center text-[11px] italic text-gray-400 dark:text-zinc-500">{t('soc_ticket_note')}</p>
               </div>
             )}
           </motion.div>
