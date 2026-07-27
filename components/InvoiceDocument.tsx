@@ -91,23 +91,11 @@ export default function InvoiceDocument({
   showEmplacement?: boolean
   settingsOverride?: Settings
 }) {
-  const { settings: storeSettings, activeStore } = useDroguerie()
-  // Documents carry the active store's coordinates (name, address, contact, ICE, IF, logo),
-  // falling back to the global company settings. An explicit override (e.g. live preview) wins.
-  const settings: Settings = settingsOverride
-    ? settingsOverride
-    : activeStore
-      ? {
-          ...storeSettings,
-          storeName: activeStore.name || storeSettings.storeName,
-          address: activeStore.address || storeSettings.address,
-          phone: activeStore.phone || storeSettings.phone,
-          email: activeStore.email || storeSettings.email,
-          logoDataUrl: activeStore.logoDataUrl || storeSettings.logoDataUrl,
-          ice: activeStore.ice || storeSettings.ice,
-          idFiscal: activeStore.idFiscal || storeSettings.idFiscal,
-        }
-      : storeSettings
+  const { settings: storeSettings } = useDroguerie()
+  // Les factures/documents utilisent TOUJOURS les coordonnées de la Société
+  // (Paramètres › Société) — source unique. Un override explicite (aperçu en
+  // direct) l'emporte.
+  const settings: Settings = settingsOverride ?? storeSettings
   const { t } = useLanguage()
 
   const totalHT = lines.reduce((a, l) => a + l.puHT * l.qty, 0)
