@@ -31,5 +31,10 @@ Catalogue_complet.csv
 ~$*.xlsx
 ~$*.xls
 
+# Modèles / exports Excel volumineux (ne pas versionner)
+*.xlsx
+*.CSV
+Stock_initial_modele*.xlsx
+
 # Archives ZIP locales
 *.zip
