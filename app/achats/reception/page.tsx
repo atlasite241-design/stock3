@@ -71,7 +71,7 @@ function Content() {
     // Enregistre la réf. fournisseur et la remise réelle avant de valider.
     const gd = Math.max(0, Math.min(100, parseFloat(globalDiscount.replace(',', '.')) || 0))
     updatePurchase(receiveTarget.id, { supplierRef: supplierRef.trim() || undefined, globalDiscount: gd || undefined })
-    validateReception(receiveTarget.id, received, { employee, depot })
+    validateReception(receiveTarget.id, received, { employee, depot: depots.find((d) => d.id === depot)?.name, depotId: depot || undefined })
     toast(`✓ ${receiveTarget.ref} ${t('recep_toast_validated')}`)
     setReceiveTarget(null)
   }
@@ -187,7 +187,7 @@ function Content() {
                   value={depot}
                   onChange={setDepot}
                   placeholder={t('recep_depot_choose')}
-                  options={[{ value: '', label: t('recep_depot_choose') }, ...depots.map((d) => ({ value: d.name, label: d.name }))]}
+                  options={[{ value: '', label: t('recep_depot_choose') }, ...depots.filter((d) => d.storeId === receiveTarget.storeId).map((d) => ({ value: d.id, label: d.name }))]}
                 />
               </div>
               <div>

@@ -2180,7 +2180,7 @@ export function useDroguerieState() {
   const validateReception = (
     id: string,
     received: { productId: string; receivedQty: number; state: PurchaseItem['receptionState']; note?: string }[],
-    meta?: { employee?: string; depot?: string }
+    meta?: { employee?: string; depot?: string; depotId?: string }
   ) => {
     const po = purchases.find((p) => p.id === id)
     if (!po) return
@@ -2197,7 +2197,7 @@ export function useDroguerieState() {
       receivedValue += r.receivedQty * i.cost
       curProducts = curProducts.map((x) => (x.id === r.productId ? { ...x, stock: x.stock + r.receivedQty, cost: i.cost } : x))
       curMovements = [
-        { id: uid() + r.productId, date: new Date().toISOString(), productId: r.productId, productName: i.name, type: 'entree' as const, qty: r.receivedQty, note: `${po.ref} / ${brRef}` },
+        { id: uid() + r.productId, date: new Date().toISOString(), productId: r.productId, productName: i.name, type: 'entree' as const, qty: r.receivedQty, note: `${po.ref} / ${brRef}`, storeId: po.storeId, depotId: meta?.depotId || undefined },
         ...curMovements,
       ]
     })
