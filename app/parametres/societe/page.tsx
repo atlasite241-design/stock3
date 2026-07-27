@@ -212,16 +212,6 @@ function Content() {
                     ]}
                   />
                 </div>
-                <div>
-                  <label className="field-label">{t('soc_slogan')}</label>
-                  <input
-                    type="text"
-                    value={form.slogan}
-                    onChange={(e) => setForm({ ...form, slogan: e.target.value })}
-                    placeholder={t('soc_slogan_placeholder')}
-                    className="input-field"
-                  />
-                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
