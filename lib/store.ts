@@ -2630,6 +2630,7 @@ export function useDroguerieState() {
         qty: -it.requestedQty,
         note: `Transfert ${tr.ref} → ${storeName(tr.destStoreId)}`,
         storeId: tr.sourceStoreId,
+        depotId: tr.sourceDepotId || undefined,
       })
     }
     persistProducts(curProducts)
@@ -2696,6 +2697,7 @@ export function useDroguerieState() {
         qty: rq,
         note: `Transfert ${tr.ref} ← ${storeName(tr.sourceStoreId)}`,
         storeId: tr.destStoreId,
+        depotId: tr.destDepotId || undefined,
       })
     })
     persistProducts(curProducts)
