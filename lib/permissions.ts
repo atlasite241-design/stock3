@@ -103,6 +103,7 @@ export const PERMISSION_CATALOG: PermCategory[] = [
       { key: 'stock.inventory', fr: 'Effectuer un inventaire', ar: 'إجراء جرد' },
       { key: 'stock.adjust', fr: 'Ajuster le stock', ar: 'تعديل المخزون' },
       { key: 'stock.entry', fr: 'Entrée de stock', ar: 'إدخال مخزون' },
+      { key: 'stock.init', fr: 'Initialiser le stock', ar: 'تهيئة المخزون' },
       { key: 'stock.exit', fr: 'Sortie de stock', ar: 'إخراج مخزون' },
       { key: 'stock.restock', fr: 'Réapprovisionnement', ar: 'إعادة التموين' },
       { key: 'stock.reception', fr: 'Réception fournisseur', ar: 'استلام المورد' },

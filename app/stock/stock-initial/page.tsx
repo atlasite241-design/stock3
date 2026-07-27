@@ -1,18 +1,23 @@
 'use client'
 
-import React, { useDeferredValue, useMemo, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
+import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import Loader from '@/components/Loader'
-import { Barcode, Boxes, ChevronLeft, ChevronRight, PackageCheck, RotateCcw, Save, Search, ShieldAlert, Upload } from 'lucide-react'
+import {
+  AlertTriangle, Barcode, Boxes, CheckCircle2, ChevronLeft, ChevronRight, FileSpreadsheet,
+  Keyboard, PackageCheck, Plus, RotateCcw, Save, ScanLine, Search, ShieldAlert, Store, Trash2, Upload, X,
+} from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
-import { fmtDH, useDroguerie } from '@/lib/store'
+import { fmtDH, useDroguerie, type Product } from '@/lib/store'
 import { useAuth } from '@/lib/auth-context'
 import { useLanguage } from '@/lib/i18n'
 
 const PAGE_SIZE = 12
+type Mode = 'manual' | 'scanqty' | 'scanrepeat' | 'import'
+type ImportReport = { ok: number; unknown: string[]; dup: string[] }
 
 function Content() {
   const { ready, products, movements, stores, activeStoreId, activeStoreInitialized, initializeStock } = useDroguerie()
@@ -20,49 +25,45 @@ function Content() {
   const { t } = useLanguage()
   const toast = useToast()
 
+  const [mode, setMode] = useState<Mode>('manual')
   const [qty, setQty] = useState<Record<string, number>>({})
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('Toutes')
   const [page, setPage] = useState(1)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [blockedOpen, setBlockedOpen] = useState(false)
+  const [scanFound, setScanFound] = useState<Product | null>(null)
+  const [scanQtyInput, setScanQtyInput] = useState('1')
+  const [report, setReport] = useState<ImportReport | null>(null)
   const csvRef = useRef<HTMLInputElement>(null)
+  const scanRef = useRef<HTMLInputElement>(null)
+  const scanQtyRef = useRef<HTMLInputElement>(null)
 
   const canForce = currentUser?.role === 'Administrateur' || currentUser?.role === 'Gérant'
   const storeName = stores.find((s) => s.id === activeStoreId)?.name ?? '—'
 
-  // Produits déjà initialisés (un mouvement stock_initial existe) → exclus de la liste.
   const initializedIds = useMemo(
     () => new Set(movements.filter((m) => m.type === 'stock_initial').map((m) => m.productId)),
     [movements]
   )
-
   const categories = useMemo(() => ['Toutes', ...Array.from(new Set(products.map((p) => p.category)))], [products])
-
-  // Index O(1) : évite un find() sur des dizaines de milliers de produits
-  // à chaque rendu (coût de la ligne saisie, scan douchette).
   const prodById = useMemo(() => {
-    const m = new Map<string, (typeof products)[number]>()
+    const m = new Map<string, Product>()
     for (const p of products) m.set(p.id, p)
     return m
   }, [products])
-
   const prodByBarcode = useMemo(() => {
-    const m = new Map<string, (typeof products)[number]>()
+    const m = new Map<string, Product>()
     for (const p of products) if (p.barcode) m.set(p.barcode, p)
     return m
   }, [products])
 
-  // Recherche différée : la saisie reste fluide même sur 50 000 produits.
   const deferredQuery = useDeferredValue(query)
-
-  // Un SEUL passage sur le catalogue : compte le total et extrait uniquement la
-  // page affichée, sans construire de tableau intermédiaire de 50 000 éléments.
   const { pageItems, total } = useMemo(() => {
     const q = deferredQuery.trim().toLowerCase()
     const start = (page - 1) * PAGE_SIZE
     const end = start + PAGE_SIZE
-    const items: typeof products = []
+    const items: Product[] = []
     let total = 0
     for (const p of products) {
       if (initializedIds.has(p.id)) continue
@@ -74,20 +75,31 @@ function Content() {
     return { pageItems: items, total }
   }, [products, initializedIds, category, deferredQuery, page])
 
-  if (!ready) {
-    return <Loader />
-  }
+  // Focus auto du champ scan quand on entre dans un mode scan.
+  useEffect(() => {
+    if (mode === 'scanqty' || mode === 'scanrepeat') scanRef.current?.focus()
+  }, [mode])
+  useEffect(() => {
+    if (scanFound) scanQtyRef.current?.focus()
+  }, [scanFound])
+
+  if (!ready) return <Loader />
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
-
   const setQ = (id: string, v: number) => setQty((m) => ({ ...m, [id]: Math.max(0, Math.round(v || 0)) }))
+  const removeEntry = (id: string) => setQty((m) => { const n = { ...m }; delete n[id]; return n })
   const ref = (id: string) => id.slice(-8).toUpperCase()
 
   const entries = Object.entries(qty).filter(([id, v]) => v > 0 && !initializedIds.has(id))
   const totalQty = entries.reduce((s, [, v]) => s + v, 0)
   const totalValue = entries.reduce((s, [id, v]) => s + v * (prodById.get(id)?.cost ?? 0), 0)
+  const gridRows = entries
+    .map(([id, v]) => ({ id, p: prodById.get(id), v }))
+    .filter((r): r is { id: string; p: Product; v: number } => !!r.p)
+    .sort((a, b) => a.p.name.localeCompare(b.p.name, 'fr'))
 
-  const onScan = (code: string) => {
+  // Scanner répétitif : +1 par lecture.
+  const onScanRepeat = (code: string) => {
     const c = code.trim()
     if (!c) return
     const p = prodByBarcode.get(c)
@@ -97,22 +109,48 @@ function Content() {
     toast(`+1 ${p.name}`)
   }
 
-  // Applique des lignes [code-barres, quantité] à la saisie. Colonnes suivantes
-  // (Nom, Catégorie…) ignorées. En-tête sautée (le code contient « code/barre/… »).
+  // Scanner + quantité : lecture → affiche le produit → saisie quantité → Ajouter.
+  const onScanLookup = (code: string) => {
+    const c = code.trim()
+    if (!c) return
+    const p = prodByBarcode.get(c)
+    if (!p) { toast(`${t('si_toast_not_found')} ${c}`, 'error'); setScanFound(null); return }
+    if (initializedIds.has(p.id)) { toast(`${p.name} — ${t('si_already_prod')}`, 'error'); return }
+    setScanFound(p)
+    setScanQtyInput('1')
+  }
+  const addScanned = () => {
+    if (!scanFound) return
+    const q = Math.max(1, Math.round(parseFloat(scanQtyInput.replace(',', '.')) || 0))
+    setQ(scanFound.id, (qty[scanFound.id] ?? 0) + q)
+    toast(`✓ ${scanFound.name} (+${q})`)
+    setScanFound(null)
+    setScanQtyInput('1')
+    scanRef.current?.focus()
+  }
+
+  // Import : construit un rapport (importés / inconnus / doublons).
   const applyRows = (rows: (string | number)[][]) => {
     const byBarcode = new Map<string, string>()
     for (const p of products) if (p.barcode && !initializedIds.has(p.id)) byBarcode.set(p.barcode, p.id)
-    const next = { ...qty }
-    let n = 0
+    const tmp = new Map<string, number>()
+    const seen = new Map<string, number>()
+    const unknown = new Set<string>()
     for (const cols of rows) {
       if (!cols || cols.length < 2) continue
       const code = String(cols[0] ?? '').replace(/"/g, '').trim()
+      if (!code || /code|barre|barcode|qte|quant/i.test(code)) continue
       const q = Math.round(parseFloat(String(cols[1] ?? '').replace(',', '.')) || 0)
+      seen.set(code, (seen.get(code) ?? 0) + 1)
       const id = byBarcode.get(code)
-      if (id && q > 0 && !/code|barre|barcode|qte|quant/i.test(code)) { next[id] = q; n++ }
+      if (!id) { unknown.add(code); continue }
+      if (q > 0) tmp.set(id, (tmp.get(id) ?? 0) + q)
     }
-    setQty(next)
-    toast(`✓ ${n} ${t('si_toast_imported')}`)
+    if (tmp.size === 0 && unknown.size === 0) { toast(t('si_import_none'), 'error'); return }
+    setQty((prev) => { const next = { ...prev }; tmp.forEach((v, id) => (next[id] = v)); return next })
+    const dup = [...seen.entries()].filter(([, c]) => c > 1).map(([code]) => code)
+    setReport({ ok: tmp.size, unknown: [...unknown], dup })
+    if (tmp.size > 0) toast(`✓ ${tmp.size} ${t('si_toast_imported')}`)
   }
 
   const onImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,8 +158,6 @@ function Content() {
     if (!file) return
     const isExcel = /\.xlsx?$/i.test(file.name) || /sheet|excel/i.test(file.type)
     if (isExcel) {
-      // Lecture directe d'un classeur Excel (.xlsx/.xls). La bibliothèque n'est
-      // chargée qu'ici (import dynamique) pour ne pas alourdir le reste de l'app.
       const reader = new FileReader()
       reader.onload = async () => {
         try {
@@ -130,9 +166,7 @@ function Content() {
           const ws = wb.Sheets[wb.SheetNames[0]]
           const rows = XLSX.utils.sheet_to_json<(string | number)[]>(ws, { header: 1, blankrows: false })
           applyRows(rows)
-        } catch {
-          toast(t('si_toast_empty'), 'error')
-        }
+        } catch { toast(t('si_import_none'), 'error') }
       }
       reader.readAsArrayBuffer(file)
     } else {
@@ -152,7 +186,6 @@ function Content() {
     if (activeStoreInitialized && !canForce) { setBlockedOpen(true); return }
     setConfirmOpen(true)
   }
-
   const doValidate = () => {
     const res = initializeStock(entries.map(([productId, q]) => ({ productId, qty: q })), activeStoreInitialized)
     if (!res.ok) {
@@ -161,9 +194,61 @@ function Content() {
       return
     }
     toast(`✓ ${t('si_toast_done')} ${res.count} produit(s) — ${fmtDH(totalValue)}`)
-    setQty({})
-    setConfirmOpen(false)
+    setQty({}); setReport(null); setConfirmOpen(false)
   }
+
+  const MODES: { key: Mode; label: string; icon: typeof Keyboard }[] = [
+    { key: 'manual', label: t('si_mode_manual'), icon: Keyboard },
+    { key: 'scanqty', label: t('si_mode_scanqty'), icon: ScanLine },
+    { key: 'scanrepeat', label: t('si_mode_scanrepeat'), icon: Barcode },
+    { key: 'import', label: t('si_mode_import'), icon: FileSpreadsheet },
+  ]
+
+  // JSX (pas un composant) : évite le remontage → les champs quantité gardent le focus.
+  const grid = (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass-card overflow-hidden">
+      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-white/10">
+        <h3 className="text-sm font-bold text-gray-800 dark:text-zinc-200">{t('si_grid_title')}</h3>
+        <span className="text-xs font-semibold text-gray-400 dark:text-zinc-500 tabular-nums">{gridRows.length}</span>
+      </div>
+      {gridRows.length === 0 ? (
+        <p className="px-4 py-10 text-center text-sm text-gray-400 dark:text-zinc-500">{t('si_grid_empty')}</p>
+      ) : (
+        <div className="max-h-[52vh] overflow-y-auto">
+          <table className="w-full min-w-[680px] text-sm">
+            <thead className="sticky top-0 bg-white dark:bg-[#12121a]">
+              <tr className="border-b border-gray-100 dark:border-white/10 text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500">
+                <th className="px-4 py-3">{t('si_col_barcode')}</th>
+                <th className="px-4 py-3">{t('si_col_name')}</th>
+                <th className="px-4 py-3 text-right">{t('si_col_cost')}</th>
+                <th className="px-4 py-3 text-center">{t('si_col_qty')}</th>
+                <th className="px-4 py-3 text-right">{t('si_col_value')}</th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {gridRows.map(({ id, p, v }) => (
+                <tr key={id} className="border-b border-gray-50 last:border-0 dark:border-white/5 hover:bg-amber-50/40 dark:hover:bg-white/5">
+                  <td className="px-4 py-2 font-mono text-xs text-gray-500 dark:text-zinc-400">{p.barcode || '—'}</td>
+                  <td className="px-4 py-2 font-semibold text-gray-900 dark:text-white">{p.name}</td>
+                  <td className="px-4 py-2 text-right text-gray-500 dark:text-zinc-400 tabular-nums">{fmtDH(p.cost)}</td>
+                  <td className="px-4 py-2 text-center">
+                    <input type="number" min="0" value={v || ''} onChange={(e) => setQ(id, Number(e.target.value))} className="input-field !h-9 w-24 text-center" />
+                  </td>
+                  <td className="px-4 py-2 text-right font-bold text-gray-900 dark:text-white tabular-nums">{fmtDH(v * p.cost)}</td>
+                  <td className="px-4 py-2 text-right">
+                    <button onClick={() => removeEntry(id)} title={t('si_remove')} className="rounded-lg p-1.5 text-gray-400 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </motion.div>
+  )
 
   return (
     <>
@@ -173,25 +258,18 @@ function Content() {
             <Boxes className="h-6 w-6 text-amber-500" />
             {t('si_title')}
           </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
-            {t('si_subtitle')} · <span className="font-semibold text-amber-600 dark:text-amber-400">{storeName}</span>
+          <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-sm text-gray-500 dark:text-zinc-400">
+            {t('si_subtitle')} · <Store className="h-3.5 w-3.5 text-amber-500" /><span className="font-semibold text-amber-600 dark:text-amber-400">{storeName}</span>
             {initializedIds.size > 0 && <span className="tabular-nums"> · {initializedIds.size} {t('si_initialized_count')}</span>}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <button onClick={() => csvRef.current?.click()} className="btn-secondary">
-            <Upload className="h-4 w-4" />
-            {t('si_import')}
-          </button>
-          <button onClick={() => setQty({})} disabled={entries.length === 0} className="btn-secondary disabled:opacity-40">
-            <RotateCcw className="h-4 w-4" />
-            {t('si_reset')}
+          <button onClick={() => { setQty({}); setReport(null) }} disabled={entries.length === 0} className="btn-secondary disabled:opacity-40">
+            <RotateCcw className="h-4 w-4" />{t('si_reset')}
           </button>
           <button onClick={startValidate} disabled={entries.length === 0} className="btn-primary disabled:opacity-50">
-            <Save className="h-4 w-4" />
-            {t('si_validate')} ({entries.length})
+            <Save className="h-4 w-4" />{t('si_validate')} ({entries.length})
           </button>
-          <input ref={csvRef} type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={onImport} className="hidden" />
         </div>
       </motion.div>
 
@@ -202,98 +280,193 @@ function Content() {
         </div>
       )}
 
+      {/* Sélecteur de mode */}
+      <div>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-zinc-500">{t('si_mode_label')}</p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {MODES.map((m) => {
+            const active = mode === m.key
+            return (
+              <button key={m.key} onClick={() => { setMode(m.key); setScanFound(null) }}
+                className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${active ? 'border-amber-400 bg-amber-500 text-white shadow-sm' : 'border-gray-200 bg-white text-gray-600 hover:border-amber-300 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300'}`}>
+                <m.icon className="h-4 w-4 shrink-0" />{m.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="glass-card p-5">
-          <p className="text-[13px] font-medium text-gray-500 dark:text-zinc-400">{t('si_lines_filled')}</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{entries.length}</p>
-        </div>
-        <div className="glass-card p-5">
-          <p className="text-[13px] font-medium text-gray-500 dark:text-zinc-400">{t('si_total_qty')}</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{totalQty}</p>
-        </div>
-        <div className="glass-card p-5">
-          <p className="text-[13px] font-medium text-gray-500 dark:text-zinc-400">{t('si_total_value')}</p>
-          <p className="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{fmtDH(totalValue)}</p>
-        </div>
+        <div className="glass-card p-5"><p className="text-[13px] font-medium text-gray-500 dark:text-zinc-400">{t('si_lines_filled')}</p><p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{entries.length}</p></div>
+        <div className="glass-card p-5"><p className="text-[13px] font-medium text-gray-500 dark:text-zinc-400">{t('si_total_qty')}</p><p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{totalQty}</p></div>
+        <div className="glass-card p-5"><p className="text-[13px] font-medium text-gray-500 dark:text-zinc-400">{t('si_total_value')}</p><p className="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{fmtDH(totalValue)}</p></div>
       </div>
 
-      {/* Filters + scan */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative min-w-[220px] flex-1 sm:max-w-xs">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input value={query} onChange={(e) => { setQuery(e.target.value); setPage(1) }} placeholder={t('si_search')} className="input-field pl-10" />
-        </div>
-        <Select value={category} onChange={(v) => { setCategory(v); setPage(1) }} options={categories.map((c) => ({ value: c, label: c === 'Toutes' ? t('si_all_cats') : c }))} className="w-auto min-w-[170px]" />
-        <div className="relative min-w-[240px] flex-1">
-          <Barcode className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-500" />
-          <input
-            type="text"
-            placeholder={t('si_scan_ph')}
-            onKeyDown={(e) => { if (e.key === 'Enter') { onScan(e.currentTarget.value); e.currentTarget.value = '' } }}
-            className="input-field pl-10"
-          />
-        </div>
-      </div>
-
-      {/* Table */}
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.4 }} className="glass-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 dark:border-white/10 text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500">
-                <th className="px-4 py-3.5">{t('si_col_ref')}</th>
-                <th className="px-4 py-3.5">{t('si_col_barcode')}</th>
-                <th className="px-4 py-3.5">{t('si_col_name')}</th>
-                <th className="px-4 py-3.5">{t('si_col_category')}</th>
-                <th className="px-4 py-3.5">{t('si_col_store')}</th>
-                <th className="px-4 py-3.5 text-right">{t('si_col_cost')}</th>
-                <th className="px-4 py-3.5 text-center">{t('si_col_qty')}</th>
-                <th className="px-4 py-3.5 text-right">{t('si_col_value')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageItems.map((p) => {
-                const q = qty[p.id] ?? 0
-                return (
-                  <tr key={p.id} className="border-b border-gray-50 dark:border-white/5 transition-colors hover:bg-amber-50/40 dark:hover:bg-white/5">
-                    <td className="px-4 py-2.5 font-mono text-xs text-gray-500 dark:text-zinc-400">{ref(p.id)}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs text-gray-500 dark:text-zinc-400">{p.barcode || '—'}</td>
-                    <td className="px-4 py-2.5 font-semibold text-gray-900 dark:text-white">{p.name}</td>
-                    <td className="px-4 py-2.5">
-                      <span className="rounded-md bg-gray-100 dark:bg-white/10 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:text-zinc-400">{p.category}</span>
-                    </td>
-                    <td className="px-4 py-2.5 text-gray-600 dark:text-zinc-400">{storeName}</td>
-                    <td className="px-4 py-2.5 text-right text-gray-600 dark:text-zinc-400 tabular-nums">{fmtDH(p.cost)}</td>
-                    <td className="px-4 py-2.5 text-center">
-                      <input type="number" min="0" value={q || ''} onChange={(e) => setQ(p.id, Number(e.target.value))} placeholder="0" className="input-field !h-9 w-24 text-center" />
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-bold text-gray-900 dark:text-white tabular-nums">{q > 0 ? fmtDH(q * p.cost) : '—'}</td>
+      {/* ---- MODE: Saisie manuelle ---- */}
+      {mode === 'manual' && (
+        <>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative min-w-[220px] flex-1 sm:max-w-xs">
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input value={query} onChange={(e) => { setQuery(e.target.value); setPage(1) }} placeholder={t('si_search')} className="input-field pl-10" />
+            </div>
+            <Select value={category} onChange={(v) => { setCategory(v); setPage(1) }} options={categories.map((c) => ({ value: c, label: c === 'Toutes' ? t('si_all_cats') : c }))} className="w-auto min-w-[170px]" />
+          </div>
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="glass-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[900px] text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 dark:border-white/10 text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500">
+                    <th className="px-4 py-3.5">{t('si_col_ref')}</th>
+                    <th className="px-4 py-3.5">{t('si_col_barcode')}</th>
+                    <th className="px-4 py-3.5">{t('si_col_name')}</th>
+                    <th className="px-4 py-3.5">{t('si_col_category')}</th>
+                    <th className="px-4 py-3.5 text-right">{t('si_col_cost')}</th>
+                    <th className="px-4 py-3.5 text-center">{t('si_col_qty')}</th>
+                    <th className="px-4 py-3.5 text-right">{t('si_col_value')}</th>
                   </tr>
-                )
-              })}
-              {total === 0 && (
-                <tr><td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-zinc-500">{t('prod_none_found')}</td></tr>
+                </thead>
+                <tbody>
+                  {pageItems.map((p) => {
+                    const q = qty[p.id] ?? 0
+                    return (
+                      <tr key={p.id} className="border-b border-gray-50 dark:border-white/5 transition-colors hover:bg-amber-50/40 dark:hover:bg-white/5">
+                        <td className="px-4 py-2.5 font-mono text-xs text-gray-500 dark:text-zinc-400">{ref(p.id)}</td>
+                        <td className="px-4 py-2.5 font-mono text-xs text-gray-500 dark:text-zinc-400">{p.barcode || '—'}</td>
+                        <td className="px-4 py-2.5 font-semibold text-gray-900 dark:text-white">{p.name}</td>
+                        <td className="px-4 py-2.5"><span className="rounded-md bg-gray-100 dark:bg-white/10 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:text-zinc-400">{p.category}</span></td>
+                        <td className="px-4 py-2.5 text-right text-gray-600 dark:text-zinc-400 tabular-nums">{fmtDH(p.cost)}</td>
+                        <td className="px-4 py-2.5 text-center">
+                          <input type="number" min="0" value={q || ''} onChange={(e) => setQ(p.id, Number(e.target.value))} placeholder="0" className="input-field !h-9 w-24 text-center" />
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-bold text-gray-900 dark:text-white tabular-nums">{q > 0 ? fmtDH(q * p.cost) : '—'}</td>
+                      </tr>
+                    )
+                  })}
+                  {total === 0 && <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-zinc-500">{t('prod_none_found')}</td></tr>}
+                </tbody>
+              </table>
+            </div>
+            {pageCount > 1 && (
+              <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 dark:border-white/10">
+                <p className="text-xs text-gray-500 dark:text-zinc-400 tabular-nums">{total} · {page}/{pageCount}</p>
+                <div className="flex gap-1">
+                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronLeft className="h-4 w-4" /></button>
+                  <button onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={page === pageCount} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronRight className="h-4 w-4" /></button>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </>
+      )}
+
+      {/* ---- MODE: Scanner + quantité ---- */}
+      {mode === 'scanqty' && (
+        <div className="space-y-4">
+          <div className="glass-card p-4">
+            <p className="mb-2 text-xs text-gray-500 dark:text-zinc-400">{t('si_scanqty_hint')}</p>
+            <div className="relative">
+              <ScanLine className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-amber-500" />
+              <input ref={scanRef} type="text" placeholder={t('si_scan_ph')} autoComplete="off"
+                onKeyDown={(e) => { if (e.key === 'Enter') { onScanLookup(e.currentTarget.value); e.currentTarget.value = '' } }}
+                className="input-field h-12 pl-11 text-lg font-mono" />
+            </div>
+            <AnimatePresence>
+              {scanFound && (
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-500/20 dark:bg-amber-500/10">
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-amber-500" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{scanFound.name}</p>
+                    <p className="font-mono text-[11px] text-gray-500 dark:text-zinc-400">{scanFound.barcode} · {fmtDH(scanFound.cost)}</p>
+                  </div>
+                  <div>
+                    <label className="mb-0.5 block text-[10px] font-semibold uppercase text-gray-400">{t('si_qty_label')}</label>
+                    <input ref={scanQtyRef} type="number" min="1" value={scanQtyInput}
+                      onChange={(e) => setScanQtyInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') addScanned() }}
+                      className="input-field !h-10 w-24 text-center" />
+                  </div>
+                  <button onClick={addScanned} className="btn-primary !h-10"><Plus className="h-4 w-4" />{t('si_add')}</button>
+                  <button onClick={() => setScanFound(null)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"><X className="h-5 w-5" /></button>
+                </motion.div>
               )}
-            </tbody>
-          </table>
+            </AnimatePresence>
+          </div>
+          {grid}
         </div>
-        {pageCount > 1 && (
-          <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 dark:border-white/10">
-            <p className="text-xs text-gray-500 dark:text-zinc-400 tabular-nums">{total} · {page}/{pageCount}</p>
-            <div className="flex gap-1">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronLeft className="h-4 w-4" /></button>
-              <button onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={page === pageCount} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronRight className="h-4 w-4" /></button>
+      )}
+
+      {/* ---- MODE: Scanner répétitif ---- */}
+      {mode === 'scanrepeat' && (
+        <div className="space-y-4">
+          <div className="glass-card p-4">
+            <p className="mb-2 text-xs text-gray-500 dark:text-zinc-400">{t('si_scanrepeat_hint')}</p>
+            <div className="relative">
+              <Barcode className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-amber-500" />
+              <input ref={scanRef} type="text" placeholder={t('si_scan_ph')} autoComplete="off"
+                onKeyDown={(e) => { if (e.key === 'Enter') { onScanRepeat(e.currentTarget.value); e.currentTarget.value = '' } }}
+                className="input-field h-12 pl-11 text-lg font-mono" />
             </div>
           </div>
-        )}
-      </motion.div>
-      <p className="text-xs text-gray-400 dark:text-zinc-500">{t('si_import_hint')}</p>
+          {grid}
+        </div>
+      )}
+
+      {/* ---- MODE: Import Excel/CSV ---- */}
+      {mode === 'import' && (
+        <div className="space-y-4">
+          <div className="glass-card flex flex-col items-center gap-3 p-8 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-500 dark:bg-amber-500/10"><Upload className="h-7 w-7" /></div>
+            <button onClick={() => csvRef.current?.click()} className="btn-primary"><FileSpreadsheet className="h-4 w-4" />{t('si_import_choose')}</button>
+            <p className="max-w-md text-xs text-gray-400 dark:text-zinc-500">{t('si_import_drop')}</p>
+            <input ref={csvRef} type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={onImport} className="hidden" />
+          </div>
+
+          {report && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5">
+              <h3 className="mb-3 text-sm font-bold text-gray-800 dark:text-zinc-200">{t('si_import_report_title')}</h3>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-500/20 dark:bg-emerald-500/10">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300"><CheckCircle2 className="h-4 w-4" />{t('si_import_ok')}</p>
+                  <p className="mt-1 text-2xl font-bold text-emerald-700 dark:text-emerald-300 tabular-nums">{report.ok}</p>
+                </div>
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 dark:border-rose-500/20 dark:bg-rose-500/10">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400"><AlertTriangle className="h-4 w-4" />{t('si_import_unknown')}</p>
+                  <p className="mt-1 text-2xl font-bold text-rose-600 dark:text-rose-400 tabular-nums">{report.unknown.length}</p>
+                </div>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-500/20 dark:bg-amber-500/10">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-400"><AlertTriangle className="h-4 w-4" />{t('si_import_dup')}</p>
+                  <p className="mt-1 text-2xl font-bold text-amber-700 dark:text-amber-400 tabular-nums">{report.dup.length}</p>
+                </div>
+              </div>
+              {report.unknown.length > 0 && (
+                <div className="mt-3">
+                  <p className="mb-1 text-xs font-semibold text-gray-500 dark:text-zinc-400">{t('si_import_unknown')}</p>
+                  <div className="flex flex-wrap gap-1.5">{report.unknown.slice(0, 60).map((c) => <span key={c} className="rounded-md bg-rose-50 px-2 py-0.5 font-mono text-[11px] text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">{c}</span>)}{report.unknown.length > 60 && <span className="text-[11px] text-gray-400">+{report.unknown.length - 60}…</span>}</div>
+                </div>
+              )}
+              {report.dup.length > 0 && (
+                <div className="mt-3">
+                  <p className="mb-1 text-xs font-semibold text-gray-500 dark:text-zinc-400">{t('si_import_dup')}</p>
+                  <div className="flex flex-wrap gap-1.5">{report.dup.slice(0, 60).map((c) => <span key={c} className="rounded-md bg-amber-50 px-2 py-0.5 font-mono text-[11px] text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">{c}</span>)}{report.dup.length > 60 && <span className="text-[11px] text-gray-400">+{report.dup.length - 60}…</span>}</div>
+                </div>
+              )}
+            </motion.div>
+          )}
+          {grid}
+        </div>
+      )}
+
+      <p className="text-xs text-gray-400 dark:text-zinc-500">{t('si_recorded_hint')}</p>
 
       {/* Confirmation */}
       <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title={t('si_confirm_title')} maxWidth="max-w-sm">
         <p className="text-sm text-gray-600 dark:text-zinc-400">{t('si_confirm_desc')}</p>
-        <div className="mt-4 rounded-xl border border-gray-100 dark:border-white/10 bg-gray-50/60 dark:bg-white/5 p-3 text-sm">
+        <div className="mt-4 space-y-1.5 rounded-xl border border-gray-100 dark:border-white/10 bg-gray-50/60 dark:bg-white/5 p-3 text-sm">
+          <div className="flex justify-between"><span className="text-gray-500 dark:text-zinc-400">{t('si_confirm_store')}</span><span className="font-semibold text-gray-900 dark:text-white">{storeName}</span></div>
+          <div className="flex justify-between"><span className="text-gray-500 dark:text-zinc-400">{t('si_confirm_user')}</span><span className="font-semibold text-gray-900 dark:text-white">{currentUser?.name ?? '—'}</span></div>
+          <div className="my-1 border-t border-gray-100 dark:border-white/10" />
           <div className="flex justify-between"><span className="text-gray-500 dark:text-zinc-400">{t('si_lines_filled')}</span><span className="font-bold tabular-nums">{entries.length}</span></div>
           <div className="flex justify-between"><span className="text-gray-500 dark:text-zinc-400">{t('si_total_qty')}</span><span className="font-bold tabular-nums">{totalQty}</span></div>
           <div className="flex justify-between"><span className="text-gray-500 dark:text-zinc-400">{t('si_total_value')}</span><span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{fmtDH(totalValue)}</span></div>
@@ -304,7 +477,7 @@ function Content() {
         </div>
       </Modal>
 
-      {/* Bloqué (non autorisé) */}
+      {/* Bloqué */}
       <Modal open={blockedOpen} onClose={() => setBlockedOpen(false)} title={t('si_already_title')} maxWidth="max-w-sm">
         <div className="flex items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-500 dark:bg-rose-500/10 dark:text-rose-400"><ShieldAlert className="h-5 w-5" /></span>
