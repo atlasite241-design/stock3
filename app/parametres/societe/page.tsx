@@ -3,12 +3,13 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { Eye, Gavel, Globe, Info, Mail, Phone, Receipt, Save, Store, UploadCloud } from 'lucide-react'
+import { Eye, Gavel, Globe, Info, Mail, Phone, Printer, Receipt, Save, Store, Tag, UploadCloud } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import InvoiceDocument from '@/components/InvoiceDocument'
+import EAN13 from '@/components/EAN13'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
-import { useDroguerie, type Settings } from '@/lib/store'
+import { fmtDH, useDroguerie, type Settings } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 function Content() {
@@ -16,8 +17,14 @@ function Content() {
   const { t } = useLanguage()
   const toast = useToast()
   const [form, setForm] = useState(settings)
+  const [previewTab, setPreviewTab] = useState<'facture' | 'etiquette'>('facture')
   const logoInputRef = useRef<HTMLInputElement>(null)
   const signatureInputRef = useRef<HTMLInputElement>(null)
+
+  // Produit d'exemple pour prévisualiser l'étiquette Zebra.
+  const sampleLabel = { name: 'Peinture blanche 5L', price: 185, barcode: '6111234500017' }
+  const labelW = Math.max(10, form.labelWidthMm ?? 40)
+  const labelH = Math.max(10, form.labelHeightMm ?? 30)
 
   useEffect(() => {
     if (ready) setForm(settings)
@@ -47,6 +54,37 @@ function Content() {
     reader.onload = () => setForm((f) => ({ ...f, [key]: String(reader.result) }))
     reader.readAsDataURL(file)
     e.target.value = ''
+  }
+
+  // Impression d'une étiquette de test (iframe isolé, mêmes réglages que la Zebra).
+  const printLabel = async () => {
+    const w = labelW, h = labelH
+    const bcH = Math.min(60, Math.round(h * 1.5))
+    const { renderToStaticMarkup } = await import('react-dom/server')
+    const body = renderToStaticMarkup(
+      <div className="zlabel">
+        <div style={{ fontSize: '6pt', fontWeight: 700, textTransform: 'uppercase', lineHeight: 1 }}>{form.storeName}</div>
+        <div className="zname" style={{ fontSize: '7pt', fontWeight: 600, lineHeight: 1.05 }}>{sampleLabel.name}</div>
+        <EAN13 code={sampleLabel.barcode} height={bcH} moduleWidth={1.1} />
+        <div style={{ fontSize: '10pt', fontWeight: 800, lineHeight: 1 }}>{fmtDH(sampleLabel.price)}</div>
+      </div>
+    )
+    const doc = `<!doctype html><html><head><meta charset="utf-8"><style>
+      @page { size: ${w}mm ${h}mm; margin: 0; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff; }
+      .zlabel { width: ${w}mm; height: ${h}mm; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5mm; padding: 1mm; text-align: center; overflow: hidden; }
+      .zname { max-height: 5mm; overflow: hidden; }
+      svg { max-width: 100%; height: auto; }
+    </style></head><body>${body}</body></html>`
+    const iframe = document.createElement('iframe')
+    iframe.setAttribute('aria-hidden', 'true')
+    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;'
+    document.body.appendChild(iframe)
+    const idoc = iframe.contentWindow?.document
+    if (!idoc) { iframe.remove(); return }
+    idoc.open(); idoc.write(doc); idoc.close()
+    setTimeout(() => { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); setTimeout(() => iframe.remove(), 2000) }, 350)
   }
 
   const invoicePreviewNumber = `${form.invoicePrefix}${new Date().getFullYear()}-${form.invoiceStartNumber}`
@@ -322,23 +360,70 @@ function Content() {
               <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">{t('soc_preview_title')}</span>
             </div>
 
-            <div className="p-4">
-              <div className="rounded-xl border border-gray-100 shadow-lg" style={{ zoom: 0.55 } as React.CSSProperties}>
-                <InvoiceDocument
-                  title={t('fdoc_invoice')}
-                  docNumber={invoicePreviewNumber}
-                  number="BC-000042"
-                  date={new Date().toISOString()}
-                  partyLabel={t('fdoc_supplier')}
-                  partyName={t('soc_preview_client_sample')}
-                  settingsOverride={form}
-                  lines={[{ label: t('soc_preview_sample_item'), qty: 2, puHT: 1200, tvaPct: form.tva }]}
-                  paid={2400 * (1 + form.tva / 100)}
-                  showBalance
-                />
-              </div>
-              <p className="mt-3 text-center text-[11px] italic text-gray-400 dark:text-zinc-500">{t('soc_preview_note')}</p>
+            {/* Onglets Facture / Étiquette */}
+            <div className="flex gap-1 border-b border-gray-100 p-2 dark:border-white/10">
+              {([['facture', Receipt, t('soc_tab_invoice')], ['etiquette', Tag, t('soc_tab_label')]] as const).map(([key, Icon, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setPreviewTab(key)}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition ${previewTab === key ? 'bg-amber-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100 dark:text-zinc-400 dark:hover:bg-white/10'}`}
+                >
+                  <Icon className="h-4 w-4" />{label}
+                </button>
+              ))}
             </div>
+
+            {previewTab === 'facture' ? (
+              <div className="p-4">
+                <div className="rounded-xl border border-gray-100 shadow-lg" style={{ zoom: 0.55 } as React.CSSProperties}>
+                  <InvoiceDocument
+                    title={t('fdoc_invoice')}
+                    docNumber={invoicePreviewNumber}
+                    number="BC-000042"
+                    date={new Date().toISOString()}
+                    partyLabel={t('fdoc_supplier')}
+                    partyName={t('soc_preview_client_sample')}
+                    settingsOverride={form}
+                    lines={[{ label: t('soc_preview_sample_item'), qty: 2, puHT: 1200, tvaPct: form.tva }]}
+                    paid={2400 * (1 + form.tva / 100)}
+                    showBalance
+                  />
+                </div>
+                <p className="mt-3 text-center text-[11px] italic text-gray-400 dark:text-zinc-500">{t('soc_preview_note')}</p>
+              </div>
+            ) : (
+              <div className="p-4">
+                {/* Dimensions modifiables (mm) — partagées avec l'impression Zebra */}
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className="mb-1 block text-[11px] font-semibold text-gray-500 dark:text-zinc-400">{t('soc_label_width')}</span>
+                    <input type="number" min={10} value={form.labelWidthMm ?? 40} onChange={(e) => setForm({ ...form, labelWidthMm: Math.max(10, Number(e.target.value) || 0) })} className="input-field !h-9" />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-[11px] font-semibold text-gray-500 dark:text-zinc-400">{t('soc_label_height')}</span>
+                    <input type="number" min={10} value={form.labelHeightMm ?? 30} onChange={(e) => setForm({ ...form, labelHeightMm: Math.max(10, Number(e.target.value) || 0) })} className="input-field !h-9" />
+                  </label>
+                </div>
+
+                {/* Aperçu de l'étiquette (proportions réelles) */}
+                <div className="mt-4 flex justify-center rounded-xl bg-gray-100 p-4 dark:bg-white/5">
+                  <div
+                    className="flex flex-col items-center justify-center gap-1 overflow-hidden rounded border border-dashed border-gray-400 bg-white p-2 text-center text-black dark:border-white/30"
+                    style={{ width: `${labelW * 3.4}px`, height: `${labelH * 3.4}px` }}
+                  >
+                    <div className="w-full truncate text-[9px] font-bold uppercase leading-none">{form.storeName}</div>
+                    <div className="w-full truncate text-[10px] font-semibold leading-tight">{sampleLabel.name}</div>
+                    <EAN13 code={sampleLabel.barcode} height={Math.min(44, labelH * 1.3)} moduleWidth={1.1} />
+                    <div className="text-[12px] font-extrabold leading-none">{fmtDH(sampleLabel.price)}</div>
+                  </div>
+                </div>
+
+                <button onClick={printLabel} className="btn-secondary mt-4 w-full">
+                  <Printer className="h-4 w-4" />{t('soc_label_print_test')}
+                </button>
+                <p className="mt-3 text-center text-[11px] italic text-gray-400 dark:text-zinc-500">{t('soc_label_note')}</p>
+              </div>
+            )}
           </motion.div>
 
           <motion.div

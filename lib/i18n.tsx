@@ -2209,6 +2209,12 @@ const DICT = {
   soc_preview_total_ttc: { fr: 'Total TTC', ar: 'المجموع شامل الضريبة' },
   soc_preview_paid_cash: { fr: 'Réglé en Espèces', ar: 'تم الدفع نقداً' },
   soc_preview_note: { fr: 'Ceci est un aperçu généré automatiquement basé sur vos réglages.', ar: 'هذه معاينة تلقائية بناءً على إعداداتك.' },
+  soc_tab_invoice: { fr: 'Facture', ar: 'الفاتورة' },
+  soc_tab_label: { fr: 'Étiquette', ar: 'الملصق' },
+  soc_label_width: { fr: 'Largeur (mm)', ar: 'العرض (مم)' },
+  soc_label_height: { fr: 'Hauteur (mm)', ar: 'الارتفاع (مم)' },
+  soc_label_print_test: { fr: 'Imprimer une étiquette test', ar: 'طباعة ملصق تجريبي' },
+  soc_label_note: { fr: 'Ces dimensions sont utilisées par l’impression Zebra. N’oubliez pas d’enregistrer.', ar: 'تُستخدم هذه الأبعاد في طباعة Zebra. لا تنسَ الحفظ.' },
   soc_legal_reminder_title: { fr: 'Rappel légal', ar: 'تذكير قانوني' },
   soc_legal_reminder_desc: {
     fr: "Conformément à la loi marocaine, l'ICE doit obligatoirement figurer sur toutes vos factures et documents commerciaux.",
