@@ -3,9 +3,10 @@
 import { useDeferredValue, useMemo, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { AlertTriangle, Boxes, ChevronLeft, ChevronRight, Minus, PackageX, Plus, Search, TrendingUp, Truck } from 'lucide-react'
+import { AlertTriangle, Boxes, ChevronLeft, ChevronRight, Minus, PackageX, Plus, Search, TrendingUp, Truck, Warehouse } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
+import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
 import { fmtDH, useDroguerie, type Product } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
@@ -14,7 +15,7 @@ type Filter = 'tous' | 'faible' | 'rupture'
 const PAGE_SIZE = 50
 
 function StockContent() {
-  const { ready, products, adjustStock, restockProduct } = useDroguerie()
+  const { ready, products, depots, activeStoreId, adjustStock, restockProduct } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
   const [filter, setFilter] = useState<Filter>('tous')
@@ -23,6 +24,8 @@ function StockContent() {
   const [restockTarget, setRestockTarget] = useState<Product | null>(null)
   const [restockQty, setRestockQty] = useState('10')
   const [restockNote, setRestockNote] = useState('')
+  const [adjDepotId, setAdjDepotId] = useState('')
+  const storeDepots = useMemo(() => depots.filter((d) => d.storeId === activeStoreId), [depots, activeStoreId])
 
   // Compteurs (un seul passage) — indépendants de la pagination/recherche.
   const stats = useMemo(() => {
@@ -86,7 +89,7 @@ function StockContent() {
     if (!restockTarget) return
     const qty = Math.max(1, Math.round(parseFloat(restockQty.replace(',', '.')) || 0))
     // Réappro = mouvement « Entrée » (distinct de l'ajustement ±1), avec motif.
-    restockProduct(restockTarget.id, qty, restockNote.trim() || 'Réapprovisionnement')
+    restockProduct(restockTarget.id, qty, restockNote.trim() || 'Réapprovisionnement', adjDepotId || undefined)
     toast(`✓ ${restockTarget.name} : +${qty} ${t('stock_toast_restocked')}`)
     setRestockTarget(null)
     setRestockQty('10')
@@ -147,6 +150,17 @@ function StockContent() {
         </div>
       </div>
 
+      {/* Dépôt appliqué aux ajustements / réappro (ventilation par dépôt) */}
+      {storeDepots.length > 0 && (
+        <div className="glass-card flex flex-wrap items-center gap-3 p-3">
+          <Warehouse className="h-4 w-4 shrink-0 text-amber-500" />
+          <span className="text-sm font-medium text-gray-600 dark:text-zinc-300">{t('stock_adj_depot')}</span>
+          <div className="ml-auto min-w-[200px]">
+            <Select value={adjDepotId} onChange={setAdjDepotId} options={[{ value: '', label: t('stock_adj_depot_none') }, ...storeDepots.map((d) => ({ value: d.id, label: d.name }))]} />
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
@@ -202,14 +216,14 @@ function StockContent() {
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={() => adjustStock(p.id, -1)}
+                          onClick={() => adjustStock(p.id, -1, 'Ajustement manuel', adjDepotId || undefined)}
                           disabled={p.stock === 0}
                           className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#12121a] text-gray-600 dark:text-zinc-400 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-500 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <Minus className="h-3.5 w-3.5" />
                         </button>
                         <button
-                          onClick={() => adjustStock(p.id, 1)}
+                          onClick={() => adjustStock(p.id, 1, 'Ajustement manuel', adjDepotId || undefined)}
                           className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#12121a] text-gray-600 dark:text-zinc-400 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-600"
                         >
                           <Plus className="h-3.5 w-3.5" />

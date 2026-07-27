@@ -1618,7 +1618,8 @@ export function useDroguerieState() {
     qty: number,
     note = '',
     baseProducts?: Product[],
-    baseMovements?: StockMovement[]
+    baseMovements?: StockMovement[],
+    depotId?: string
   ) => {
     const list = baseProducts ?? products
     const p = list.find((x) => x.id === productId)
@@ -1635,20 +1636,22 @@ export function useDroguerieState() {
       type,
       qty,
       note,
+      storeId: p.storeId ?? activeStoreRef.current,
+      depotId: depotId || undefined,
     }
     persistMovements([mv, ...(baseMovements ?? movements)])
     return nextProducts
   }
 
-  const adjustStock = (id: string, delta: number, note = 'Ajustement manuel') => {
-    addMovement(id, 'ajustement', delta, note)
+  const adjustStock = (id: string, delta: number, note = 'Ajustement manuel', depotId?: string) => {
+    addMovement(id, 'ajustement', delta, note, undefined, undefined, depotId)
   }
 
   // Réapprovisionnement : entrée de stock (type « entree »), distincte de
   // l'ajustement ±1 — meilleure traçabilité dans les mouvements et rapports.
-  const restockProduct = (id: string, qty: number, note = 'Réapprovisionnement') => {
+  const restockProduct = (id: string, qty: number, note = 'Réapprovisionnement', depotId?: string) => {
     if (qty <= 0) return
-    addMovement(id, 'reappro', qty, note || 'Réapprovisionnement')
+    addMovement(id, 'reappro', qty, note || 'Réapprovisionnement', undefined, undefined, depotId)
   }
 
   const applyInventory = (counts: { productId: string; counted: number }[]) => {
