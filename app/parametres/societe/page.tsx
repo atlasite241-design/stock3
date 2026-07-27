@@ -61,7 +61,23 @@ function Content() {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = () => setForm((f) => ({ ...f, [key]: String(reader.result) }))
+    reader.onload = () => {
+      const next = { ...form, [key]: String(reader.result) }
+      setForm(next)
+      // Persistance immédiate : une image est lourde, on ne veut pas la perdre
+      // si l'utilisateur rafraîchit sans cliquer « Enregistrer ».
+      try {
+        saveSettings({
+          ...next,
+          storeName: next.storeName.trim() || 'Droguerie Pro',
+          currency: next.currency.trim() || 'MAD (DH)',
+          tva: Math.max(0, Number(next.tva) || 0),
+        })
+        toast(`✓ ${t('soc_logo_saved')}`)
+      } catch {
+        toast(t('soc_logo_too_large'), 'error')
+      }
+    }
     reader.readAsDataURL(file)
     e.target.value = ''
   }

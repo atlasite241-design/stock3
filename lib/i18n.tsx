@@ -2209,6 +2209,8 @@ const DICT = {
   soc_preview_total_ttc: { fr: 'Total TTC', ar: 'المجموع شامل الضريبة' },
   soc_preview_paid_cash: { fr: 'Réglé en Espèces', ar: 'تم الدفع نقداً' },
   soc_preview_note: { fr: 'Ceci est un aperçu généré automatiquement basé sur vos réglages.', ar: 'هذه معاينة تلقائية بناءً على إعداداتك.' },
+  soc_logo_saved: { fr: 'Logo enregistré', ar: 'تم حفظ الشعار' },
+  soc_logo_too_large: { fr: 'Image trop lourde — utilisez une image plus légère.', ar: 'الصورة كبيرة جدًا — استعمل صورة أخف.' },
   soc_tab_invoice: { fr: 'Facture', ar: 'الفاتورة' },
   soc_tab_label: { fr: 'Étiquette', ar: 'الملصق' },
   soc_tab_ticket: { fr: 'Ticket', ar: 'التذكرة' },
