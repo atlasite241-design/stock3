@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Rocket,
   Settings,
+  Sparkles,
   ShoppingCart,
   Store,
   Truck,
@@ -43,6 +44,7 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { labelKey: 'nav_dashboard', icon: LayoutDashboard, href: '/' },
+  { labelKey: 'nav_setup', icon: Sparkles, href: '/setup' },
   { labelKey: 'nav_guide', icon: Rocket, href: '/guide-demarrage' },
   { labelKey: 'nav_guide_exercise', icon: RefreshCw, href: '/guide-exercice' },
   {

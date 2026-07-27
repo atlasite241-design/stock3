@@ -461,6 +461,15 @@ export interface Settings {
   /** Dimensions de l'étiquette (mm) pour l'impression Zebra. */
   labelWidthMm?: number
   labelHeightMm?: number
+  /** Champs enrichis (assistant de configuration). */
+  activity?: string
+  country?: string
+  timezone?: string
+  roundingMode?: '0.01' | '0.05' | '0.10' | '1'
+  /** Modes de paiement activés (clés). */
+  paymentModes?: string[]
+  /** État de l'assistant de configuration (Setup Wizard). */
+  setup?: { completed?: boolean; step?: number; done?: string[] }
 }
 
 export interface Expense {
