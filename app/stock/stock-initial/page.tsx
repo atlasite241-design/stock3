@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Loader from '@/components/Loader'
 import {
   AlertTriangle, Barcode, Boxes, CheckCircle2, ChevronLeft, ChevronRight, FileSpreadsheet,
-  Keyboard, PackageCheck, Plus, RotateCcw, Save, ScanLine, Search, ShieldAlert, Store, Trash2, Upload, X,
+  Keyboard, PackageCheck, Plus, RotateCcw, Save, ScanLine, Search, ShieldAlert, Store, Trash2, Upload, Warehouse, X,
 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
@@ -20,7 +20,7 @@ type Mode = 'manual' | 'scanqty' | 'scanrepeat' | 'import'
 type ImportReport = { ok: number; unknown: string[]; dup: string[] }
 
 function Content() {
-  const { ready, products, movements, stores, activeStoreId, activeStoreInitialized, initializeStock } = useDroguerie()
+  const { ready, products, movements, stores, depots, activeStoreId, activeStoreInitialized, initializeStock } = useDroguerie()
   const { currentUser } = useAuth()
   const { t } = useLanguage()
   const toast = useToast()
@@ -35,12 +35,15 @@ function Content() {
   const [scanFound, setScanFound] = useState<Product | null>(null)
   const [scanQtyInput, setScanQtyInput] = useState('1')
   const [report, setReport] = useState<ImportReport | null>(null)
+  const [depotId, setDepotId] = useState('')
   const csvRef = useRef<HTMLInputElement>(null)
   const scanRef = useRef<HTMLInputElement>(null)
   const scanQtyRef = useRef<HTMLInputElement>(null)
 
   const canForce = currentUser?.role === 'Administrateur' || currentUser?.role === 'Gérant'
   const storeName = stores.find((s) => s.id === activeStoreId)?.name ?? '—'
+  const storeDepots = useMemo(() => depots.filter((d) => d.storeId === activeStoreId), [depots, activeStoreId])
+  const depotName = storeDepots.find((d) => d.id === depotId)?.name ?? '—'
 
   const initializedIds = useMemo(
     () => new Set(movements.filter((m) => m.type === 'stock_initial').map((m) => m.productId)),
@@ -187,7 +190,7 @@ function Content() {
     setConfirmOpen(true)
   }
   const doValidate = () => {
-    const res = initializeStock(entries.map(([productId, q]) => ({ productId, qty: q })), activeStoreInitialized)
+    const res = initializeStock(entries.map(([productId, q]) => ({ productId, qty: q })), activeStoreInitialized, depotId)
     if (!res.ok) {
       toast(res.error === 'already' ? t('si_already_blocked') : t('si_toast_empty'), 'error')
       setConfirmOpen(false)
@@ -277,6 +280,20 @@ function Content() {
         <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold ${canForce ? 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400' : 'border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400'}`}>
           <ShieldAlert className="h-4 w-4 shrink-0" />
           {canForce ? t('si_already_force') : t('si_already_blocked')}
+        </div>
+      )}
+
+      {/* Dépôt de destination (si le magasin a des dépôts) */}
+      {storeDepots.length > 0 && (
+        <div className="glass-card flex flex-wrap items-center gap-3 p-4">
+          <Warehouse className="h-5 w-5 shrink-0 text-amber-500" />
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-zinc-500">{t('si_depot_label')}</p>
+            <p className="text-[11px] text-gray-400 dark:text-zinc-500">{t('si_depot_hint')}</p>
+          </div>
+          <div className="ml-auto min-w-[220px]">
+            <Select value={depotId} onChange={setDepotId} options={[{ value: '', label: t('si_depot_none') }, ...storeDepots.map((d) => ({ value: d.id, label: d.name }))]} />
+          </div>
         </div>
       )}
 
@@ -465,6 +482,7 @@ function Content() {
         <p className="text-sm text-gray-600 dark:text-zinc-400">{t('si_confirm_desc')}</p>
         <div className="mt-4 space-y-1.5 rounded-xl border border-gray-100 dark:border-white/10 bg-gray-50/60 dark:bg-white/5 p-3 text-sm">
           <div className="flex justify-between"><span className="text-gray-500 dark:text-zinc-400">{t('si_confirm_store')}</span><span className="font-semibold text-gray-900 dark:text-white">{storeName}</span></div>
+          {storeDepots.length > 0 && <div className="flex justify-between"><span className="text-gray-500 dark:text-zinc-400">{t('si_depot_label')}</span><span className="font-semibold text-gray-900 dark:text-white">{depotName}</span></div>}
           <div className="flex justify-between"><span className="text-gray-500 dark:text-zinc-400">{t('si_confirm_user')}</span><span className="font-semibold text-gray-900 dark:text-white">{currentUser?.name ?? '—'}</span></div>
           <div className="my-1 border-t border-gray-100 dark:border-white/10" />
           <div className="flex justify-between"><span className="text-gray-500 dark:text-zinc-400">{t('si_lines_filled')}</span><span className="font-bold tabular-nums">{entries.length}</span></div>

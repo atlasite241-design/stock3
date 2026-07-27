@@ -86,6 +86,7 @@ const NAV: NavItem[] = [
       { href: '/stock', labelKey: 'nav_stock_current' },
       { href: '/stock/stock-initial', labelKey: 'nav_stock_initial' },
       { href: '/stock/par-magasin', labelKey: 'nav_stock_by_store' },
+      { href: '/stock/par-depot', labelKey: 'nav_stock_by_depot' },
       { href: '/stock/inventaire', labelKey: 'nav_stock_inventory' },
       { href: '/stock/consultation', labelKey: 'nav_stock_consult' },
       { href: '/stock/reapprovisionnement', labelKey: 'nav_stock_reappro' },

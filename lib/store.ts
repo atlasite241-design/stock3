@@ -239,6 +239,8 @@ export interface StockMovement {
   qty: number
   note: string
   storeId?: string
+  /** Dépôt concerné (optionnel) — utilisé pour la ventilation du stock par dépôt. */
+  depotId?: string
 }
 
 export interface PurchaseItem {
@@ -1679,7 +1681,7 @@ export function useDroguerieState() {
   /** Vrai si le magasin actif a déjà été initialisé (un mouvement stock_initial existe). */
   const activeStoreInitialized = movements.some((m) => m.type === 'stock_initial' && (m.storeId ?? activeStoreRef.current) === activeStoreRef.current)
 
-  const initializeStock = (entries: { productId: string; qty: number }[], force = false) => {
+  const initializeStock = (entries: { productId: string; qty: number }[], force = false, depotId?: string) => {
     const sid = activeStoreRef.current
     const already = movements.some((m) => m.type === 'stock_initial' && (m.storeId ?? sid) === sid)
     if (already && !force) return { ok: false as const, error: 'already' as const }
@@ -1690,7 +1692,7 @@ export function useDroguerieState() {
     const nextProducts = products.map((p) => {
       const q = qtyMap.get(p.id)
       if (q === undefined || p.storeId !== sid) return p
-      newMovements.push({ id: uid(), date: nowIso, productId: p.id, productName: p.name, type: 'stock_initial', qty: q, note: 'Initialisation du stock', storeId: sid })
+      newMovements.push({ id: uid(), date: nowIso, productId: p.id, productName: p.name, type: 'stock_initial', qty: q, note: 'Initialisation du stock', storeId: sid, depotId: depotId || undefined })
       return { ...p, stock: q }
     })
     persistProducts(nextProducts)
