@@ -97,6 +97,58 @@ function Content() {
     setTimeout(() => { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); setTimeout(() => iframe.remove(), 2000) }, 350)
   }
 
+  // Impression d'un ticket de caisse test (iframe isolé, largeur 58/80 mm).
+  const printTicket = async () => {
+    const w = form.printFormat === 'ticket80' ? 80 : 58
+    const { renderToStaticMarkup } = await import('react-dom/server')
+    const row = { display: 'flex', justifyContent: 'space-between' } as const
+    const dash = { borderTop: '1px dashed #999', margin: '5px 0' } as const
+    const msg = form.ticketMessage?.trim() || t('posr_thanks').replace(/\*\*/g, '')
+    const body = renderToStaticMarkup(
+      <div style={{ fontFamily: 'monospace', fontSize: '10px', color: '#000', lineHeight: 1.25 }}>
+        <div style={{ textAlign: 'center', fontWeight: 800, fontSize: '15px' }}>{form.storeName}</div>
+        <div style={{ textAlign: 'center', fontSize: '8px', letterSpacing: '2px', color: '#555' }}>- MARKET -</div>
+        <div style={dash} />
+        <div style={{ textAlign: 'center' }}>{form.address}</div>
+        <div style={{ textAlign: 'center' }}>{form.phone}</div>
+        <div style={{ textAlign: 'center', fontWeight: 700, marginTop: '4px' }}>{t('soc_ticket_sale')}</div>
+        <div style={dash} />
+        {ticketItems.map((i, idx) => (
+          <div key={idx} style={row}>
+            <span>{i.qty.toFixed(2)} {i.name}</span>
+            <span>{(i.price * i.qty).toFixed(2)}</span>
+          </div>
+        ))}
+        <div style={dash} />
+        <div style={{ ...row, fontWeight: 800, fontSize: '13px' }}><span>{t('posr_total_ttc')}</span><span>{fmtDH(ticketTotal)}</span></div>
+        <div style={dash} />
+        <div style={row}><span>{t('posr_stamp_duty')}</span><span>0,00 DH</span></div>
+        <div style={{ ...row, fontWeight: 700 }}><span>{t('pos_pay_especes').toUpperCase()}</span><span>{fmtDH(ticketTotal)}</span></div>
+        <div style={row}><span>{t('posr_change')}</span><span>0,00</span></div>
+        <div style={dash} />
+        <div style={{ fontWeight: 700 }}>{t('posr_vat_breakdown')}</div>
+        <div style={row}><span>{t('posr_vat_rate')}</span><span>{t('posr_vat_ht')}</span><span>{t('posr_vat_tva')}</span><span>{t('posr_vat_ttc')}</span></div>
+        <div style={row}><span>{form.tva}%</span><span>{ticketHT.toFixed(2)}</span><span>{ticketTVA.toFixed(2)}</span><span>{ticketTotal.toFixed(2)}</span></div>
+        <div style={dash} />
+        <div style={{ textAlign: 'center', fontWeight: 700, marginTop: '4px' }}>{msg}</div>
+      </div>
+    )
+    const doc = `<!doctype html><html><head><meta charset="utf-8"><style>
+      @page { size: ${w}mm auto; margin: 0; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { background: #fff; }
+      body { width: ${w}mm; padding: 2mm; }
+    </style></head><body>${body}</body></html>`
+    const iframe = document.createElement('iframe')
+    iframe.setAttribute('aria-hidden', 'true')
+    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;'
+    document.body.appendChild(iframe)
+    const idoc = iframe.contentWindow?.document
+    if (!idoc) { iframe.remove(); return }
+    idoc.open(); idoc.write(doc); idoc.close()
+    setTimeout(() => { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); setTimeout(() => iframe.remove(), 2000) }, 300)
+  }
+
   const invoicePreviewNumber = `${form.invoicePrefix}${new Date().getFullYear()}-${form.invoiceStartNumber}`
 
   const initials = (form.storeName || 'DP')
@@ -469,6 +521,9 @@ function Content() {
                     <p className="mt-2 text-center font-semibold">{form.ticketMessage?.trim() || t('posr_thanks').replace(/\*\*/g, '')}</p>
                   </div>
                 </div>
+                <button onClick={printTicket} className="btn-secondary mt-4 w-full">
+                  <Printer className="h-4 w-4" />{t('soc_ticket_print_test')}
+                </button>
                 <p className="mt-3 text-center text-[11px] italic text-gray-400 dark:text-zinc-500">{t('soc_ticket_note')}</p>
               </div>
             )}

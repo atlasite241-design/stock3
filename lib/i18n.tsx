@@ -2214,6 +2214,7 @@ const DICT = {
   soc_tab_ticket: { fr: 'Ticket', ar: 'التذكرة' },
   soc_ticket_sale: { fr: 'VENTE', ar: 'بيع' },
   soc_ticket_note: { fr: 'Aperçu du ticket de caisse (58/80 mm, message et TVA selon vos réglages).', ar: 'معاينة تذكرة الصندوق (58/80 مم، الرسالة والضريبة حسب إعداداتك).' },
+  soc_ticket_print_test: { fr: 'Imprimer un ticket test', ar: 'طباعة تذكرة تجريبية' },
   soc_label_width: { fr: 'Largeur (mm)', ar: 'العرض (مم)' },
   soc_label_height: { fr: 'Hauteur (mm)', ar: 'الارتفاع (مم)' },
   soc_label_print_test: { fr: 'Imprimer une étiquette test', ar: 'طباعة ملصق تجريبي' },
