@@ -9,7 +9,7 @@ import { useDroguerie } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 function Content() {
-  const { ready, products, units, unitActions } = useDroguerie()
+  const { ready, products, units, unitActions, reconcileAttributesFromProducts } = useDroguerie()
   const { t } = useLanguage()
   // Comptage en un seul passage (voir /produits/categories).
   const counts = useMemo(() => {
@@ -17,6 +17,11 @@ function Content() {
     for (const p of products) if (p.unit) m.set(p.unit, (m.get(p.unit) ?? 0) + 1)
     return m
   }, [products])
+  const items = useMemo(() => {
+    const known = new Set(units.map((u) => u.name))
+    const extra = [...counts.keys()].filter((name) => name && !known.has(name)).sort((a, b) => a.localeCompare(b, 'fr'))
+    return [...units, ...extra.map((name) => ({ id: `sync:${name}`, name }))]
+  }, [units, counts])
   if (!ready) {
     return <Loader />
   }
@@ -26,9 +31,10 @@ function Content() {
       subtitle={t('units_subtitle')}
       newPlaceholder={t('units_new_placeholder')}
       icon={Ruler}
-      items={units}
+      items={items}
       usageOf={(name) => counts.get(name) ?? 0}
       actions={unitActions}
+      onSync={reconcileAttributesFromProducts}
     />
   )
 }

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import type { LucideIcon } from 'lucide-react'
-import { AlertTriangle, Pencil, Plus, Trash2 } from 'lucide-react'
+import { AlertTriangle, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import Modal from '@/components/Modal'
 import { useToast } from '@/components/Toast'
 import type { Attribute } from '@/lib/store'
@@ -17,6 +17,7 @@ export default function AttributCrud({
   usageOf,
   actions,
   newPlaceholder,
+  onSync,
 }: {
   title: string
   subtitle: string
@@ -29,6 +30,7 @@ export default function AttributCrud({
     remove: (id: string) => void
   }
   newPlaceholder?: string
+  onSync?: () => number
 }) {
   const { t } = useLanguage()
   const toast = useToast()
@@ -93,6 +95,11 @@ export default function AttributCrud({
             <Plus className="h-4 w-4" />
             {t('attr_add')}
           </button>
+          {onSync && (
+            <button onClick={() => { const n = onSync(); toast(n > 0 ? `✓ ${n} ${t('attr_synced')}` : t('attr_sync_none')) }} className="btn-secondary shrink-0" title={t('attr_sync')}>
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
         {/* List */}

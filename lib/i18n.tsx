@@ -1303,6 +1303,9 @@ const DICT = {
   // AttributCrud (shared: Catégories, Marques, Unités)
   attr_add: { fr: 'Ajouter', ar: 'إضافة' },
   attr_product_count: { fr: 'produit(s)', ar: 'منتج(ات)' },
+  attr_sync: { fr: 'Synchroniser depuis les produits', ar: 'المزامنة من المنتجات' },
+  attr_synced: { fr: 'ajoutée(s) depuis les produits', ar: 'مضافة من المنتجات' },
+  attr_sync_none: { fr: 'Déjà à jour — rien à synchroniser.', ar: 'محدّث بالفعل — لا شيء للمزامنة.' },
   attr_empty: { fr: 'Aucun élément — ajoutez-en un ci-dessus', ar: 'لا يوجد عنصر — أضف واحداً أعلاه' },
   attr_rename_title: { fr: 'Renommer', ar: 'إعادة تسمية' },
   attr_cancel: { fr: 'Annuler', ar: 'إلغاء' },

@@ -9,7 +9,7 @@ import { useDroguerie } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 function Content() {
-  const { ready, products, brands, brandActions } = useDroguerie()
+  const { ready, products, brands, brandActions, reconcileAttributesFromProducts } = useDroguerie()
   const { t } = useLanguage()
   // Comptage en un seul passage (voir /produits/categories).
   const counts = useMemo(() => {
@@ -17,6 +17,13 @@ function Content() {
     for (const p of products) if (p.brand) m.set(p.brand, (m.get(p.brand) ?? 0) + 1)
     return m
   }, [products])
+  // Fusion : marques enregistrées + marques présentes dans les produits (importées)
+  // mais pas encore dans la liste — pour tout afficher sans écriture.
+  const items = useMemo(() => {
+    const known = new Set(brands.map((b) => b.name))
+    const extra = [...counts.keys()].filter((name) => name && !known.has(name)).sort((a, b) => a.localeCompare(b, 'fr'))
+    return [...brands, ...extra.map((name) => ({ id: `sync:${name}`, name }))]
+  }, [brands, counts])
   if (!ready) {
     return <Loader />
   }
@@ -26,9 +33,10 @@ function Content() {
       subtitle={t('brand_subtitle')}
       newPlaceholder={t('brand_new_placeholder')}
       icon={Tag}
-      items={brands}
+      items={items}
       usageOf={(name) => counts.get(name) ?? 0}
       actions={brandActions}
+      onSync={reconcileAttributesFromProducts}
     />
   )
 }

@@ -1635,11 +1635,12 @@ export function useDroguerieState() {
   // Ajoute aux collections `categories`/`subcategories` celles présentes dans les
   // produits importés mais absentes — évite que la page Catégories diverge du
   // catalogue réel (sous-catégorie au format « Catégorie › Sous-catégorie »).
-  const reconcileAttributes = (rows: Omit<Product, 'id'>[]) => {
+  const reconcileAttributes = (rows: Omit<Product, 'id'>[]): number => {
     const catNames = new Set(categories.map((c) => c.name))
     const subNames = new Set(subcategories.map((s) => s.name))
-    const newCats: Attribute[] = []
-    const newSubs: Attribute[] = []
+    const brandNames = new Set(brands.map((b) => b.name))
+    const unitNames = new Set(units.map((u) => u.name))
+    const newCats: Attribute[] = [], newSubs: Attribute[] = [], newBrands: Attribute[] = [], newUnits: Attribute[] = []
     for (const r of rows) {
       const cat = (r.category || '').trim()
       if (cat && !catNames.has(cat)) { catNames.add(cat); newCats.push({ id: uid(), name: cat }) }
@@ -1648,10 +1649,20 @@ export function useDroguerieState() {
         const full = `${cat} › ${sub}`
         if (!subNames.has(full)) { subNames.add(full); newSubs.push({ id: uid(), name: full }) }
       }
+      const brand = (r.brand || '').trim()
+      if (brand && !brandNames.has(brand)) { brandNames.add(brand); newBrands.push({ id: uid(), name: brand }) }
+      const unit = (r.unit || '').trim()
+      if (unit && !unitNames.has(unit)) { unitNames.add(unit); newUnits.push({ id: uid(), name: unit }) }
     }
     if (newCats.length) persistCategories([...categories, ...newCats])
     if (newSubs.length) persistSubcategories([...subcategories, ...newSubs])
+    if (newBrands.length) persistBrands([...brands, ...newBrands])
+    if (newUnits.length) persistUnits([...units, ...newUnits])
+    return newCats.length + newSubs.length + newBrands.length + newUnits.length
   }
+  // Synchronise les attributs (catégories, sous-catégories, marques, unités) à
+  // partir du catalogue actuel — utile après un import qui les a introduits.
+  const reconcileAttributesFromProducts = (): number => reconcileAttributes(products)
 
   const importProducts = (rows: Omit<Product, 'id'>[], replace = false) => {
     // Mode « remplacer » : on repart d'un catalogue vide. Indispensable pour
@@ -3057,6 +3068,7 @@ export function useDroguerieState() {
     subcategoryActions: attrActions(subcategories, persistSubcategories),
     brandActions: attrActions(brands, persistBrands),
     unitActions: attrActions(units, persistUnits),
+    reconcileAttributesFromProducts,
     saveSettings,
     resetStats,
   }
