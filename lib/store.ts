@@ -41,12 +41,14 @@ export interface Depot {
   name: string
   address: string
   responsable: string
+  /** Code court (DEP01…) — segment dépôt du code d'emplacement. */
+  code?: string
 }
 
 // ---- Emplacements de stockage (WMS) : hiérarchie Zone → Allée → Rayon → Étagère
 //      → Niveau → Position. Chaque niveau porte un `code` court (A, 02, 03…) et
 //      référence son parent. Le code complet d'emplacement est dérivé de la chaîne.
-export interface Zone { id: string; storeId: string; code: string; name: string; type?: 'commerciale' | 'logistique'; active?: boolean; order?: number }
+export interface Zone { id: string; storeId: string; depotId?: string; code: string; name: string; type?: 'commerciale' | 'logistique'; active?: boolean; order?: number }
 
 /** Zones créées automatiquement à l'ouverture d'un magasin (commerciales A-N + logistiques O-U). */
 export const DEFAULT_ZONES: { code: string; name: string; type: 'commerciale' | 'logistique' }[] = [
@@ -90,12 +92,17 @@ export interface Emplacement {
 export function storeShortCode(index: number): string {
   return 'MAG' + String(index + 1).padStart(2, '0')
 }
+// Code dépôt normalisé (DEP01, DEP02…) à partir de l'index du dépôt dans son magasin.
+export function depotShortCode(index: number): string {
+  return 'DEP' + String(index + 1).padStart(2, '0')
+}
 
 // Assemble le code complet d'emplacement à partir des codes de chaque niveau.
+// Format : MAG01-DEP01-A-02-03-04-02-015 (le segment dépôt est optionnel).
 export function buildEmplacementCode(parts: {
-  storeCode: string; zone?: string; allee?: string; rayon?: string; etagere?: string; niveau?: string; position?: string
+  storeCode: string; depot?: string; zone?: string; allee?: string; rayon?: string; etagere?: string; niveau?: string; position?: string
 }): string {
-  return [parts.storeCode, parts.zone, parts.allee, parts.rayon, parts.etagere, parts.niveau, parts.position]
+  return [parts.storeCode, parts.depot, parts.zone, parts.allee, parts.rayon, parts.etagere, parts.niveau, parts.position]
     .filter((p) => p != null && String(p).trim() !== '')
     .join('-')
 }
@@ -2454,9 +2461,10 @@ export function useDroguerieState() {
       createdAt: new Date().toISOString(),
     }
     persistStores([...stores, store])
-    persistDepots([{ id: uid(), storeId: store.id, name: 'Dépôt principal', address: store.address, responsable: store.manager }, ...depots])
-    // Zones par défaut (commerciales + logistiques) pour un magasin prêt à l'emploi.
-    persistZones([...zones, ...DEFAULT_ZONES.map((z, i) => ({ id: uid(), storeId: store.id, code: z.code, name: z.name, type: z.type, active: true, order: i }))])
+    const mainDepotId = uid()
+    persistDepots([{ id: mainDepotId, storeId: store.id, name: 'Dépôt principal', address: store.address, responsable: store.manager, code: depotShortCode(0) }, ...depots])
+    // Zones par défaut (commerciales + logistiques), rattachées au dépôt principal.
+    persistZones([...zones, ...DEFAULT_ZONES.map((z, i) => ({ id: uid(), storeId: store.id, depotId: mainDepotId, code: z.code, name: z.name, type: z.type, active: true, order: i }))])
     logActivity(`Magasin créé : ${store.name}`)
     return store
   }
@@ -2484,7 +2492,10 @@ export function useDroguerieState() {
   }
 
   // ---- Depots ----
-  const addDepot = (data: Omit<Depot, 'id'>) => persistDepots([{ ...data, id: uid() }, ...depots])
+  const addDepot = (data: Omit<Depot, 'id'>) => {
+    const count = depots.filter((x) => x.storeId === data.storeId).length
+    persistDepots([{ ...data, id: uid(), code: data.code || depotShortCode(count) }, ...depots])
+  }
   const updateDepot = (id: string, data: Partial<Depot>) =>
     persistDepots(depots.map((d) => (d.id === id ? { ...d, ...data } : d)))
   const deleteDepot = (id: string) => persistDepots(depots.filter((d) => d.id !== id))
@@ -2498,7 +2509,8 @@ export function useDroguerieState() {
     const existing = new Set(zones.filter((z) => z.storeId === storeId).map((z) => z.code.toUpperCase()))
     const missing = DEFAULT_ZONES.filter((z) => !existing.has(z.code))
     if (missing.length === 0) return 0
-    persistZones([...zones, ...missing.map((z, i) => ({ id: uid(), storeId, code: z.code, name: z.name, type: z.type, active: true, order: existing.size + i }))])
+    const depotId = depots.find((x) => x.storeId === storeId)?.id
+    persistZones([...zones, ...missing.map((z, i) => ({ id: uid(), storeId, depotId, code: z.code, name: z.name, type: z.type, active: true, order: existing.size + i }))])
     logActivity(`Zones par défaut créées (${missing.length})`, { target: stores.find((s) => s.id === storeId)?.name })
     return missing.length
   }
@@ -2557,8 +2569,12 @@ export function useDroguerieState() {
     const e = etageres.find((x) => x.id === p.etagereId)
     const n = niveaux.find((x) => x.id === p.niveauId)
     const po = positions.find((x) => x.id === p.positionId)
+    // Dépôt : celui de la zone, sinon le dépôt principal du magasin (repli migration).
+    const dep = (z?.depotId && depots.find((x) => x.id === z.depotId))
+      || depots.find((x) => x.storeId === (p.storeId ?? activeStoreRef.current))
+      || null
     if (!z && !p.emplacementComplet) return null
-    return { code: p.emplacementComplet ?? '', zone: z, allee: a, rayon: r, etagere: e, niveau: n, position: po }
+    return { code: p.emplacementComplet ?? '', depot: dep, zone: z, allee: a, rayon: r, etagere: e, niveau: n, position: po }
   }
   // Clé de tri « parcours physique » : les produits non localisés en dernier.
   const locationSortKey = (p: Product) => p.emplacementComplet || '~~~~~~'

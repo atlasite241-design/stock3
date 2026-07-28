@@ -52,6 +52,7 @@ function Content() {
 
   const locParts = loc
     ? [
+        { label: t('wms_depot'), n: loc.depot },
         { label: t('wms_zone'), n: loc.zone },
         { label: t('wms_allee'), n: loc.allee },
         { label: t('wms_rayon'), n: loc.rayon },

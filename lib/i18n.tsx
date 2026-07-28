@@ -651,6 +651,7 @@ const DICT = {
   wms_code_exists: { fr: 'Ce code existe déjà dans ce magasin.', ar: 'هذا الرمز موجود بالفعل في هذا المتجر.' },
   wms_has_children: { fr: 'Impossible de supprimer : cet élément contient des sous-éléments.', ar: 'لا يمكن الحذف: يحتوي هذا العنصر على عناصر فرعية.' },
   wms_zone: { fr: 'Zone', ar: 'المنطقة' },
+  wms_depot: { fr: 'Dépôt', ar: 'المستودع' },
   wms_allee: { fr: 'Allée', ar: 'الممر' },
   wms_rayon: { fr: 'Rayon', ar: 'الرف' },
   wms_etagere: { fr: 'Étagère', ar: 'الرف' },
