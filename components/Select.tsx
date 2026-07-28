@@ -39,14 +39,21 @@ export default function Select({
   // Ferme au clic hors du bouton ET hors du panneau (le panneau est dans un portail,
   // donc pas contenu dans `ref`).
   useEffect(() => {
-    const onDown = (e: MouseEvent) => {
+    // Phase de CAPTURE : garantit la fermeture même si un parent stoppe la
+    // propagation (ex. contenu d'une modale).
+    const onDown = (e: Event) => {
       const target = e.target as Node
       if (ref.current?.contains(target)) return
       if (panelRef.current?.contains(target)) return
       setOpen(false)
     }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('pointerdown', onDown, true)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onDown, true)
+      document.removeEventListener('keydown', onKey)
+    }
   }, [])
 
   // Position du panneau (portail) : calculée sous le bouton, rabattue vers le haut

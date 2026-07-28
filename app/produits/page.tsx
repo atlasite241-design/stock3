@@ -90,6 +90,21 @@ function ProduitsContent() {
     return m
   }, [products])
 
+  // Unités réellement présentes par catégorie et par (catégorie + marque) — un seul passage.
+  const unitsIndex = useMemo(() => {
+    const byCat = new Map<string, Set<string>>()
+    const byCatBrand = new Map<string, Set<string>>()
+    for (const p of products) {
+      if (!p.unit || !p.category) continue
+      if (!byCat.has(p.category)) byCat.set(p.category, new Set())
+      byCat.get(p.category)!.add(p.unit)
+      const k = `${p.category}||${p.brand || ''}`
+      if (!byCatBrand.has(k)) byCatBrand.set(k, new Set())
+      byCatBrand.get(k)!.add(p.unit)
+    }
+    return { byCat, byCatBrand }
+  }, [products])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return products.filter((p) => {
@@ -485,11 +500,25 @@ function ProduitsContent() {
             </div>
             <div>
               <label className="field-label">{t('prod_unit_label')}</label>
-              <Select
-                value={form.unit}
-                onChange={(v) => setForm({ ...form, unit: v })}
-                options={units.map((u) => ({ value: u.name, label: u.name }))}
-              />
+              {(() => {
+                // Unités filtrées par catégorie + marque ; repli sur catégorie seule, puis toutes.
+                const set = form.category
+                  ? ((form.brand ? unitsIndex.byCatBrand.get(`${form.category}||${form.brand}`) : undefined) ?? unitsIndex.byCat.get(form.category))
+                  : null
+                let names = units.map((u) => u.name)
+                if (set && set.size > 0) {
+                  names = [...set]
+                  if (form.unit && !set.has(form.unit)) names.push(form.unit)
+                  names.sort((a, b) => a.localeCompare(b, 'fr'))
+                }
+                return (
+                  <Select
+                    value={form.unit}
+                    onChange={(v) => setForm({ ...form, unit: v })}
+                    options={names.map((u) => ({ value: u, label: u }))}
+                  />
+                )
+              })()}
             </div>
           </div>
           <div>
