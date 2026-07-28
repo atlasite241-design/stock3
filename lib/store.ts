@@ -221,6 +221,50 @@ export const ZONE_ALLEE_TEMPLATES: Record<string, { code: string; name: string }
     { code: '13', name: "Produits d'appel" }, { code: '14', name: 'Soldes saisonnières' },
     { code: '15', name: 'Nouveautés en promo' },
   ],
+  // ---- Zones logistiques (modèles métier) ----
+  O: [
+    { code: '01', name: 'Fins de série' }, { code: '02', name: 'Invendus' },
+    { code: '03', name: 'Produits abîmés' }, { code: '04', name: 'Retours fournisseurs' },
+    { code: '05', name: 'Lots à liquider' }, { code: '06', name: 'Saisonnier à écouler' },
+    { code: '07', name: 'Échantillons' }, { code: '08', name: 'À reconditionner' },
+  ],
+  P: [
+    { code: '01', name: 'Retours à contrôler' }, { code: '02', name: 'Retours conformes' },
+    { code: '03', name: 'Retours défectueux' }, { code: '04', name: 'Sous garantie' },
+    { code: '05', name: 'Avoirs en attente' }, { code: '06', name: 'À remettre en stock' },
+    { code: '07', name: 'À détruire' }, { code: '08', name: 'Litiges' },
+  ],
+  Q: [
+    { code: '01', name: 'Quai de déchargement' }, { code: '02', name: 'En attente de contrôle' },
+    { code: '03', name: 'Contrôle qualité' }, { code: '04', name: 'Conformes' },
+    { code: '05', name: 'Non conformes' }, { code: '06', name: 'À étiqueter' },
+    { code: '07', name: 'À ranger' }, { code: '08', name: 'Documents / bons de livraison' },
+  ],
+  R: [
+    { code: '01', name: 'Zone de picking' }, { code: '02', name: 'Commandes en cours' },
+    { code: '03', name: 'Commandes prêtes' }, { code: '04', name: 'Emballage' },
+    { code: '05', name: 'Étiquetage expédition' }, { code: '06', name: 'Colis en attente' },
+    { code: '07', name: 'Livraisons du jour' }, { code: '08', name: 'Transporteurs' },
+  ],
+  S: [
+    { code: '01', name: 'Réserve peinture' }, { code: '02', name: 'Réserve outillage' },
+    { code: '03', name: 'Réserve électricité' }, { code: '04', name: 'Réserve plomberie' },
+    { code: '05', name: 'Réserve quincaillerie' }, { code: '06', name: 'Réserve construction' },
+    { code: '07', name: 'Réserve sanitaire' }, { code: '08', name: 'Réserve jardinage' },
+    { code: '09', name: 'Réserve entretien' }, { code: '10', name: 'Stock tampon' },
+  ],
+  T: [
+    { code: '01', name: 'Inflammables' }, { code: '02', name: 'Solvants et diluants' },
+    { code: '03', name: 'Peintures et aérosols' }, { code: '04', name: 'Produits corrosifs' },
+    { code: '05', name: 'Produits toxiques' }, { code: '06', name: 'Gaz sous pression' },
+    { code: '07', name: 'Comburants' }, { code: '08', name: 'Stockage sécurisé (rétention)' },
+  ],
+  U: [
+    { code: '01', name: 'Sacs de ciment' }, { code: '02', name: 'Plaques et panneaux' },
+    { code: '03', name: 'Tubes et profilés' }, { code: '04', name: 'Échelles et escabeaux' },
+    { code: '05', name: 'Mobilier' }, { code: '06', name: 'Cuves et réservoirs' },
+    { code: '07', name: 'Palettes' }, { code: '08', name: 'Charges lourdes' },
+  ],
 }
 /** Allées génériques pour une zone sans modèle spécifique. */
 export const GENERIC_ALLEES: { code: string; name: string }[] = [
