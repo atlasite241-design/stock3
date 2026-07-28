@@ -201,6 +201,26 @@ export const ZONE_ALLEE_TEMPLATES: Record<string, { code: string; name: string }
     { code: '13', name: 'Quincaillerie gros œuvre' }, { code: '14', name: 'Échafaudage et coffrage' },
     { code: '15', name: 'Promotions Construction' },
   ],
+  A: [
+    { code: '01', name: 'Comptoir / Caisses' }, { code: '02', name: 'Piles et ampoules' },
+    { code: '03', name: 'Petit outillage de dépannage' }, { code: '04', name: 'Adhésifs et attaches' },
+    { code: '05', name: 'Quincaillerie de dépannage' }, { code: '06', name: 'Articles ménagers pratiques' },
+    { code: '07', name: 'Sécurité (masques, gants)' }, { code: '08', name: 'Articles de saison' },
+    { code: '09', name: 'Nouveautés' }, { code: '10', name: "Produits d'appel" },
+    { code: '11', name: 'Emballage et sacs' }, { code: '12', name: 'Présentoirs promotionnels' },
+    { code: '13', name: 'Recharges et consommables' }, { code: '14', name: 'Accessoires divers' },
+    { code: '15', name: 'Déstockage caisse' },
+  ],
+  N: [
+    { code: '01', name: 'Promotions Peinture' }, { code: '02', name: 'Promotions Outillage' },
+    { code: '03', name: 'Promotions Électricité' }, { code: '04', name: 'Promotions Plomberie' },
+    { code: '05', name: 'Promotions Quincaillerie' }, { code: '06', name: 'Promotions Jardinage' },
+    { code: '07', name: 'Promotions Sanitaire' }, { code: '08', name: 'Promotions Construction' },
+    { code: '09', name: 'Promotions Entretien' }, { code: '10', name: 'Fins de série' },
+    { code: '11', name: 'Déstockage' }, { code: '12', name: 'Lots et packs' },
+    { code: '13', name: "Produits d'appel" }, { code: '14', name: 'Soldes saisonnières' },
+    { code: '15', name: 'Nouveautés en promo' },
+  ],
 }
 /** Allées génériques pour une zone sans modèle spécifique. */
 export const GENERIC_ALLEES: { code: string; name: string }[] = [
