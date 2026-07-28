@@ -8,7 +8,7 @@ import Loader from '@/components/Loader'
 import Modal from '@/components/Modal'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
-import { buildEmplacementCode, storeShortCode, useDroguerie } from '@/lib/store'
+import { buildEmplacementCode, depotShortCode, storeShortCode, useDroguerie } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 // Un « niveau » de la hiérarchie d'emplacements. `pf` = champ qui référence le parent.
@@ -93,11 +93,21 @@ export default function LocationManager({
     ? target.items.filter((it) => it.storeId === d.activeStoreId && it[target.pf] === parentId).sort((a, b) => a.code.localeCompare(b.code, 'fr'))
     : []
 
+  // Dépôt de la zone sélectionnée (segment DEP01 du code) — repli sur le dépôt principal.
+  const depotCode = useMemo(() => {
+    const storeDepots = d.depots.filter((x) => x.storeId === d.activeStoreId)
+    const zDepot = (d.zones.find((z) => z.id === sel.zone)?.depotId) as string | undefined
+    const dep = (zDepot && storeDepots.find((x) => x.id === zDepot)) || storeDepots[0]
+    const idx = storeDepots.findIndex((x) => x.id === dep?.id)
+    return dep?.code || depotShortCode(idx < 0 ? 0 : idx)
+  }, [d.depots, d.zones, d.activeStoreId, sel.zone])
+
   // Code d'emplacement complet à partir de la chaîne sélectionnée + un code donné.
   const codeOf = (li: number) => (chain[li].items.find((it) => it.id === sel[chain[li].key])?.code) ?? ''
   const previewCode = (code: string) =>
     buildEmplacementCode({
       storeCode,
+      depot: depotCode,
       zone: codeOf(0),
       allee: ti >= 1 ? (ti === 1 ? code : codeOf(1)) : undefined,
       rayon: ti >= 2 ? (ti === 2 ? code : codeOf(2)) : undefined,

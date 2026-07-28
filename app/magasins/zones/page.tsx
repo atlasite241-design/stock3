@@ -1,17 +1,19 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { ChevronDown, ChevronUp, LayoutGrid, Pencil, Plus, Save, Sparkles, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, Download, FileSpreadsheet, LayoutGrid, Pencil, Plus, Save, Sparkles, Trash2, Upload } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
+import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
-import { storeShortCode, useDroguerie, type Zone } from '@/lib/store'
+import { depotShortCode, storeShortCode, useDroguerie, type Zone } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 function Content() {
-  const { ready, zones, allees, stores, activeStore, activeStoreId, addZone, updateZone, deleteZone, seedDefaultZones, seedZoneAllees } = useDroguerie()
+  const d = useDroguerie()
+  const { ready, zones, allees, stores, activeStore, activeStoreId, addZone, updateZone, deleteZone, seedDefaultZones, seedZoneAllees, bulkAddZones } = d
   const { t } = useLanguage()
   const toast = useToast()
 
@@ -19,6 +21,14 @@ function Content() {
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState<{ code: string; name: string; type: 'commerciale' | 'logistique' }>({ code: '', name: '', type: 'commerciale' })
   const [useTemplate, setUseTemplate] = useState(true)
+  const [importDepot, setImportDepot] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
+  const storeDepots = useMemo(() => d.depots.filter((x) => x.storeId === activeStoreId), [d.depots, activeStoreId])
+  const depotCodeOf = (depotId?: string) => {
+    const dep = storeDepots.find((x) => x.id === depotId)
+    const idx = storeDepots.findIndex((x) => x.id === depotId)
+    return dep?.code || (idx >= 0 ? depotShortCode(idx) : storeDepots[0]?.code || depotShortCode(0))
+  }
 
   // Code court du magasin actif (MAG01, MAG02…) pour l'aperçu de l'emplacement.
   const storeCode = useMemo(() => {
@@ -78,6 +88,50 @@ function Content() {
     toast(n > 0 ? `✓ ${n} ${t('wms_zone_default_added')}` : t('wms_zone_default_none'))
   }
 
+  // ---- Export / Import des zones (avec dépôt) ----
+  const exportRows = (): (string | number)[][] => [
+    ['Code', 'Nom', 'Type', 'Depot'],
+    ...list.map((z) => [z.code, z.name || '', z.type === 'logistique' ? 'logistique' : 'commerciale', depotCodeOf(z.depotId)]),
+  ]
+  const exportCsv = () => {
+    const csv = exportRows().map((r) => r.join(';')).join('\n')
+    const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a'); a.href = url; a.download = `zones-${activeStore?.name || ''}.csv`.replace(/[^\w.-]+/g, '_'); a.click(); URL.revokeObjectURL(url)
+  }
+  const exportXlsx = async () => {
+    const XLSX = await import('xlsx')
+    const ws = XLSX.utils.aoa_to_sheet(exportRows())
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Zones'); XLSX.writeFile(wb, `zones-${activeStore?.name || ''}.xlsx`.replace(/[^\w.-]+/g, '_'))
+  }
+  const applyImport = (rows: (string | number)[][]) => {
+    const parsed = rows.filter((r) => r && r.length >= 1).map((r) => ({
+      code: String(r[0] ?? ''), name: r[1] != null ? String(r[1]) : undefined,
+      type: /logist/i.test(String(r[2] ?? '')) ? ('logistique' as const) : ('commerciale' as const),
+    }))
+    const depotId = importDepot || storeDepots[0]?.id
+    const n = bulkAddZones(activeStoreId, depotId, parsed)
+    toast(n > 0 ? `✓ ${n} ${t('wms_zone_default_added')}` : t('wms_import_none'), n > 0 ? 'success' : 'error')
+  }
+  const onImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return
+    const isExcel = /\.xlsx?$/i.test(file.name) || /sheet|excel/i.test(file.type)
+    const reader = new FileReader()
+    if (isExcel) {
+      reader.onload = async () => {
+        try {
+          const XLSX = await import('xlsx')
+          const wb = XLSX.read(new Uint8Array(reader.result as ArrayBuffer), { type: 'array' })
+          applyImport(XLSX.utils.sheet_to_json<(string | number)[]>(wb.Sheets[wb.SheetNames[0]], { header: 1, blankrows: false }))
+        } catch { toast(t('wms_import_none'), 'error') }
+      }
+      reader.readAsArrayBuffer(file)
+    } else {
+      reader.onload = () => applyImport(String(reader.result).replace(/^﻿/, '').split(/\r?\n/).filter((l) => l.trim()).map((l) => l.split(/[;,\t]/)))
+      reader.readAsText(file)
+    }
+    e.target.value = ''
+  }
+
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="flex flex-wrap items-end justify-between gap-4">
@@ -91,15 +145,16 @@ function Content() {
             <span className="ml-1 font-mono text-xs text-gray-400 dark:text-zinc-500">({storeCode})</span>
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button onClick={seedZones} className="btn-secondary">
-            <Sparkles className="h-4 w-4" />
-            {t('wms_zone_default')}
-          </button>
-          <button onClick={openNew} className="btn-primary">
-            <Plus className="h-4 w-4" />
-            {t('wms_zone_new')}
-          </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {storeDepots.length > 1 && (
+            <div className="w-40"><Select value={importDepot || storeDepots[0]?.id} onChange={setImportDepot} options={storeDepots.map((x, i) => ({ value: x.id, label: `${x.code || depotShortCode(i)} · ${x.name}` }))} /></div>
+          )}
+          <button onClick={() => fileRef.current?.click()} className="btn-secondary"><Upload className="h-4 w-4" />{t('wms_import')}</button>
+          <button onClick={exportCsv} disabled={list.length === 0} className="btn-secondary disabled:opacity-40"><Download className="h-4 w-4" />CSV</button>
+          <button onClick={exportXlsx} disabled={list.length === 0} className="btn-secondary disabled:opacity-40"><FileSpreadsheet className="h-4 w-4" />Excel</button>
+          <button onClick={seedZones} className="btn-secondary"><Sparkles className="h-4 w-4" />{t('wms_zone_default')}</button>
+          <button onClick={openNew} className="btn-primary"><Plus className="h-4 w-4" />{t('wms_zone_new')}</button>
+          <input ref={fileRef} type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={onImport} className="hidden" />
         </div>
       </motion.div>
 
@@ -137,7 +192,7 @@ function Content() {
                         ? <span className="rounded-md bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-600 dark:bg-sky-500/10 dark:text-sky-400">{t('wms_zone_logistic')}</span>
                         : <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">{t('wms_zone_commercial')}</span>}
                     </td>
-                    <td className="px-5 py-3 font-mono text-xs text-gray-500 dark:text-zinc-400">{storeCode}-{z.code}</td>
+                    <td className="px-5 py-3 font-mono text-xs text-gray-500 dark:text-zinc-400">{storeCode}-{depotCodeOf(z.depotId)}-{z.code}</td>
                     <td className="px-5 py-3 text-center tabular-nums text-gray-600 dark:text-zinc-300">{alleeCount(z.id)}</td>
                     <td className="px-5 py-3 text-center">
                       <button onClick={() => toggleActive(z)} className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${inactive ? 'bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-zinc-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'}`}>

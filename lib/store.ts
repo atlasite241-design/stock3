@@ -2558,6 +2558,19 @@ export function useDroguerieState() {
   //      → Position. Intégrité gérée ici (pas de FK SQL) : on empêche de supprimer
   //      un élément qui a des enfants. `locateResult` : { ok } ou { ok:false, error:'children' }.
   const addZone = (data: Omit<Zone, 'id'>): Zone => { const z = { ...data, id: uid() }; persistZones([z, ...zones]); return z }
+  // Import en masse de zones (une écriture, anti-doublon par code), rattachées à un dépôt.
+  const bulkAddZones = (storeId: string, depotId: string | undefined, rows: { code: string; name?: string; type?: 'commerciale' | 'logistique' }[]): number => {
+    const existing = new Set(zones.filter((z) => z.storeId === storeId).map((z) => z.code.toUpperCase()))
+    const seen = new Set<string>()
+    const clean = rows
+      .map((r) => ({ code: String(r.code ?? '').trim().toUpperCase(), name: (r.name ?? '').trim(), type: r.type }))
+      .filter((r) => r.code && !/code|zone|nom/i.test(r.code))
+      .filter((r) => { if (existing.has(r.code) || seen.has(r.code)) return false; seen.add(r.code); return true })
+    if (clean.length === 0) return 0
+    const base = zones.filter((z) => z.storeId === storeId).length
+    persistZones([...clean.map((r, i) => ({ id: uid(), storeId, depotId, code: r.code, name: r.name || r.code, type: r.type === 'logistique' ? 'logistique' as const : 'commerciale' as const, active: true, order: base + i })), ...zones])
+    return clean.length
+  }
   // Crée les zones par défaut manquantes pour un magasin existant (idempotent par code).
   const seedDefaultZones = (storeId: string): number => {
     const existing = new Set(zones.filter((z) => z.storeId === storeId).map((z) => z.code.toUpperCase()))
@@ -2972,7 +2985,7 @@ export function useDroguerieState() {
     deleteDepot,
     // Emplacements (WMS) — listes brutes (filtrées par storeId dans les pages) + actions.
     zones, allees, rayons, etageres, niveaux, positions, emplacements,
-    addZone, updateZone, deleteZone, seedDefaultZones,
+    addZone, updateZone, deleteZone, seedDefaultZones, bulkAddZones,
     addAllee, updateAllee, deleteAllee, seedZoneAllees, generateSubStructure, bulkAddLocations,
     addRayon, updateRayon, deleteRayon,
     addEtagere, updateEtagere, deleteEtagere,
