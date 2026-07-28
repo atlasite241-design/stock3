@@ -46,7 +46,32 @@ export interface Depot {
 // ---- Emplacements de stockage (WMS) : hiérarchie Zone → Allée → Rayon → Étagère
 //      → Niveau → Position. Chaque niveau porte un `code` court (A, 02, 03…) et
 //      référence son parent. Le code complet d'emplacement est dérivé de la chaîne.
-export interface Zone { id: string; storeId: string; code: string; name: string }
+export interface Zone { id: string; storeId: string; code: string; name: string; type?: 'commerciale' | 'logistique'; active?: boolean; order?: number }
+
+/** Zones créées automatiquement à l'ouverture d'un magasin (commerciales A-N + logistiques O-U). */
+export const DEFAULT_ZONES: { code: string; name: string; type: 'commerciale' | 'logistique' }[] = [
+  { code: 'A', name: 'Accueil / Point de vente', type: 'commerciale' },
+  { code: 'B', name: 'Peinture', type: 'commerciale' },
+  { code: 'C', name: 'Outillage manuel', type: 'commerciale' },
+  { code: 'D', name: 'Outillage électrique', type: 'commerciale' },
+  { code: 'E', name: 'Électricité', type: 'commerciale' },
+  { code: 'F', name: 'Plomberie', type: 'commerciale' },
+  { code: 'G', name: 'Quincaillerie', type: 'commerciale' },
+  { code: 'H', name: 'Colles et silicones', type: 'commerciale' },
+  { code: 'I', name: "Produits d'entretien", type: 'commerciale' },
+  { code: 'J', name: 'Jardinage', type: 'commerciale' },
+  { code: 'K', name: 'Gaz et sécurité', type: 'commerciale' },
+  { code: 'L', name: 'Sanitaire', type: 'commerciale' },
+  { code: 'M', name: 'Construction', type: 'commerciale' },
+  { code: 'N', name: 'Promotions', type: 'commerciale' },
+  { code: 'O', name: 'Déstockage', type: 'logistique' },
+  { code: 'P', name: 'Retours clients', type: 'logistique' },
+  { code: 'Q', name: 'Réception marchandises', type: 'logistique' },
+  { code: 'R', name: 'Préparation de commandes', type: 'logistique' },
+  { code: 'S', name: 'Réserve', type: 'logistique' },
+  { code: 'T', name: 'Produits dangereux', type: 'logistique' },
+  { code: 'U', name: 'Produits volumineux', type: 'logistique' },
+]
 export interface Allee { id: string; storeId: string; zoneId: string; code: string; name?: string }
 export interface Rayon { id: string; storeId: string; alleeId: string; code: string; name?: string }
 export interface Etagere { id: string; storeId: string; rayonId: string; code: string; name?: string }
@@ -2430,6 +2455,8 @@ export function useDroguerieState() {
     }
     persistStores([...stores, store])
     persistDepots([{ id: uid(), storeId: store.id, name: 'Dépôt principal', address: store.address, responsable: store.manager }, ...depots])
+    // Zones par défaut (commerciales + logistiques) pour un magasin prêt à l'emploi.
+    persistZones([...zones, ...DEFAULT_ZONES.map((z, i) => ({ id: uid(), storeId: store.id, code: z.code, name: z.name, type: z.type, active: true, order: i }))])
     logActivity(`Magasin créé : ${store.name}`)
     return store
   }
@@ -2466,6 +2493,15 @@ export function useDroguerieState() {
   //      → Position. Intégrité gérée ici (pas de FK SQL) : on empêche de supprimer
   //      un élément qui a des enfants. `locateResult` : { ok } ou { ok:false, error:'children' }.
   const addZone = (data: Omit<Zone, 'id'>): Zone => { const z = { ...data, id: uid() }; persistZones([z, ...zones]); return z }
+  // Crée les zones par défaut manquantes pour un magasin existant (idempotent par code).
+  const seedDefaultZones = (storeId: string): number => {
+    const existing = new Set(zones.filter((z) => z.storeId === storeId).map((z) => z.code.toUpperCase()))
+    const missing = DEFAULT_ZONES.filter((z) => !existing.has(z.code))
+    if (missing.length === 0) return 0
+    persistZones([...zones, ...missing.map((z, i) => ({ id: uid(), storeId, code: z.code, name: z.name, type: z.type, active: true, order: existing.size + i }))])
+    logActivity(`Zones par défaut créées (${missing.length})`, { target: stores.find((s) => s.id === storeId)?.name })
+    return missing.length
+  }
   const updateZone = (id: string, data: Partial<Zone>) => persistZones(zones.map((z) => (z.id === id ? { ...z, ...data } : z)))
   const deleteZone = (id: string) => {
     if (allees.some((a) => a.zoneId === id)) return { ok: false as const, error: 'children' as const }
@@ -2791,7 +2827,7 @@ export function useDroguerieState() {
     deleteDepot,
     // Emplacements (WMS) — listes brutes (filtrées par storeId dans les pages) + actions.
     zones, allees, rayons, etageres, niveaux, positions, emplacements,
-    addZone, updateZone, deleteZone,
+    addZone, updateZone, deleteZone, seedDefaultZones,
     addAllee, updateAllee, deleteAllee,
     addRayon, updateRayon, deleteRayon,
     addEtagere, updateEtagere, deleteEtagere,

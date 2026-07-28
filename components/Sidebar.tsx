@@ -183,6 +183,7 @@ const NAV: NavItem[] = [
       { href: '/magasins/plan', labelKey: 'nav_stores_plan' },
       { href: '/magasins/rangement', labelKey: 'nav_stores_rangement' },
       { href: '/magasins/impression', labelKey: 'nav_stores_impression' },
+      { href: '/magasins/rapports', labelKey: 'nav_stores_reports' },
       { href: '/magasins/utilisateurs', labelKey: 'nav_stores_users' },
       { href: '/magasins/parametres', labelKey: 'nav_stores_settings' },
     ],
