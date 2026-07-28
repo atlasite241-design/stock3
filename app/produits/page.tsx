@@ -79,6 +79,17 @@ function ProduitsContent() {
     [products]
   )
 
+  // Marques réellement présentes par catégorie (pour filtrer le menu Marque du formulaire).
+  const brandsByCategory = useMemo(() => {
+    const m = new Map<string, Set<string>>()
+    for (const p of products) {
+      if (!p.category || !p.brand) continue
+      if (!m.has(p.category)) m.set(p.category, new Set())
+      m.get(p.category)!.add(p.brand)
+    }
+    return m
+  }, [products])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return products.filter((p) => {
@@ -441,19 +452,36 @@ function ProduitsContent() {
               <label className="field-label">{t('prod_category_label')}</label>
               <Select
                 value={form.category}
-                onChange={(v) => setForm({ ...form, category: v })}
+                onChange={(v) => {
+                  // Réinitialise la marque si elle n'appartient pas à la nouvelle catégorie.
+                  const set = brandsByCategory.get(v)
+                  const keepBrand = !v || !set || set.size === 0 || set.has(form.brand)
+                  setForm({ ...form, category: v, brand: keepBrand ? form.brand : '' })
+                }}
                 placeholder={t('prod_choose')}
                 options={[{ value: '', label: t('prod_choose') }, ...categories.map((c) => ({ value: c.name, label: c.name }))]}
               />
             </div>
             <div>
               <label className="field-label">{t('prod_brand_label')}</label>
-              <Select
-                value={form.brand}
-                onChange={(v) => setForm({ ...form, brand: v })}
-                placeholder={t('prod_none')}
-                options={[{ value: '', label: t('prod_none') }, ...brands.map((b) => ({ value: b.name, label: b.name }))]}
-              />
+              {(() => {
+                // Marques filtrées par catégorie ; repli sur toutes si la catégorie n'en a aucune.
+                const set = form.category ? brandsByCategory.get(form.category) : null
+                let names = brands.map((b) => b.name)
+                if (set && set.size > 0) {
+                  names = [...set]
+                  if (form.brand && !set.has(form.brand)) names.push(form.brand)
+                  names.sort((a, b) => a.localeCompare(b, 'fr'))
+                }
+                return (
+                  <Select
+                    value={form.brand}
+                    onChange={(v) => setForm({ ...form, brand: v })}
+                    placeholder={t('prod_none')}
+                    options={[{ value: '', label: t('prod_none') }, ...names.map((b) => ({ value: b, label: b }))]}
+                  />
+                )
+              })()}
             </div>
             <div>
               <label className="field-label">{t('prod_unit_label')}</label>
