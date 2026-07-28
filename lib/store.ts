@@ -97,10 +97,14 @@ export const ZONE_ALLEE_TEMPLATES: Record<string, { code: string; name: string }
     { code: '07', name: 'Serrage et étaux' }, { code: '08', name: 'Coffrets et rangement' },
   ],
   E: [
-    { code: '01', name: 'Câbles et fils' }, { code: '02', name: 'Interrupteurs et prises' },
-    { code: '03', name: 'Disjoncteurs et tableaux' }, { code: '04', name: 'Éclairage' },
-    { code: '05', name: 'Gaines et moulures' }, { code: '06', name: 'Boîtes et accessoires' },
-    { code: '07', name: 'Domotique' }, { code: '08', name: "Outillage d'électricien" },
+    { code: '01', name: 'Câbles électriques' }, { code: '02', name: 'Gaines et conduits' },
+    { code: '03', name: 'Interrupteurs' }, { code: '04', name: 'Prises électriques' },
+    { code: '05', name: 'Disjoncteurs et protections' }, { code: '06', name: 'Tableaux électriques' },
+    { code: '07', name: 'Éclairage intérieur' }, { code: '08', name: 'Éclairage extérieur' },
+    { code: '09', name: 'Rallonges et multiprises' }, { code: '10', name: 'Connecteurs et bornes' },
+    { code: '11', name: 'Minuteries et automatismes' }, { code: '12', name: 'Ventilation' },
+    { code: '13', name: "Outils d'électricien" }, { code: '14', name: 'Accessoires électriques' },
+    { code: '15', name: 'Promotions Électricité' },
   ],
   F: [
     { code: '01', name: 'Tubes et raccords PVC' }, { code: '02', name: 'Tubes et raccords cuivre' },
