@@ -180,6 +180,7 @@ const NAV: NavItem[] = [
       { href: '/magasins/etageres', labelKey: 'nav_stores_etageres' },
       { href: '/magasins/niveaux', labelKey: 'nav_stores_niveaux' },
       { href: '/magasins/emplacements', labelKey: 'nav_stores_emplacements' },
+      { href: '/magasins/generateur', labelKey: 'nav_stores_generator' },
       { href: '/magasins/plan', labelKey: 'nav_stores_plan' },
       { href: '/magasins/rangement', labelKey: 'nav_stores_rangement' },
       { href: '/magasins/impression', labelKey: 'nav_stores_impression' },

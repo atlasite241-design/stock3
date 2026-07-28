@@ -2582,6 +2582,42 @@ export function useDroguerieState() {
     persistAllees([...tpl.map((a) => ({ id: uid(), storeId, zoneId, code: a.code, name: a.name })), ...allees])
     return tpl.length
   }
+
+  // Générateur de sous-structure à la demande : crée sous une allée une grille
+  // Rayons × Étagères × Niveaux × Positions. Une SEULE écriture par collection
+  // (batch) — le volume total est décidé et confirmé par l'utilisateur.
+  const generateSubStructure = (
+    alleeId: string,
+    storeId: string,
+    counts: { rayons: number; etageres: number; niveaux: number; positions: number }
+  ): { ok: boolean; error?: 'exists' | 'empty'; total?: number } => {
+    if (rayons.some((r) => r.alleeId === alleeId)) return { ok: false, error: 'exists' }
+    const R = Math.max(0, Math.floor(counts.rayons))
+    const E = Math.max(0, Math.floor(counts.etageres))
+    const N = Math.max(0, Math.floor(counts.niveaux))
+    const P = Math.max(0, Math.floor(counts.positions))
+    if (R === 0) return { ok: false, error: 'empty' }
+    const p2 = (n: number) => String(n).padStart(2, '0')
+    const p3 = (n: number) => String(n).padStart(3, '0')
+    const newR: Rayon[] = [], newE: Etagere[] = [], newN: Niveau[] = [], newP: Position[] = []
+    for (let r = 1; r <= R; r++) {
+      const rid = uid(); newR.push({ id: rid, storeId, alleeId, code: 'R' + p2(r) })
+      for (let e = 1; e <= E; e++) {
+        const eid = uid(); newE.push({ id: eid, storeId, rayonId: rid, code: 'E' + p2(e) })
+        for (let n = 1; n <= N; n++) {
+          const nid = uid(); newN.push({ id: nid, storeId, etagereId: eid, code: 'N' + p2(n) })
+          for (let p = 1; p <= P; p++) newP.push({ id: uid(), storeId, niveauId: nid, code: 'P' + p3(p) })
+        }
+      }
+    }
+    if (newR.length) persistRayons([...newR, ...rayons])
+    if (newE.length) persistEtageres([...newE, ...etageres])
+    if (newN.length) persistNiveaux([...newN, ...niveaux])
+    if (newP.length) persistPositions([...newP, ...positions])
+    const total = newR.length + newE.length + newN.length + newP.length
+    logActivity(`Structure générée (${total} éléments)`, { target: allees.find((a) => a.id === alleeId)?.code })
+    return { ok: true, total }
+  }
   const updateAllee = (id: string, data: Partial<Allee>) => persistAllees(allees.map((a) => (a.id === id ? { ...a, ...data } : a)))
   const deleteAllee = (id: string) => {
     if (rayons.some((r) => r.alleeId === id)) return { ok: false as const, error: 'children' as const }
@@ -2905,7 +2941,7 @@ export function useDroguerieState() {
     // Emplacements (WMS) — listes brutes (filtrées par storeId dans les pages) + actions.
     zones, allees, rayons, etageres, niveaux, positions, emplacements,
     addZone, updateZone, deleteZone, seedDefaultZones,
-    addAllee, updateAllee, deleteAllee, seedZoneAllees,
+    addAllee, updateAllee, deleteAllee, seedZoneAllees, generateSubStructure,
     addRayon, updateRayon, deleteRayon,
     addEtagere, updateEtagere, deleteEtagere,
     addNiveau, updateNiveau, deleteNiveau,
