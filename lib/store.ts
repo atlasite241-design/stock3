@@ -2583,6 +2583,38 @@ export function useDroguerieState() {
     return tpl.length
   }
 
+  // Import en masse d'un niveau d'emplacement dans un parent donné (une seule
+  // écriture). Ignore les doublons de code au sein du même parent.
+  const bulkAddLocations = (
+    level: 'allee' | 'rayon' | 'etagere' | 'niveau' | 'position',
+    storeId: string,
+    parentField: string,
+    parentId: string,
+    rows: { code: string; name?: string }[]
+  ): number => {
+    const table = {
+      allee: { items: allees, persist: persistAllees },
+      rayon: { items: rayons, persist: persistRayons },
+      etagere: { items: etageres, persist: persistEtageres },
+      niveau: { items: niveaux, persist: persistNiveaux },
+      position: { items: positions, persist: persistPositions },
+    }[level]
+    const existing = new Set(
+      (table.items as unknown as { code: string; [k: string]: unknown }[])
+        .filter((it) => it[parentField] === parentId)
+        .map((it) => it.code.toUpperCase())
+    )
+    const seen = new Set<string>()
+    const toAdd = rows
+      .map((r) => ({ code: String(r.code ?? '').trim().toUpperCase(), name: (r.name ?? '').trim() }))
+      .filter((r) => r.code && !/code|barre|allee|rayon|etag|niveau|position/i.test(r.code))
+      .filter((r) => { if (existing.has(r.code) || seen.has(r.code)) return false; seen.add(r.code); return true })
+    if (toAdd.length === 0) return 0
+    const items = toAdd.map((r) => ({ id: uid(), storeId, [parentField]: parentId, code: r.code, name: r.name || undefined }))
+    ;(table.persist as (v: unknown[]) => void)([...items, ...(table.items as unknown[])])
+    return toAdd.length
+  }
+
   // Générateur de sous-structure à la demande : crée sous une allée une grille
   // Rayons × Étagères × Niveaux × Positions. Une SEULE écriture par collection
   // (batch) — le volume total est décidé et confirmé par l'utilisateur.
@@ -2941,7 +2973,7 @@ export function useDroguerieState() {
     // Emplacements (WMS) — listes brutes (filtrées par storeId dans les pages) + actions.
     zones, allees, rayons, etageres, niveaux, positions, emplacements,
     addZone, updateZone, deleteZone, seedDefaultZones,
-    addAllee, updateAllee, deleteAllee, seedZoneAllees, generateSubStructure,
+    addAllee, updateAllee, deleteAllee, seedZoneAllees, generateSubStructure, bulkAddLocations,
     addRayon, updateRayon, deleteRayon,
     addEtagere, updateEtagere, deleteEtagere,
     addNiveau, updateNiveau, deleteNiveau,

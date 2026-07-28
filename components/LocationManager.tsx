@@ -1,8 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Pencil, Plus, Save, Trash2 } from 'lucide-react'
+import { Download, FileSpreadsheet, Pencil, Plus, Save, Trash2, Upload } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import Loader from '@/components/Loader'
 import Modal from '@/components/Modal'
@@ -57,6 +57,7 @@ export default function LocationManager({
   const [open, setOpen] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState({ code: '', name: '' })
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const storeCode = useMemo(() => {
     const idx = d.stores.findIndex((s) => s.id === d.activeStoreId)
@@ -124,6 +125,49 @@ export default function LocationManager({
     toast(t('mag_delete'))
   }
 
+  // ---- Export (CSV / Excel) : les éléments du parent sélectionné ----
+  const exportName = `${level}-${previewCode('') || d.activeStore?.name || ''}`.replace(/[^\w-]+/g, '_')
+  const exportRows = (): (string | number)[][] => [
+    ['Code', 'Nom', 'Emplacement'],
+    ...list.map((it) => [it.code, (it.name as string) || '', previewCode(it.code)]),
+  ]
+  const exportCsv = () => {
+    const csv = exportRows().map((r) => r.join(';')).join('\n')
+    const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a'); a.href = url; a.download = `${exportName}.csv`; a.click(); URL.revokeObjectURL(url)
+  }
+  const exportXlsx = async () => {
+    const XLSX = await import('xlsx')
+    const ws = XLSX.utils.aoa_to_sheet(exportRows())
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, target.label); XLSX.writeFile(wb, `${exportName}.xlsx`)
+  }
+
+  // ---- Import (CSV / Excel) dans le parent sélectionné ----
+  const applyImport = (rows: (string | number)[][]) => {
+    const parsed = rows.filter((r) => r && r.length >= 1).map((r) => ({ code: String(r[0] ?? ''), name: r[1] != null ? String(r[1]) : undefined }))
+    const n = (d.bulkAddLocations as (l: string, s: string, pf: string, pid: string, rows: { code: string; name?: string }[]) => number)(level, d.activeStoreId, target.pf, parentId, parsed)
+    toast(n > 0 ? `✓ ${n} ${t('wms_imported')}` : t('wms_import_none'), n > 0 ? 'success' : 'error')
+  }
+  const onImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return
+    const isExcel = /\.xlsx?$/i.test(file.name) || /sheet|excel/i.test(file.type)
+    const reader = new FileReader()
+    if (isExcel) {
+      reader.onload = async () => {
+        try {
+          const XLSX = await import('xlsx')
+          const wb = XLSX.read(new Uint8Array(reader.result as ArrayBuffer), { type: 'array' })
+          applyImport(XLSX.utils.sheet_to_json<(string | number)[]>(wb.Sheets[wb.SheetNames[0]], { header: 1, blankrows: false }))
+        } catch { toast(t('wms_import_none'), 'error') }
+      }
+      reader.readAsArrayBuffer(file)
+    } else {
+      reader.onload = () => applyImport(String(reader.result).replace(/^﻿/, '').split(/\r?\n/).filter((l) => l.trim()).map((l) => l.split(/[;,\t]/)))
+      reader.readAsText(file)
+    }
+    e.target.value = ''
+  }
+
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="flex flex-wrap items-end justify-between gap-4">
@@ -136,10 +180,13 @@ export default function LocationManager({
             {subtitle} — <span className="font-semibold text-amber-600 dark:text-amber-400">{d.activeStore?.name}</span>
           </p>
         </div>
-        <button onClick={openNew} disabled={!parentReady} className="btn-primary disabled:opacity-40">
-          <Plus className="h-4 w-4" />
-          {t('wms_add')}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => fileRef.current?.click()} disabled={!parentReady} className="btn-secondary disabled:opacity-40"><Upload className="h-4 w-4" />{t('wms_import')}</button>
+          <button onClick={exportCsv} disabled={!parentReady || list.length === 0} className="btn-secondary disabled:opacity-40"><Download className="h-4 w-4" />CSV</button>
+          <button onClick={exportXlsx} disabled={!parentReady || list.length === 0} className="btn-secondary disabled:opacity-40"><FileSpreadsheet className="h-4 w-4" />Excel</button>
+          <button onClick={openNew} disabled={!parentReady} className="btn-primary disabled:opacity-40"><Plus className="h-4 w-4" />{t('wms_add')}</button>
+          <input ref={fileRef} type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={onImport} className="hidden" />
+        </div>
       </motion.div>
 
       {/* Cascade de sélection des parents */}
