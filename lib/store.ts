@@ -2599,10 +2599,12 @@ export function useDroguerieState() {
   }
 
   const addAllee = (data: Omit<Allee, 'id'>): Allee => { const a = { ...data, id: uid() }; persistAllees([a, ...allees]); return a }
-  // Modèle AtlasStock : crée les allées nommées d'une zone (si elle n'en a pas encore).
+  // Modèle AtlasStock : crée les allées nommées d'une zone (ajoute uniquement
+  // celles qui manquent — idempotent par code).
   const seedZoneAllees = (zoneId: string, storeId: string, zoneCode: string): number => {
-    if (allees.some((a) => a.zoneId === zoneId)) return 0
-    const tpl = alleeTemplateForZone(zoneCode)
+    const existing = new Set(allees.filter((a) => a.zoneId === zoneId).map((a) => a.code.toUpperCase()))
+    const tpl = alleeTemplateForZone(zoneCode).filter((a) => !existing.has(a.code.toUpperCase()))
+    if (tpl.length === 0) return 0
     persistAllees([...tpl.map((a) => ({ id: uid(), storeId, zoneId, code: a.code, name: a.name })), ...allees])
     return tpl.length
   }

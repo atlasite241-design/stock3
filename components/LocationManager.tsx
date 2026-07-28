@@ -2,7 +2,7 @@
 
 import React, { useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Download, FileSpreadsheet, Pencil, Plus, Save, Trash2, Upload } from 'lucide-react'
+import { Download, FileSpreadsheet, Pencil, Plus, Save, Sparkles, Trash2, Upload } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import Loader from '@/components/Loader'
 import Modal from '@/components/Modal'
@@ -135,6 +135,14 @@ export default function LocationManager({
     toast(t('mag_delete'))
   }
 
+  // Allées par défaut : crée le modèle AtlasStock d'allées pour la zone sélectionnée.
+  const seedAllees = () => {
+    const zoneId = sel.zone
+    const zoneCode = (chain[0].items.find((it) => it.id === zoneId)?.code) ?? ''
+    const n = d.seedZoneAllees(zoneId, d.activeStoreId, zoneCode)
+    toast(n > 0 ? `✓ ${n} ${t('wms_allees').toLowerCase()}` : t('wms_zone_default_none'))
+  }
+
   // ---- Export (CSV / Excel) : les éléments du parent sélectionné ----
   const exportName = `${level}-${previewCode('') || d.activeStore?.name || ''}`.replace(/[^\w-]+/g, '_')
   const exportRows = (): (string | number)[][] => [
@@ -191,6 +199,9 @@ export default function LocationManager({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {level === 'allee' && (
+            <button onClick={seedAllees} disabled={!parentReady} className="btn-secondary disabled:opacity-40"><Sparkles className="h-4 w-4" />{t('wms_allee_default')}</button>
+          )}
           <button onClick={() => fileRef.current?.click()} disabled={!parentReady} className="btn-secondary disabled:opacity-40"><Upload className="h-4 w-4" />{t('wms_import')}</button>
           <button onClick={exportCsv} disabled={!parentReady || list.length === 0} className="btn-secondary disabled:opacity-40"><Download className="h-4 w-4" />CSV</button>
           <button onClick={exportXlsx} disabled={!parentReady || list.length === 0} className="btn-secondary disabled:opacity-40"><FileSpreadsheet className="h-4 w-4" />Excel</button>

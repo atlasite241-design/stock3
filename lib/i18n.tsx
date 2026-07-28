@@ -553,6 +553,7 @@ const DICT = {
   wms_zones_subtitle: { fr: 'Zones de stockage du magasin', ar: 'مناطق تخزين المتجر' },
   wms_zone_new: { fr: 'Nouvelle zone', ar: 'منطقة جديدة' },
   wms_zone_default: { fr: 'Zones par défaut', ar: 'المناطق الافتراضية' },
+  wms_allee_default: { fr: 'Allées par défaut', ar: 'الممرات الافتراضية' },
   wms_zone_default_added: { fr: 'zone(s) ajoutée(s)', ar: 'منطقة مضافة' },
   wms_zone_default_none: { fr: 'Toutes les zones par défaut existent déjà.', ar: 'كل المناطق الافتراضية موجودة بالفعل.' },
   wms_zone_type: { fr: 'Type', ar: 'النوع' },
