@@ -11,13 +11,14 @@ import { storeShortCode, useDroguerie, type Zone } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 function Content() {
-  const { ready, zones, allees, stores, activeStore, activeStoreId, addZone, updateZone, deleteZone, seedDefaultZones } = useDroguerie()
+  const { ready, zones, allees, stores, activeStore, activeStoreId, addZone, updateZone, deleteZone, seedDefaultZones, seedZoneAllees } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
 
   const [open, setOpen] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState<{ code: string; name: string; type: 'commerciale' | 'logistique' }>({ code: '', name: '', type: 'commerciale' })
+  const [useTemplate, setUseTemplate] = useState(true)
 
   // Code court du magasin actif (MAG01, MAG02…) pour l'aperçu de l'emplacement.
   const storeCode = useMemo(() => {
@@ -31,7 +32,7 @@ function Content() {
     .sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || a.code.localeCompare(b.code, 'fr'))
   const alleeCount = (zoneId: string) => allees.filter((a) => a.zoneId === zoneId).length
 
-  const openNew = () => { setEditId(null); setForm({ code: '', name: '', type: 'commerciale' }); setOpen(true) }
+  const openNew = () => { setEditId(null); setForm({ code: '', name: '', type: 'commerciale' }); setUseTemplate(true); setOpen(true) }
   const openEdit = (z: Zone) => { setEditId(z.id); setForm({ code: z.code, name: z.name, type: z.type ?? 'commerciale' }); setOpen(true) }
 
   const save = () => {
@@ -42,7 +43,15 @@ function Content() {
     const clash = list.some((z) => z.code.toUpperCase() === code && z.id !== editId)
     if (clash) { toast(t('wms_code_exists'), 'error'); return }
     if (editId) updateZone(editId, { code, name, type: form.type })
-    else addZone({ storeId: activeStoreId, code, name, type: form.type, active: true, order: list.length })
+    else {
+      const z = addZone({ storeId: activeStoreId, code, name, type: form.type, active: true, order: list.length })
+      if (useTemplate) {
+        const n = seedZoneAllees(z.id, activeStoreId, code)
+        toast(n > 0 ? `✓ ${name} — ${n} ${t('wms_allees').toLowerCase()}` : t('mag_saved'))
+        setOpen(false)
+        return
+      }
+    }
     toast(t('mag_saved'))
     setOpen(false)
   }
@@ -177,6 +186,19 @@ function Content() {
               ))}
             </div>
           </label>
+          {!editId && (
+            <div className="space-y-2 rounded-xl border border-gray-100 p-3 dark:border-white/10">
+              <span className="block text-xs font-semibold text-gray-600 dark:text-zinc-400">{t('wms_tpl_title')}</span>
+              <button type="button" onClick={() => setUseTemplate(true)} className={`flex w-full items-start gap-2 rounded-lg border p-2.5 text-left transition ${useTemplate ? 'border-amber-400 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10' : 'border-gray-200 dark:border-white/10'}`}>
+                <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${useTemplate ? 'border-amber-500 bg-amber-500' : 'border-gray-300'}`}>{useTemplate && <span className="h-1.5 w-1.5 rounded-full bg-white" />}</span>
+                <span><span className="block text-sm font-semibold text-gray-800 dark:text-zinc-100">{t('wms_tpl_use')}</span><span className="block text-[11px] text-gray-500 dark:text-zinc-400">{t('wms_tpl_use_desc')}</span></span>
+              </button>
+              <button type="button" onClick={() => setUseTemplate(false)} className={`flex w-full items-start gap-2 rounded-lg border p-2.5 text-left transition ${!useTemplate ? 'border-amber-400 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10' : 'border-gray-200 dark:border-white/10'}`}>
+                <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${!useTemplate ? 'border-amber-500 bg-amber-500' : 'border-gray-300'}`}>{!useTemplate && <span className="h-1.5 w-1.5 rounded-full bg-white" />}</span>
+                <span><span className="block text-sm font-semibold text-gray-800 dark:text-zinc-100">{t('wms_tpl_empty')}</span><span className="block text-[11px] text-gray-500 dark:text-zinc-400">{t('wms_tpl_empty_desc')}</span></span>
+              </button>
+            </div>
+          )}
           {form.code.trim() && (
             <p className="text-xs text-gray-400 dark:text-zinc-500">
               {t('wms_emplacement')} : <span className="font-mono text-amber-600 dark:text-amber-400">{storeCode}-{form.code.trim().toUpperCase()}</span>

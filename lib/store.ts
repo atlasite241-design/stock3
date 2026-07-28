@@ -74,6 +74,52 @@ export const DEFAULT_ZONES: { code: string; name: string; type: 'commerciale' | 
   { code: 'T', name: 'Produits dangereux', type: 'logistique' },
   { code: 'U', name: 'Produits volumineux', type: 'logistique' },
 ]
+
+/**
+ * Modèle AtlasStock : structure d'allées nommées proposée automatiquement par
+ * zone (code d'allée = numéro à 2 chiffres ; la zone reste un segment distinct
+ * du code d'emplacement → MAG01-DEP01-B-01-…). Non codé en dur côté produit :
+ * l'utilisateur peut tout modifier ensuite.
+ */
+export const ZONE_ALLEE_TEMPLATES: Record<string, { code: string; name: string }[]> = {
+  B: [
+    { code: '01', name: 'Peintures intérieures' }, { code: '02', name: 'Peintures extérieures' },
+    { code: '03', name: 'Vernis' }, { code: '04', name: 'Lasures' }, { code: '05', name: 'Diluants et solvants' },
+    { code: '06', name: 'Enduits et mastics' }, { code: '07', name: 'Sous-couches et primaires' },
+    { code: '08', name: 'Colorants et pigments' }, { code: '09', name: 'Pinceaux et brosses' },
+    { code: '10', name: 'Rouleaux et accessoires' }, { code: '11', name: 'Rubans de masquage' },
+    { code: '12', name: 'Protection chantier' }, { code: '13', name: 'Aérosols' },
+    { code: '14', name: 'Produits spécialisés' }, { code: '15', name: 'Promotions peinture' },
+  ],
+  C: [
+    { code: '01', name: 'Marteaux' }, { code: '02', name: 'Tournevis' }, { code: '03', name: 'Clés et douilles' },
+    { code: '04', name: 'Pinces' }, { code: '05', name: 'Scies manuelles' }, { code: '06', name: 'Mesure et traçage' },
+    { code: '07', name: 'Serrage et étaux' }, { code: '08', name: 'Coffrets et rangement' },
+  ],
+  E: [
+    { code: '01', name: 'Câbles et fils' }, { code: '02', name: 'Interrupteurs et prises' },
+    { code: '03', name: 'Disjoncteurs et tableaux' }, { code: '04', name: 'Éclairage' },
+    { code: '05', name: 'Gaines et moulures' }, { code: '06', name: 'Boîtes et accessoires' },
+    { code: '07', name: 'Domotique' }, { code: '08', name: "Outillage d'électricien" },
+  ],
+  F: [
+    { code: '01', name: 'Tubes et raccords PVC' }, { code: '02', name: 'Tubes et raccords cuivre' },
+    { code: '03', name: 'Robinetterie' }, { code: '04', name: 'Sanitaire' }, { code: '05', name: 'Chauffe-eau' },
+    { code: '06', name: 'Évacuation' }, { code: '07', name: 'Joints et étanchéité' }, { code: '08', name: 'Outillage plombier' },
+  ],
+  G: [
+    { code: '01', name: 'Vis' }, { code: '02', name: 'Boulons et écrous' }, { code: '03', name: 'Clous et pointes' },
+    { code: '04', name: 'Chevilles' }, { code: '05', name: 'Serrures et cylindres' },
+    { code: '06', name: 'Charnières et paumelles' }, { code: '07', name: 'Poignées' }, { code: '08', name: 'Chaînes et câbles' },
+  ],
+}
+/** Allées génériques pour une zone sans modèle spécifique. */
+export const GENERIC_ALLEES: { code: string; name: string }[] = [
+  { code: '01', name: 'Allée 1' }, { code: '02', name: 'Allée 2' }, { code: '03', name: 'Allée 3' },
+  { code: '04', name: 'Allée 4' }, { code: '05', name: 'Allée 5' },
+]
+export const alleeTemplateForZone = (zoneCode: string) => ZONE_ALLEE_TEMPLATES[zoneCode.toUpperCase()] ?? GENERIC_ALLEES
+
 export interface Allee { id: string; storeId: string; zoneId: string; code: string; name?: string }
 export interface Rayon { id: string; storeId: string; alleeId: string; code: string; name?: string }
 export interface Etagere { id: string; storeId: string; rayonId: string; code: string; name?: string }
@@ -1572,6 +1618,14 @@ export function useDroguerieState() {
     }
   }
 
+  // Déplacement d'emplacement : met à jour la localisation ET journalise le
+  // changement dans l'historique (ancien → nouvel emplacement).
+  const moveProductLocation = (id: string, patch: Partial<Product>) => {
+    const prev = products.find((p) => p.id === id)
+    persistProducts(products.map((p) => (p.id === id ? { ...p, ...patch } : p)))
+    if (prev) logActivity(`Emplacement modifié : ${prev.name}`, { target: prev.name, oldValue: prev.emplacementComplet || '—', newValue: patch.emplacementComplet || '—' })
+  }
+
   const deleteProduct = (id: string) => {
     const p = products.find((x) => x.id === id)
     persistProducts(products.filter((x) => x.id !== id))
@@ -2521,6 +2575,13 @@ export function useDroguerieState() {
   }
 
   const addAllee = (data: Omit<Allee, 'id'>): Allee => { const a = { ...data, id: uid() }; persistAllees([a, ...allees]); return a }
+  // Modèle AtlasStock : crée les allées nommées d'une zone (si elle n'en a pas encore).
+  const seedZoneAllees = (zoneId: string, storeId: string, zoneCode: string): number => {
+    if (allees.some((a) => a.zoneId === zoneId)) return 0
+    const tpl = alleeTemplateForZone(zoneCode)
+    persistAllees([...tpl.map((a) => ({ id: uid(), storeId, zoneId, code: a.code, name: a.name })), ...allees])
+    return tpl.length
+  }
   const updateAllee = (id: string, data: Partial<Allee>) => persistAllees(allees.map((a) => (a.id === id ? { ...a, ...data } : a)))
   const deleteAllee = (id: string) => {
     if (rayons.some((r) => r.alleeId === id)) return { ok: false as const, error: 'children' as const }
@@ -2844,7 +2905,7 @@ export function useDroguerieState() {
     // Emplacements (WMS) — listes brutes (filtrées par storeId dans les pages) + actions.
     zones, allees, rayons, etageres, niveaux, positions, emplacements,
     addZone, updateZone, deleteZone, seedDefaultZones,
-    addAllee, updateAllee, deleteAllee,
+    addAllee, updateAllee, deleteAllee, seedZoneAllees,
     addRayon, updateRayon, deleteRayon,
     addEtagere, updateEtagere, deleteEtagere,
     addNiveau, updateNiveau, deleteNiveau,
@@ -2863,6 +2924,7 @@ export function useDroguerieState() {
     expectedCash,
     addProduct,
     updateProduct,
+    moveProductLocation,
     deleteProduct,
     importProducts,
     addMovement,

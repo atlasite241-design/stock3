@@ -8,7 +8,8 @@ import AppShell from '@/components/AppShell'
 import { availableStock, fmtDH, useDroguerie, type Product } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
-type ReportKey = 'by_zone' | 'no_location' | 'critical_by_zone' | 'occupancy' | 'top_by_zone'
+type ReportKey = 'by_zone' | 'by_allee' | 'by_rayon' | 'no_location' | 'critical_by_zone' | 'occupancy' | 'top_by_zone'
+type AggRow = { code: string; name: string; qty: number; value: number; count: number; critical: number }
 
 function Content() {
   const d = useDroguerie()
@@ -16,7 +17,6 @@ function Content() {
   const { t } = useLanguage()
   const [report, setReport] = useState<ReportKey>('by_zone')
 
-  const zones = useMemo(() => d.zones.filter((z) => z.storeId === activeStoreId), [d.zones, activeStoreId])
   const storeProducts = useMemo(
     () => products.filter((p) => !activeStoreId || !p.storeId || p.storeId === activeStoreId),
     [products, activeStoreId]
@@ -25,22 +25,26 @@ function Content() {
   // Rattache chaque produit à sa zone (via resolveLocation → zone).
   const zoneOf = (p: Product) => resolveLocation(p)?.zone ?? null
 
-  // Agrégat par zone : quantité, valeur, nb produits, nb critiques.
-  const byZone = useMemo(() => {
-    const m = new Map<string, { code: string; name: string; qty: number; value: number; count: number; critical: number }>()
-    for (const z of zones) m.set(z.id, { code: z.code, name: z.name, qty: 0, value: 0, count: 0, critical: 0 })
-    let noZoneQty = 0, noZoneVal = 0, noZoneCount = 0
+  // Agrégat générique par nœud (zone / allée / rayon).
+  const aggregateBy = (getNode: (p: Product) => { id: string; code: string; name?: string } | null) => {
+    const m = new Map<string, AggRow>()
+    let noQty = 0, noVal = 0, noCount = 0
     for (const p of storeProducts) {
-      const z = zoneOf(p)
+      const node = getNode(p)
       const s = availableStock(p)
-      if (!z || !m.has(z.id)) { noZoneQty += s; noZoneVal += s * p.cost; noZoneCount++; continue }
-      const e = m.get(z.id)!
+      if (!node) { noQty += s; noVal += s * p.cost; noCount++; continue }
+      const e = m.get(node.id) ?? { code: node.code, name: node.name || node.code, qty: 0, value: 0, count: 0, critical: 0 }
       e.qty += s; e.value += s * p.cost; e.count++
       if (s <= p.minStock) e.critical++
+      m.set(node.id, e)
     }
-    const rows = [...m.values()].filter((r) => r.count > 0).sort((a, b) => b.value - a.value)
-    return { rows, noZone: { qty: noZoneQty, value: noZoneVal, count: noZoneCount } }
-  }, [zones, storeProducts]) // eslint-disable-line react-hooks/exhaustive-deps
+    return { rows: [...m.values()].sort((a, b) => b.value - a.value), noZone: { qty: noQty, value: noVal, count: noCount } }
+  }
+
+  const byZone = useMemo(() => aggregateBy((p) => zoneOf(p)), [storeProducts]) // eslint-disable-line react-hooks/exhaustive-deps
+  const byAllee = useMemo(() => aggregateBy((p) => { const a = resolveLocation(p)?.allee; return a ? { id: a.id, code: a.code, name: a.name } : null }), [storeProducts]) // eslint-disable-line react-hooks/exhaustive-deps
+  const byRayon = useMemo(() => aggregateBy((p) => { const r = resolveLocation(p)?.rayon; return r ? { id: r.id, code: r.code, name: r.name } : null }), [storeProducts]) // eslint-disable-line react-hooks/exhaustive-deps
+  const grouped = report === 'by_allee' ? byAllee : report === 'by_rayon' ? byRayon : byZone
 
   const noLocation = useMemo(
     () => storeProducts.filter((p) => !p.emplacementComplet).sort((a, b) => a.name.localeCompare(b.name, 'fr')),
@@ -67,11 +71,15 @@ function Content() {
 
   const REPORTS: { key: ReportKey; label: string; icon: typeof Package }[] = [
     { key: 'by_zone', label: t('wr_by_zone'), icon: BarChart3 },
+    { key: 'by_allee', label: t('wr_by_allee'), icon: BarChart3 },
+    { key: 'by_rayon', label: t('wr_by_rayon'), icon: BarChart3 },
     { key: 'no_location', label: t('wr_no_location'), icon: MapPinOff },
     { key: 'critical_by_zone', label: t('wr_critical'), icon: AlertTriangle },
     { key: 'occupancy', label: t('wr_occupancy'), icon: Package },
     { key: 'top_by_zone', label: t('wr_value_zone'), icon: BarChart3 },
   ]
+  const groupedHeader = report === 'by_allee' ? t('wms_allee') : report === 'by_rayon' ? t('wms_rayon') : t('wms_zone')
+  const isGrouped = report === 'by_zone' || report === 'by_allee' || report === 'by_rayon' || report === 'top_by_zone'
 
   // ---- Export ----
   const currentRows = (): { headers: string[]; rows: (string | number)[][]; name: string } => {
@@ -85,8 +93,9 @@ function Content() {
       return { name: 'occupation', headers: ['Indicateur', 'Valeur'],
         rows: [['Positions définies', occupancy.totalDefined], ['Occupées', occupancy.used], ['Libres', occupancy.free], ['Taux %', occupancy.rate]] }
     // by_zone / top_by_zone
-    return { name: 'stock-par-zone', headers: ['Zone', 'Nom', 'Produits', 'Quantité', 'Valeur HT', 'Critiques'],
-      rows: byZone.rows.map((r) => [r.code, r.name, r.count, r.qty, r.value.toFixed(2), r.critical]) }
+    // by_zone / by_allee / by_rayon / top_by_zone
+    return { name: `stock-par-${report === 'by_allee' ? 'allee' : report === 'by_rayon' ? 'rayon' : 'zone'}`, headers: [groupedHeader, 'Nom', 'Produits', 'Quantité', 'Valeur HT', 'Critiques'],
+      rows: grouped.rows.map((r) => [r.code, r.name, r.count, r.qty, r.value.toFixed(2), r.critical]) }
   }
   const exportCsv = () => {
     const { headers, rows, name } = currentRows()
@@ -130,17 +139,17 @@ function Content() {
       <div className="print-area glass-card overflow-hidden">
         <div className="hidden px-5 pt-4 text-lg font-bold print:block">{REPORTS.find((r) => r.key === report)?.label} — {activeStore?.name}</div>
 
-        {/* STOCK / VALEUR PAR ZONE */}
-        {(report === 'by_zone' || report === 'top_by_zone') && (
+        {/* STOCK / VALEUR PAR ZONE / ALLÉE / RAYON */}
+        {isGrouped && (
           <table className="w-full min-w-[640px] text-sm">
             <thead><tr className="border-b border-gray-100 dark:border-white/10 text-left text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500">
-              <th className="px-5 py-3">{t('wms_zone')}</th><th className="px-5 py-3">{t('wms_zone_name')}</th>
+              <th className="px-5 py-3">{groupedHeader}</th><th className="px-5 py-3">{t('wms_zone_name')}</th>
               <th className="px-5 py-3 text-center">{t('wr_col_count')}</th><th className="px-5 py-3 text-center">{t('wr_col_qty')}</th>
               <th className="px-5 py-3 text-center">{t('wr_col_critical')}</th><th className="px-5 py-3 text-right">{t('wr_col_value')}</th>
             </tr></thead>
             <tbody>
-              {byZone.rows.map((r) => (
-                <tr key={r.code} className="border-b border-gray-50 last:border-0 dark:border-white/5">
+              {grouped.rows.map((r, i) => (
+                <tr key={r.code + i} className="border-b border-gray-50 last:border-0 dark:border-white/5">
                   <td className="px-5 py-2.5"><span className="rounded-md bg-amber-50 px-2 py-0.5 font-mono text-xs font-bold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">{r.code}</span></td>
                   <td className="px-5 py-2.5 font-semibold text-gray-900 dark:text-white">{r.name}</td>
                   <td className="px-5 py-2.5 text-center tabular-nums text-gray-600 dark:text-zinc-300">{r.count}</td>
@@ -149,16 +158,16 @@ function Content() {
                   <td className="px-5 py-2.5 text-right font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{fmtDH(r.value)}</td>
                 </tr>
               ))}
-              {byZone.noZone.count > 0 && (
+              {grouped.noZone.count > 0 && (
                 <tr className="bg-rose-50/40 dark:bg-rose-500/5">
                   <td className="px-5 py-2.5 text-gray-400" colSpan={2}>{t('wr_no_zone')}</td>
-                  <td className="px-5 py-2.5 text-center tabular-nums text-gray-500">{byZone.noZone.count}</td>
-                  <td className="px-5 py-2.5 text-center tabular-nums text-gray-500">{byZone.noZone.qty}</td>
+                  <td className="px-5 py-2.5 text-center tabular-nums text-gray-500">{grouped.noZone.count}</td>
+                  <td className="px-5 py-2.5 text-center tabular-nums text-gray-500">{grouped.noZone.qty}</td>
                   <td className="px-5 py-2.5" />
-                  <td className="px-5 py-2.5 text-right tabular-nums text-gray-500">{fmtDH(byZone.noZone.value)}</td>
+                  <td className="px-5 py-2.5 text-right tabular-nums text-gray-500">{fmtDH(grouped.noZone.value)}</td>
                 </tr>
               )}
-              {byZone.rows.length === 0 && <tr><td colSpan={6} className="px-5 py-10 text-center text-sm text-gray-400">{t('wr_empty')}</td></tr>}
+              {grouped.rows.length === 0 && <tr><td colSpan={6} className="px-5 py-10 text-center text-sm text-gray-400">{t('wr_empty')}</td></tr>}
             </tbody>
           </table>
         )}

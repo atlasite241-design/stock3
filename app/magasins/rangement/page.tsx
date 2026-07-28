@@ -14,7 +14,7 @@ import { useLanguage } from '@/lib/i18n'
 type MoveLog = { id: string; name: string; from: string; to: string }
 
 function Content() {
-  const { ready, products, activeStoreId, updateProduct } = useDroguerie()
+  const { ready, products, activeStoreId, moveProductLocation } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
 
@@ -53,7 +53,7 @@ function Content() {
   const save = () => {
     if (!current) return
     const before = current.emplacementComplet || '—'
-    updateProduct(current.id, {
+    moveProductLocation(current.id, {
       zoneId: loc.zoneId, alleeId: loc.alleeId, rayonId: loc.rayonId,
       etagereId: loc.etagereId, niveauId: loc.niveauId, positionId: loc.positionId,
       emplacementComplet: loc.emplacementComplet,
