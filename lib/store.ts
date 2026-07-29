@@ -296,6 +296,31 @@ export function depotShortCode(index: number): string {
   return 'DEP' + String(index + 1).padStart(2, '0')
 }
 
+/**
+ * Garantit un code unique par dépôt au sein de chaque magasin. Corrige les
+ * données anciennes (dépôt principal créé avant le champ `code`, ou codes en
+ * double). Réassigne DEP01, DEP02… par ordre de création (le tableau est
+ * « plus récent d'abord », donc l'ancien = en fin de liste → DEP01).
+ */
+export function normalizeDepotCodes(list: Depot[]): { list: Depot[]; changed: boolean } {
+  const groups = new Map<string, Depot[]>()
+  list.forEach((d) => { const g = groups.get(d.storeId); if (g) g.push(d); else groups.set(d.storeId, [d]) })
+  const fix = new Map<string, string>()
+  groups.forEach((deps) => {
+    const codes = deps.map((d) => (d.code || '').toUpperCase())
+    const nonEmpty = codes.filter(Boolean)
+    const hasEmpty = codes.some((c) => !c)
+    const hasDup = new Set(nonEmpty).size !== nonEmpty.length
+    if (!hasEmpty && !hasDup) return
+    ;[...deps].reverse().forEach((d, i) => {
+      const code = depotShortCode(i)
+      if ((d.code || '') !== code) fix.set(d.id, code)
+    })
+  })
+  if (fix.size === 0) return { list, changed: false }
+  return { list: list.map((d) => (fix.has(d.id) ? { ...d, code: fix.get(d.id) } : d)), changed: true }
+}
+
 // Assemble le code complet d'emplacement à partir des codes de chaque niveau.
 // Format : MAG01-DEP01-A-02-03-04-02-015 (le segment dépôt est optionnel).
 export function buildEmplacementCode(parts: {
@@ -1588,7 +1613,11 @@ export function useDroguerieState() {
       setRevenues(load(K.revenues, []))
       setMoneyTransfers(load(K.moneyTransfers, []))
       setStores(load(K.stores, []))
-      setDepots(load(K.depots, []))
+      {
+        const norm = normalizeDepotCodes(load<Depot[]>(K.depots, []))
+        setDepots(norm.list)
+        if (norm.changed) save(K.depots, norm.list) // corrige une fois les codes en double/absents
+      }
       setZones(load(K.zones, []))
       setAllees(load(K.allees, []))
       setRayons(load(K.rayons, []))
@@ -2711,8 +2740,11 @@ export function useDroguerieState() {
 
   // ---- Depots ----
   const addDepot = (data: Omit<Depot, 'id'>) => {
-    const count = depots.filter((x) => x.storeId === data.storeId).length
-    persistDepots([{ ...data, id: uid(), code: data.code || depotShortCode(count) }, ...depots])
+    // Premier code DEP libre dans le magasin (évite les doublons).
+    const used = new Set(depots.filter((x) => x.storeId === data.storeId).map((x) => (x.code || '').toUpperCase()))
+    let n = 0
+    while (used.has(depotShortCode(n))) n++
+    persistDepots([{ ...data, id: uid(), code: data.code || depotShortCode(n) }, ...depots])
   }
   const updateDepot = (id: string, data: Partial<Depot>) =>
     persistDepots(depots.map((d) => (d.id === id ? { ...d, ...data } : d)))
