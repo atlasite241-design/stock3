@@ -33,6 +33,17 @@ export function storeToForm(s: Store): StoreFormValues {
   }
 }
 
+// Défini AU NIVEAU MODULE (pas dans le composant) : sinon un nouveau type de
+// composant est créé à chaque rendu → l'input est remonté et perd le focus.
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-zinc-400">{label}</span>
+      {children}
+    </label>
+  )
+}
+
 export default function StoreForm({
   value,
   onChange,
@@ -55,13 +66,6 @@ export default function StoreForm({
     reader.onerror = () => setUploading(false)
     reader.readAsDataURL(file)
   }
-
-  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <label className="block">
-      <span className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-zinc-400">{label}</span>
-      {children}
-    </label>
-  )
 
   return (
     <div className="space-y-4">
