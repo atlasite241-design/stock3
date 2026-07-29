@@ -1854,17 +1854,18 @@ export function useDroguerieState() {
       // Id STABLE dérivé du code-barres : réimporter le même catalogue met à jour
       // les mêmes lignes au lieu d'en recréer (ce qui gonflait Turso à chaque
       // import). Dédoublonnage par code-barres au passage (dernier gagne).
+      const sid = activeStoreRef.current
       const byBc = new Map<string, Product>()
       const arr: Product[] = []
       for (const r of rows) {
         const bc = (r.barcode || '').trim()
         if (bc) {
-          const rec = { ...r, id: 'p_' + bc }
+          const rec = { ...r, id: 'p_' + bc, storeId: sid }
           const prev = byBc.get(bc)
           if (prev) { Object.assign(prev, rec) } // écrase la version précédente
           else { byBc.set(bc, rec); arr.push(rec) }
         } else {
-          arr.push({ ...r, id: uid() })
+          arr.push({ ...r, id: uid(), storeId: sid })
         }
       }
       persistProducts(arr)

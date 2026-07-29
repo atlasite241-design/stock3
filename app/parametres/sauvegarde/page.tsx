@@ -89,10 +89,15 @@ function Content() {
       try {
         const { added, updated } = importProducts(rows, replace)
         toast(`✓ ${t('set_toast_import_added')} ${added} ${t('set_toast_import_added_suffix')} ${updated} ${t('set_toast_import_updated_suffix')}`)
+        // Recharge la page (comme l'import JSON / la restauration) : sur un gros
+        // catalogue, garder les milliers de produits dans le renderer courant +
+        // re-rendre toute l'app (recherche Topbar…) faisait planter l'onglet
+        // (« This page couldn't load »). Le catalogue est déjà persisté ; la
+        // synchro reprend au chargement en arrière-plan.
+        setTimeout(() => window.location.reload(), 700)
       } catch {
         // Dépassement de quota du stockage navigateur sur un fichier trop volumineux.
         toast(t('set_import_quota'), 'error')
-      } finally {
         setImportState(null)
       }
     }, 40)
