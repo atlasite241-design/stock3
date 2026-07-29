@@ -5,6 +5,7 @@ import Loader from '@/components/Loader'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertTriangle, Boxes, CheckCircle2, Layers, Loader2, Merge, RefreshCw, Sparkles, Store, Wand2, X } from 'lucide-react'
 import AppShell from '@/components/AppShell'
+import LocationPreview3D from '@/components/LocationPreview3D'
 import Modal from '@/components/Modal'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
@@ -170,6 +171,18 @@ function Content() {
           </button>
         </motion.div>
       </div>
+
+      {/* Aperçu 3D de la structure */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <LocationPreview3D
+          rayons={R} etageres={E} niveaux={N} positions={P}
+          labels={{
+            title: t('gen_3d_title'), empty: t('gen_3d_empty'), drag: t('gen_3d_drag'),
+            spin: t('gen_3d_spin'), reset: t('gen_3d_reset'), simplified: t('gen_3d_simplified'),
+            rayon: t('wms_rayon'), etagere: t('wms_etagere'), niveau: t('wms_niveau'), position: t('wms_position'),
+          }}
+        />
+      </motion.div>
 
       {/* Confirmation (allée vide) */}
       <Modal open={confirmNew} onClose={() => setConfirmNew(false)} title={t('gen_confirm_title')} maxWidth="max-w-sm">
