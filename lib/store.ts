@@ -2832,18 +2832,36 @@ export function useDroguerieState() {
   const generateSubStructure = (
     alleeId: string,
     storeId: string,
-    counts: { rayons: number; etageres: number; niveaux: number; positions: number }
-  ): { ok: boolean; error?: 'exists' | 'empty'; total?: number } => {
-    if (rayons.some((r) => r.alleeId === alleeId)) return { ok: false, error: 'exists' }
+    counts: { rayons: number; etageres: number; niveaux: number; positions: number },
+    mode: 'new' | 'merge' | 'replace' = 'new'
+  ): { ok: boolean; error?: 'exists' | 'empty'; total?: number; counts?: { rayons: number; etageres: number; niveaux: number; positions: number } } => {
     const R = Math.max(0, Math.floor(counts.rayons))
     const E = Math.max(0, Math.floor(counts.etageres))
     const N = Math.max(0, Math.floor(counts.niveaux))
     const P = Math.max(0, Math.floor(counts.positions))
     if (R === 0) return { ok: false, error: 'empty' }
+    const existing = rayons.filter((r) => r.alleeId === alleeId)
+    if (mode === 'new' && existing.length > 0) return { ok: false, error: 'exists' }
+
+    // Bases après suppression éventuelle (mode Remplacer), et n° de départ des rayons.
+    let baseR = rayons, baseE = etageres, baseN = niveaux, baseP = positions
+    let startR = 1
+    if (mode === 'replace' && existing.length) {
+      const rIds = new Set(existing.map((r) => r.id))
+      const eIds = new Set(etageres.filter((e) => rIds.has(e.rayonId as string)).map((e) => e.id))
+      const nIds = new Set(niveaux.filter((n) => eIds.has(n.etagereId as string)).map((n) => n.id))
+      baseR = rayons.filter((r) => !rIds.has(r.id))
+      baseE = etageres.filter((e) => !rIds.has(e.rayonId as string))
+      baseN = niveaux.filter((n) => !eIds.has(n.etagereId as string))
+      baseP = positions.filter((p) => !nIds.has(p.niveauId as string))
+    } else if (mode === 'merge' && existing.length) {
+      startR = Math.max(0, ...existing.map((r) => parseInt(r.code.replace(/\D/g, ''), 10) || 0)) + 1
+    }
+
     const p2 = (n: number) => String(n).padStart(2, '0')
     const p3 = (n: number) => String(n).padStart(3, '0')
     const newR: Rayon[] = [], newE: Etagere[] = [], newN: Niveau[] = [], newP: Position[] = []
-    for (let r = 1; r <= R; r++) {
+    for (let r = startR; r < startR + R; r++) {
       const rid = uid(); newR.push({ id: rid, storeId, alleeId, code: 'R' + p2(r) })
       for (let e = 1; e <= E; e++) {
         const eid = uid(); newE.push({ id: eid, storeId, rayonId: rid, code: 'E' + p2(e) })
@@ -2853,13 +2871,14 @@ export function useDroguerieState() {
         }
       }
     }
-    if (newR.length) persistRayons([...newR, ...rayons])
-    if (newE.length) persistEtageres([...newE, ...etageres])
-    if (newN.length) persistNiveaux([...newN, ...niveaux])
-    if (newP.length) persistPositions([...newP, ...positions])
-    const total = newR.length + newE.length + newN.length + newP.length
-    logActivity(`Structure générée (${total} éléments)`, { target: allees.find((a) => a.id === alleeId)?.code })
-    return { ok: true, total }
+    persistRayons([...newR, ...baseR])
+    persistEtageres([...newE, ...baseE])
+    persistNiveaux([...newN, ...baseN])
+    persistPositions([...newP, ...baseP])
+    const c = { rayons: newR.length, etageres: newE.length, niveaux: newN.length, positions: newP.length }
+    const total = c.rayons + c.etageres + c.niveaux + c.positions
+    logActivity(`Structure générée (${total} éléments, ${mode})`, { target: allees.find((a) => a.id === alleeId)?.code })
+    return { ok: true, total, counts: c }
   }
   const updateAllee = (id: string, data: Partial<Allee>) => persistAllees(allees.map((a) => (a.id === id ? { ...a, ...data } : a)))
   const deleteAllee = (id: string) => {
