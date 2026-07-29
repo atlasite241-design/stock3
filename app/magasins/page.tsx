@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { Building2, Check, Package, Pencil, Plus, Save, Trash2, TrendingUp, Users, Warehouse } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
+import DangerConfirm from '@/components/DangerConfirm'
 import StoreForm, { storeToForm, type StoreFormValues } from '@/components/StoreForm'
 import { useToast } from '@/components/Toast'
 import { fmtDH, useDroguerie, type Store } from '@/lib/store'
@@ -163,16 +164,16 @@ function Content() {
         </div>
       </Modal>
 
-      <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} title={t('mag_delete')}>
-        <p className="text-sm text-gray-600 dark:text-zinc-300">{t('mag_delete_confirm')}</p>
-        <div className="mt-6 flex justify-end gap-2">
-          <button onClick={() => setConfirmDelete(null)} className="btn-secondary">{t('mag_cancel')}</button>
-          <button onClick={doDelete} className="btn-danger">
-            <Trash2 className="h-4 w-4" />
-            {t('mag_delete')}
-          </button>
-        </div>
-      </Modal>
+      <DangerConfirm
+        open={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        onConfirm={doDelete}
+        title={t('mag_delete')}
+        description={<>{t('mag_delete_confirm')}</>}
+        word={confirmDelete?.name}
+        actionLabel={t('mag_delete')}
+        icon={<Trash2 className="h-4 w-4" />}
+      />
     </>
   )
 }
