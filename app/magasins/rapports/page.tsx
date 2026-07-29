@@ -8,7 +8,7 @@ import AppShell from '@/components/AppShell'
 import { availableStock, fmtDH, useDroguerie, type Product } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
-type ReportKey = 'by_zone' | 'by_allee' | 'by_rayon' | 'no_location' | 'critical_by_zone' | 'occupancy' | 'top_by_zone'
+type ReportKey = 'by_zone' | 'by_allee' | 'by_rayon' | 'by_etagere' | 'by_niveau' | 'by_position' | 'no_location' | 'mislocated' | 'critical_by_zone' | 'occupancy' | 'top_by_zone'
 type AggRow = { code: string; name: string; qty: number; value: number; count: number; critical: number }
 
 function Content() {
@@ -44,12 +44,34 @@ function Content() {
   const byZone = useMemo(() => aggregateBy((p) => zoneOf(p)), [storeProducts]) // eslint-disable-line react-hooks/exhaustive-deps
   const byAllee = useMemo(() => aggregateBy((p) => { const a = resolveLocation(p)?.allee; return a ? { id: a.id, code: a.code, name: a.name } : null }), [storeProducts]) // eslint-disable-line react-hooks/exhaustive-deps
   const byRayon = useMemo(() => aggregateBy((p) => { const r = resolveLocation(p)?.rayon; return r ? { id: r.id, code: r.code, name: r.name } : null }), [storeProducts]) // eslint-disable-line react-hooks/exhaustive-deps
-  const grouped = report === 'by_allee' ? byAllee : report === 'by_rayon' ? byRayon : byZone
+  const byEtagere = useMemo(() => aggregateBy((p) => { const e = resolveLocation(p)?.etagere; return e ? { id: e.id, code: e.code, name: e.name } : null }), [storeProducts]) // eslint-disable-line react-hooks/exhaustive-deps
+  const byNiveau = useMemo(() => aggregateBy((p) => { const n = resolveLocation(p)?.niveau; return n ? { id: n.id, code: n.code, name: n.name } : null }), [storeProducts]) // eslint-disable-line react-hooks/exhaustive-deps
+  const byPosition = useMemo(() => aggregateBy((p) => { const po = resolveLocation(p)?.position; return po ? { id: po.id, code: p.emplacementComplet || po.code, name: po.name } : null }), [storeProducts]) // eslint-disable-line react-hooks/exhaustive-deps
+  const grouped = report === 'by_allee' ? byAllee : report === 'by_rayon' ? byRayon
+    : report === 'by_etagere' ? byEtagere : report === 'by_niveau' ? byNiveau : report === 'by_position' ? byPosition
+    : byZone
 
   const noLocation = useMemo(
     () => storeProducts.filter((p) => !p.emplacementComplet).sort((a, b) => a.name.localeCompare(b.name, 'fr')),
     [storeProducts]
   )
+
+  // Produits mal localisés : ils portent une intention de localisation
+  // (emplacement/position/zone) mais celle-ci ne se résout PAS vers une zone
+  // valide (référence supprimée, chaîne cassée, ou position inexistante).
+  const misLocated = useMemo(() => {
+    const posIds = new Set(positions.filter((po) => po.storeId === activeStoreId).map((po) => po.id))
+    return storeProducts
+      .filter((p) => {
+        const hasIntent = !!p.emplacementComplet || !!p.positionId || !!p.zoneId
+        if (!hasIntent) return false
+        const loc = resolveLocation(p)
+        const zoneBroken = !loc?.zone
+        const posBroken = !!p.positionId && !posIds.has(p.positionId)
+        return zoneBroken || posBroken
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+  }, [storeProducts, positions, activeStoreId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const criticalByZone = useMemo(() =>
     storeProducts
@@ -73,13 +95,18 @@ function Content() {
     { key: 'by_zone', label: t('wr_by_zone'), icon: BarChart3 },
     { key: 'by_allee', label: t('wr_by_allee'), icon: BarChart3 },
     { key: 'by_rayon', label: t('wr_by_rayon'), icon: BarChart3 },
+    { key: 'by_etagere', label: t('wr_by_etagere'), icon: BarChart3 },
+    { key: 'by_niveau', label: t('wr_by_niveau'), icon: BarChart3 },
+    { key: 'by_position', label: t('wr_by_position'), icon: BarChart3 },
     { key: 'no_location', label: t('wr_no_location'), icon: MapPinOff },
+    { key: 'mislocated', label: t('wr_mislocated'), icon: AlertTriangle },
     { key: 'critical_by_zone', label: t('wr_critical'), icon: AlertTriangle },
     { key: 'occupancy', label: t('wr_occupancy'), icon: Package },
     { key: 'top_by_zone', label: t('wr_value_zone'), icon: BarChart3 },
   ]
-  const groupedHeader = report === 'by_allee' ? t('wms_allee') : report === 'by_rayon' ? t('wms_rayon') : t('wms_zone')
-  const isGrouped = report === 'by_zone' || report === 'by_allee' || report === 'by_rayon' || report === 'top_by_zone'
+  const groupedHeader = report === 'by_allee' ? t('wms_allee') : report === 'by_rayon' ? t('wms_rayon')
+    : report === 'by_etagere' ? t('wms_etagere') : report === 'by_niveau' ? t('wms_niveau') : report === 'by_position' ? t('wms_position') : t('wms_zone')
+  const isGrouped = ['by_zone', 'by_allee', 'by_rayon', 'by_etagere', 'by_niveau', 'by_position', 'top_by_zone'].includes(report)
 
   // ---- Export ----
   const currentRows = (): { headers: string[]; rows: (string | number)[][]; name: string } => {
@@ -92,9 +119,12 @@ function Content() {
     if (report === 'occupancy')
       return { name: 'occupation', headers: ['Indicateur', 'Valeur'],
         rows: [['Positions définies', occupancy.totalDefined], ['Occupées', occupancy.used], ['Libres', occupancy.free], ['Taux %', occupancy.rate]] }
-    // by_zone / top_by_zone
-    // by_zone / by_allee / by_rayon / top_by_zone
-    return { name: `stock-par-${report === 'by_allee' ? 'allee' : report === 'by_rayon' ? 'rayon' : 'zone'}`, headers: [groupedHeader, 'Nom', 'Produits', 'Quantité', 'Valeur HT', 'Critiques'],
+    if (report === 'mislocated')
+      return { name: 'produits-mal-localises', headers: ['Code-barres', 'Produit', 'Emplacement (invalide)', 'Stock'],
+        rows: misLocated.map((p) => [p.barcode, p.name, p.emplacementComplet || '—', availableStock(p)]) }
+    // by_zone / by_allee / by_rayon / by_etagere / by_niveau / by_position / top_by_zone
+    const suffix = report === 'by_allee' ? 'allee' : report === 'by_rayon' ? 'rayon' : report === 'by_etagere' ? 'etagere' : report === 'by_niveau' ? 'niveau' : report === 'by_position' ? 'position' : 'zone'
+    return { name: `stock-par-${suffix}`, headers: [groupedHeader, 'Nom', 'Produits', 'Quantité', 'Valeur HT', 'Critiques'],
       rows: grouped.rows.map((r) => [r.code, r.name, r.count, r.qty, r.value.toFixed(2), r.critical]) }
   }
   const exportCsv = () => {
@@ -211,6 +241,27 @@ function Content() {
                 </tr>
               ))}
               {criticalByZone.length === 0 && <tr><td colSpan={4} className="px-5 py-10 text-center text-sm text-gray-400">🎉 {t('wr_no_critical')}</td></tr>}
+            </tbody>
+          </table>
+        )}
+
+        {/* PRODUITS MAL LOCALISÉS */}
+        {report === 'mislocated' && (
+          <table className="w-full min-w-[640px] text-sm">
+            <thead><tr className="border-b border-gray-100 dark:border-white/10 text-left text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500">
+              <th className="px-5 py-3">{t('wms_code')}</th><th className="px-5 py-3">{t('wms_zone_name')}</th>
+              <th className="px-5 py-3">{t('wr_col_bad_location')}</th><th className="px-5 py-3 text-center">{t('wr_col_qty')}</th>
+            </tr></thead>
+            <tbody>
+              {misLocated.map((p) => (
+                <tr key={p.id} className="border-b border-gray-50 last:border-0 dark:border-white/5">
+                  <td className="px-5 py-2.5 font-mono text-xs text-gray-500">{p.barcode || '—'}</td>
+                  <td className="px-5 py-2.5 font-semibold text-gray-900 dark:text-white">{p.name}</td>
+                  <td className="px-5 py-2.5 font-mono text-xs text-rose-500">{p.emplacementComplet || '—'}</td>
+                  <td className="px-5 py-2.5 text-center tabular-nums text-gray-600 dark:text-zinc-300">{availableStock(p)}</td>
+                </tr>
+              ))}
+              {misLocated.length === 0 && <tr><td colSpan={4} className="px-5 py-10 text-center text-sm text-gray-400">🎉 {t('wr_all_located_ok')}</td></tr>}
             </tbody>
           </table>
         )}
