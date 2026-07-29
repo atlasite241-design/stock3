@@ -28,6 +28,7 @@ function Content() {
   const { t } = useLanguage()
   const toast = useToast()
   const [resetOpen, setResetOpen] = useState(false)
+  const [resetConfirm, setResetConfirm] = useState('')
   const [backups, setBackups] = useState<Backup[]>([])
   const [restoreTarget, setRestoreTarget] = useState<Backup | null>(null)
   const [importState, setImportState] = useState<{ msg: string; pct: number | null } | null>(null)
@@ -59,6 +60,7 @@ function Content() {
   }
 
   const confirmReset = () => {
+    if (resetConfirm.trim().toUpperCase() !== 'SUPPRIMER') return
     resetDemoData()
     window.location.reload()
   }
@@ -272,16 +274,28 @@ function Content() {
         </div>
       </Modal>
 
-      <Modal open={resetOpen} onClose={() => setResetOpen(false)} title={t('set_reset_title')} maxWidth="max-w-sm">
+      <Modal open={resetOpen} onClose={() => { setResetOpen(false); setResetConfirm('') }} title={t('set_reset_title')} maxWidth="max-w-sm">
         <p className="text-sm text-gray-600 dark:text-zinc-400">
           {t('set_reset_desc1')} <span className="font-semibold text-rose-600 dark:text-rose-400">{t('set_reset_desc2')}</span>{' '}
           {t('set_reset_desc3')}
         </p>
+        <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 dark:border-rose-500/20 dark:bg-rose-500/10">
+          <label className="mb-1.5 block text-xs font-semibold text-rose-700 dark:text-rose-400">
+            {t('set_reset_type_hint')} <span className="font-mono font-bold">SUPPRIMER</span>
+          </label>
+          <input
+            value={resetConfirm}
+            onChange={(e) => setResetConfirm(e.target.value)}
+            placeholder="SUPPRIMER"
+            className="input-field font-mono uppercase"
+            autoFocus
+          />
+        </div>
         <div className="mt-5 grid grid-cols-2 gap-3">
-          <button onClick={() => setResetOpen(false)} className="btn-secondary">
+          <button onClick={() => { setResetOpen(false); setResetConfirm('') }} className="btn-secondary">
             {t('set_cancel')}
           </button>
-          <button onClick={confirmReset} className="btn-danger">
+          <button onClick={confirmReset} disabled={resetConfirm.trim().toUpperCase() !== 'SUPPRIMER'} className="btn-danger disabled:opacity-40 disabled:cursor-not-allowed">
             <RefreshCcw className="h-4 w-4" />
             {t('set_reset_action')}
           </button>

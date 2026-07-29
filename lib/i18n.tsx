@@ -2483,6 +2483,7 @@ const DICT = {
   set_restore_confirm_prefix: { fr: 'Les données actuelles seront remplacées par la sauvegarde du', ar: 'سيتم استبدال البيانات الحالية بالنسخة الاحتياطية من' },
   set_cancel: { fr: 'Annuler', ar: 'إلغاء' },
   set_reset_title: { fr: 'Réinitialiser les données ?', ar: 'إعادة تعيين البيانات؟' },
+  set_reset_type_hint: { fr: 'Pour confirmer cette suppression définitive, tapez', ar: 'لتأكيد هذا الحذف النهائي، اكتب' },
   set_reset_desc1: { fr: 'Toutes les données actuelles seront', ar: 'سيتم' },
   set_reset_desc2: { fr: 'supprimées', ar: 'حذف جميع البيانات الحالية' },
   set_reset_desc3: { fr: 'et remplacées par les données de démonstration.', ar: 'واستبدالها ببيانات العرض التوضيحي.' },
