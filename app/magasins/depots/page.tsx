@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { Pencil, Plus, Save, Trash2, Warehouse } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
+import DangerConfirm from '@/components/DangerConfirm'
 import { useToast } from '@/components/Toast'
 import { useDroguerie, type Depot } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
@@ -18,6 +19,7 @@ function Content() {
   const [open, setOpen] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState({ name: '', address: '', responsable: '' })
+  const [deleteTarget, setDeleteTarget] = useState<Depot | null>(null)
 
   if (!ready) {
     return <Loader />
@@ -88,7 +90,7 @@ function Content() {
                       <button onClick={() => openEdit(d)} className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-amber-400">
                         <Pencil className="h-4 w-4" />
                       </button>
-                      <button onClick={() => { deleteDepot(d.id); toast(t('mag_delete')) }} className="rounded-lg p-2 text-gray-400 transition hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10">
+                      <button onClick={() => setDeleteTarget(d)} className="rounded-lg p-2 text-gray-400 transition hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
@@ -123,6 +125,22 @@ function Content() {
           </button>
         </div>
       </Modal>
+
+      <DangerConfirm
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (!deleteTarget) return
+          deleteDepot(deleteTarget.id)
+          toast(t('mag_delete'))
+          setDeleteTarget(null)
+        }}
+        title={t('dep_delete_title')}
+        description={<><span className="font-semibold text-gray-900 dark:text-white">{deleteTarget?.name}</span> {t('dep_delete_desc')}</>}
+        word={deleteTarget?.name}
+        actionLabel={t('mag_delete')}
+        icon={<Trash2 className="h-4 w-4" />}
+      />
     </>
   )
 }

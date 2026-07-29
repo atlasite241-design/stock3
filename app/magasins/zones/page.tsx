@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { ChevronDown, ChevronUp, Download, FileSpreadsheet, LayoutGrid, Pencil, Plus, Save, Sparkles, Trash2, Upload } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
+import DangerConfirm from '@/components/DangerConfirm'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
 import { depotShortCode, storeShortCode, useDroguerie, type Zone } from '@/lib/store'
@@ -21,6 +22,7 @@ function Content() {
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState<{ code: string; name: string; type: 'commerciale' | 'logistique' }>({ code: '', name: '', type: 'commerciale' })
   const [useTemplate, setUseTemplate] = useState(true)
+  const [deleteTarget, setDeleteTarget] = useState<Zone | null>(null)
   const [importDepot, setImportDepot] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const storeDepots = useMemo(() => d.depots.filter((x) => x.storeId === activeStoreId), [d.depots, activeStoreId])
@@ -66,10 +68,12 @@ function Content() {
     setOpen(false)
   }
 
-  const remove = (z: Zone) => {
-    const res = deleteZone(z.id)
-    if (!res.ok) { toast(t('wms_has_children'), 'error'); return }
+  const remove = () => {
+    if (!deleteTarget) return
+    const res = deleteZone(deleteTarget.id)
+    if (!res.ok) { toast(t('wms_has_children'), 'error'); setDeleteTarget(null); return }
     toast(t('mag_delete'))
+    setDeleteTarget(null)
   }
 
   const toggleActive = (z: Zone) => updateZone(z.id, { active: z.active === false })
@@ -206,7 +210,7 @@ function Content() {
                         <button onClick={() => openEdit(z)} className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-amber-400">
                           <Pencil className="h-4 w-4" />
                         </button>
-                        <button onClick={() => remove(z)} className="rounded-lg p-2 text-gray-400 transition hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10">
+                        <button onClick={() => setDeleteTarget(z)} className="rounded-lg p-2 text-gray-400 transition hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10">
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
@@ -268,6 +272,17 @@ function Content() {
           </button>
         </div>
       </Modal>
+
+      <DangerConfirm
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={remove}
+        title={t('mag_delete')}
+        description={<><span className="font-semibold text-gray-900 dark:text-white">{deleteTarget?.code} · {deleteTarget?.name}</span> — {t('wms_zone_delete_desc')}</>}
+        word={deleteTarget?.name || deleteTarget?.code}
+        actionLabel={t('mag_delete')}
+        icon={<Trash2 className="h-4 w-4" />}
+      />
     </>
   )
 }

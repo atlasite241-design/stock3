@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
+import DangerConfirm from '@/components/DangerConfirm'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
 import { useDroguerie, type AppUser } from '@/lib/store'
@@ -235,27 +236,22 @@ function Content() {
         </div>
       </Modal>
 
-      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={t('usr_delete_title')} maxWidth="max-w-sm">
-        <p className="text-sm text-gray-600 dark:text-zinc-400">
-          <span className="font-semibold text-gray-900 dark:text-white">{deleteTarget?.name}</span> {t('usr_delete_desc')}
-        </p>
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <button onClick={() => setDeleteTarget(null)} className="btn-secondary">
-            {t('usr_cancel')}
-          </button>
-          <button
-            onClick={() => {
-              deleteUser(deleteTarget!.id)
-              toast(`${deleteTarget!.name} ${t('usr_toast_deleted')}`)
-              setDeleteTarget(null)
-            }}
-            className="btn-danger"
-          >
-            <Trash2 className="h-4 w-4" />
-            {t('usr_delete')}
-          </button>
-        </div>
-      </Modal>
+      <DangerConfirm
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (!deleteTarget) return
+          const name = deleteTarget.name
+          deleteUser(deleteTarget.id)
+          toast(`${name} ${t('usr_toast_deleted')}`)
+          setDeleteTarget(null)
+        }}
+        title={t('usr_delete_title')}
+        description={<><span className="font-semibold text-gray-900 dark:text-white">{deleteTarget?.name}</span> {t('usr_delete_desc')}</>}
+        word={deleteTarget?.name}
+        actionLabel={t('usr_delete')}
+        icon={<Trash2 className="h-4 w-4" />}
+      />
     </>
   )
 }
