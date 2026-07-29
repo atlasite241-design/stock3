@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { Camera, ChevronLeft, ChevronRight, ImagePlus, MapPin, Package, Pencil, Plus, Printer, Scissors, Search, Trash2, Wand2 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
+import DangerConfirm from '@/components/DangerConfirm'
 import ProductImage from '@/components/ProductImage'
 import CameraScanner from '@/components/CameraScanner'
 import { generateEan13 } from '@/components/EAN13'
@@ -617,25 +618,16 @@ function ProduitsContent() {
       />
 
       {/* Delete confirm */}
-      <Modal
+      <DangerConfirm
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
         title={t('prod_delete_confirm_title')}
-        maxWidth="max-w-sm"
-      >
-        <p className="text-sm text-gray-600 dark:text-zinc-400">
-          <span className="font-semibold text-gray-900 dark:text-white">{deleteTarget?.name}</span> {t('prod_delete_confirm_desc')}
-        </p>
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <button onClick={() => setDeleteTarget(null)} className="btn-secondary">
-            {t('prod_cancel')}
-          </button>
-          <button onClick={confirmDelete} className="btn-danger">
-            <Trash2 className="h-4 w-4" />
-            {t('prod_delete')}
-          </button>
-        </div>
-      </Modal>
+        description={<><span className="font-semibold text-gray-900 dark:text-white">{deleteTarget?.name}</span> {t('prod_delete_confirm_desc')}</>}
+        word={deleteTarget?.name}
+        actionLabel={t('prod_delete')}
+        icon={<Trash2 className="h-4 w-4" />}
+      />
     </>
   )
 }

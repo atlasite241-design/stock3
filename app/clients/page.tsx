@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
+import DangerConfirm from '@/components/DangerConfirm'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
 import { creditStatus, fmtDH, PAYMENT_META, useDroguerie, type Client } from '@/lib/store'
@@ -576,30 +577,25 @@ function ClientsContent() {
       </Modal>
 
       {/* Delete confirm */}
-      <Modal
+      <DangerConfirm
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
         title={t('cli_delete_title')}
-        maxWidth="max-w-sm"
-      >
-        <p className="text-sm text-gray-600 dark:text-zinc-400">
-          <span className="font-semibold text-gray-900 dark:text-white">{deleteTarget?.name}</span> {t('cli_delete_desc')}
-          {deleteTarget && deleteTarget.credit > 0 && (
-            <span className="mt-1 block font-semibold text-rose-600 dark:text-rose-400">
-              {t('cli_delete_credit_warning')} {fmtDH(deleteTarget.credit)}.
-            </span>
-          )}
-        </p>
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <button onClick={() => setDeleteTarget(null)} className="btn-secondary">
-            {t('cli_cancel')}
-          </button>
-          <button onClick={confirmDelete} className="btn-danger">
-            <Trash2 className="h-4 w-4" />
-            {t('cli_delete')}
-          </button>
-        </div>
-      </Modal>
+        description={
+          <>
+            <span className="font-semibold text-gray-900 dark:text-white">{deleteTarget?.name}</span> {t('cli_delete_desc')}
+            {deleteTarget && deleteTarget.credit > 0 && (
+              <span className="mt-1 block font-semibold text-rose-600 dark:text-rose-400">
+                {t('cli_delete_credit_warning')} {fmtDH(deleteTarget.credit)}.
+              </span>
+            )}
+          </>
+        }
+        word={deleteTarget?.name}
+        actionLabel={t('cli_delete')}
+        icon={<Trash2 className="h-4 w-4" />}
+      />
 
       {/* Client profile */}
       <Modal open={!!profileTarget} onClose={() => setProfileTarget(null)} title={t('cli_profile_title')} maxWidth="max-w-lg">
