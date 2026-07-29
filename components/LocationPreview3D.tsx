@@ -6,6 +6,8 @@ import { Box, Move3d, Pause, Play, RotateCcw } from 'lucide-react'
 export interface Preview3DLabels {
   title: string
   empty: string
+  zone: string
+  allee: string
   rayon: string
   etagere: string
   niveau: string
@@ -22,6 +24,9 @@ interface Props {
   niveaux: number
   positions: number
   labels: Preview3DLabels
+  zone?: string
+  allee?: string
+  code?: string
 }
 
 // Palette de teintes pour distinguer les rayons.
@@ -39,7 +44,7 @@ function rot(x: number, y: number, z: number, cy: number, sy: number, cp: number
 
 const BOX_CAP = 2600 // garde-fou : au-delà on simplifie / borne le rendu
 
-export default function LocationPreview3D({ rayons, etageres, niveaux, positions, labels }: Props) {
+export default function LocationPreview3D({ rayons, etageres, niveaux, positions, labels, zone, allee, code }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const view = useRef({ yaw: -0.62, pitch: -0.5, zoom: 1 })
@@ -155,9 +160,30 @@ export default function LocationPreview3D({ rayons, etageres, niveaux, positions
       }
     }
 
+    // Sol + cadre de l'allée (dessiné en premier, il sert de base).
+    const pad = 0.7, fy = -0.03
+    const floor = [pr(-pad, fy, -pad), pr(maxX + pad, fy, -pad), pr(maxX + pad, fy, D + pad), pr(-pad, fy, D + pad)]
+    ctx.lineJoin = 'round'
+    ctx.beginPath()
+    ctx.moveTo(floor[0].sx, floor[0].sy)
+    for (let i = 1; i < floor.length; i++) ctx.lineTo(floor[i].sx, floor[i].sy)
+    ctx.closePath()
+    ctx.fillStyle = 'rgba(148,163,184,0.15)'
+    ctx.fill()
+    ctx.strokeStyle = 'rgba(245,158,11,0.55)'
+    ctx.lineWidth = 1.5
+    ctx.stroke()
+    // Séparateurs de rayons sur le sol.
+    ctx.strokeStyle = 'rgba(148,163,184,0.32)'
+    ctx.lineWidth = 1
+    for (let r = 1; r < R; r++) {
+      const xl = r * (E * colW + rayonGap) - rayonGap / 2
+      const a = pr(xl, fy, -pad), b = pr(xl, fy, D + pad)
+      ctx.beginPath(); ctx.moveTo(a.sx, a.sy); ctx.lineTo(b.sx, b.sy); ctx.stroke()
+    }
+
     // Peintre : du plus loin au plus proche.
     quads.sort((a, b) => a.depth - b.depth)
-    ctx.lineJoin = 'round'
     for (const q of quads) {
       ctx.beginPath()
       ctx.moveTo(q.pts[0].sx, q.pts[0].sy)
@@ -258,6 +284,13 @@ export default function LocationPreview3D({ rayons, etageres, niveaux, positions
         onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp} onWheel={onWheel}
       >
         <canvas ref={canvasRef} className="touch-none select-none" />
+        {!empty && (code || zone || allee) && (
+          <div className="pointer-events-none absolute left-3 top-3 flex flex-col items-start gap-1.5">
+            {code && <span className="rounded-md bg-amber-500/90 px-2 py-0.5 font-mono text-[11px] font-bold text-white shadow-sm">{code}</span>}
+            {zone && <span className="rounded-md bg-black/55 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm">{labels.zone}: {zone}</span>}
+            {allee && <span className="rounded-md bg-black/55 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm">{labels.allee}: {allee}</span>}
+          </div>
+        )}
         {empty && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center text-sm text-gray-400 dark:text-zinc-500">
             <Box className="h-8 w-8 text-gray-300 dark:text-zinc-700" />{labels.empty}

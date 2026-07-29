@@ -176,9 +176,13 @@ function Content() {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <LocationPreview3D
           rayons={R} etageres={E} niveaux={N} positions={P}
+          zone={zone ? `${zone.code} · ${zone.name}` : undefined}
+          allee={alleeId ? `${alleeCode}${zoneAllees.find((a) => a.id === alleeId)?.name ? ' · ' + zoneAllees.find((a) => a.id === alleeId)!.name : ''}` : undefined}
+          code={zone && alleeId ? `${storeCode}-${depotCode}-${zone.code}-${alleeCode}` : undefined}
           labels={{
             title: t('gen_3d_title'), empty: t('gen_3d_empty'), drag: t('gen_3d_drag'),
             spin: t('gen_3d_spin'), reset: t('gen_3d_reset'), simplified: t('gen_3d_simplified'),
+            zone: t('wms_zone'), allee: t('wms_allee'),
             rayon: t('wms_rayon'), etagere: t('wms_etagere'), niveau: t('wms_niveau'), position: t('wms_position'),
           }}
         />
