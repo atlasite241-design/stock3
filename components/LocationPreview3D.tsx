@@ -16,6 +16,7 @@ export interface Preview3DLabels {
   reset: string
   drag: string
   simplified: string
+  viewNote: string
 }
 
 interface Props {
@@ -55,8 +56,11 @@ export default function LocationPreview3D({ rayons, etageres, niveaux, positions
   const [spin, setSpin] = useState(true)
   const spinRef = useRef(true)
   const [simplified, setSimplified] = useState(false)
-  const props = useRef({ rayons, etageres, niveaux, positions })
-  props.current = { rayons, etageres, niveaux, positions }
+  // Aperçu entrepôt : nb de zones et d'allées (visualisation uniquement).
+  const [vZones, setVZones] = useState(1)
+  const [vAllees, setVAllees] = useState(1)
+  const props = useRef({ rayons, etageres, niveaux, positions, zones: 1, allees: 1 })
+  props.current = { rayons, etageres, niveaux, positions, zones: vZones, allees: vAllees }
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current
@@ -71,31 +75,42 @@ export default function LocationPreview3D({ rayons, etageres, niveaux, positions
     const E = Math.max(0, Math.floor(props.current.etageres))
     const N = Math.max(0, Math.floor(props.current.niveaux))
     const P = Math.max(0, Math.floor(props.current.positions))
+    const Z = Math.max(1, Math.floor(props.current.zones))
+    const A = Math.max(1, Math.floor(props.current.allees))
     if (R === 0 || E === 0 || N === 0 || P === 0) return
 
-    // Géométrie : une boîte par (rayon, étagère, niveau). Si trop d'unités,
-    // on regroupe les niveaux (boîte pleine hauteur) pour rester fluide.
+    // Géométrie : une boîte par (zone, allée, rayon, étagère, niveau). Si trop
+    // d'unités, on regroupe les niveaux (boîte pleine hauteur) pour rester fluide.
     const colW = 1, boxW = 0.84, levelH = 0.72, boxH = 0.6, D = 2.2, rayonGap = 1.1
-    let geomN = R * E * N > 1600 ? 1 : N
-    if (R * E > BOX_CAP) geomN = 1
+    const zoneWidth = R * E * colW + (R - 1) * rayonGap
+    const zoneStride = zoneWidth + 2.4         // zones côte à côte le long de X
+    const alleeStride = D + 1.4                 // allées parallèles le long de Z
+    let geomN = Z * A * R * E * N > 1600 ? 1 : N
+    if (Z * A * R * E > BOX_CAP) geomN = 1
     const boxHfull = geomN === 1 ? Math.max(0.4, N * levelH - 0.12) : boxH
     const isSimplified = geomN !== N
     if (isSimplified !== simplified) setSimplified(isSimplified)
 
     type BoxG = { x0: number; y0: number; z0: number; x1: number; y1: number; z1: number; hue: string }
     const boxes: BoxG[] = []
-    let maxX = 0, maxY = 0
-    outer: for (let r = 0; r < R; r++) {
-      const hue = HUES[r % HUES.length]
-      for (let e = 0; e < E; e++) {
-        const x0 = r * (E * colW + rayonGap) + e * colW
-        for (let n = 0; n < geomN; n++) {
-          const y0 = n * levelH
-          const b = { x0, y0, z0: 0, x1: x0 + boxW, y1: y0 + boxHfull, z1: D, hue }
-          boxes.push(b)
-          if (b.x1 > maxX) maxX = b.x1
-          if (b.y1 > maxY) maxY = b.y1
-          if (boxes.length >= BOX_CAP) break outer
+    let maxX = 0, maxY = 0, maxZ = 0
+    outer: for (let zi = 0; zi < Z; zi++) {
+      for (let a = 0; a < A; a++) {
+        const zBand = a * alleeStride
+        for (let r = 0; r < R; r++) {
+          const hue = HUES[r % HUES.length]
+          for (let e = 0; e < E; e++) {
+            const x0 = zi * zoneStride + r * (E * colW + rayonGap) + e * colW
+            for (let n = 0; n < geomN; n++) {
+              const y0 = n * levelH
+              const b = { x0, y0, z0: zBand, x1: x0 + boxW, y1: y0 + boxHfull, z1: zBand + D, hue }
+              boxes.push(b)
+              if (b.x1 > maxX) maxX = b.x1
+              if (b.y1 > maxY) maxY = b.y1
+              if (b.z1 > maxZ) maxZ = b.z1
+              if (boxes.length >= BOX_CAP) break outer
+            }
+          }
         }
       }
     }
@@ -104,8 +119,8 @@ export default function LocationPreview3D({ rayons, etageres, niveaux, positions
     // Caméra : orthographique, lacet + tangage, échelle auto pour remplir.
     const { yaw, pitch, zoom } = view.current
     const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch)
-    const cxo = maxX / 2, cyo = maxY / 2, czo = D / 2
-    const radius = 0.5 * Math.hypot(maxX, maxY, D) || 1
+    const cxo = maxX / 2, cyo = maxY / 2, czo = maxZ / 2
+    const radius = 0.5 * Math.hypot(maxX, maxY, maxZ) || 1
     const scale = (Math.min(w, h) * 0.44 / radius) * zoom
     const ox = w / 2, oy = h / 2 + h * 0.04
     const pr = (x: number, y: number, z: number) => {
@@ -160,9 +175,9 @@ export default function LocationPreview3D({ rayons, etageres, niveaux, positions
       }
     }
 
-    // Sol + cadre de l'allée (dessiné en premier, il sert de base).
+    // Sol + cadre de l'entrepôt (dessiné en premier, il sert de base).
     const pad = 0.7, fy = -0.03
-    const floor = [pr(-pad, fy, -pad), pr(maxX + pad, fy, -pad), pr(maxX + pad, fy, D + pad), pr(-pad, fy, D + pad)]
+    const floor = [pr(-pad, fy, -pad), pr(maxX + pad, fy, -pad), pr(maxX + pad, fy, maxZ + pad), pr(-pad, fy, maxZ + pad)]
     ctx.lineJoin = 'round'
     ctx.beginPath()
     ctx.moveTo(floor[0].sx, floor[0].sy)
@@ -173,14 +188,25 @@ export default function LocationPreview3D({ rayons, etageres, niveaux, positions
     ctx.strokeStyle = 'rgba(245,158,11,0.55)'
     ctx.lineWidth = 1.5
     ctx.stroke()
-    // Séparateurs de rayons sur le sol.
-    ctx.strokeStyle = 'rgba(148,163,184,0.32)'
-    ctx.lineWidth = 1
-    for (let r = 1; r < R; r++) {
-      const xl = r * (E * colW + rayonGap) - rayonGap / 2
-      const a = pr(xl, fy, -pad), b = pr(xl, fy, D + pad)
+    const gline = (x0: number, z0: number, x1: number, z1: number) => {
+      const a = pr(x0, fy, z0), b = pr(x1, fy, z1)
       ctx.beginPath(); ctx.moveTo(a.sx, a.sy); ctx.lineTo(b.sx, b.sy); ctx.stroke()
     }
+    // Séparateurs de zones (X) — plus marqués.
+    ctx.strokeStyle = 'rgba(245,158,11,0.4)'
+    ctx.lineWidth = 1.2
+    for (let zi = 1; zi < Z; zi++) gline(zi * zoneStride - 1.2, -pad, zi * zoneStride - 1.2, maxZ + pad)
+    // Séparateurs d'allées (Z) — légers.
+    ctx.strokeStyle = 'rgba(148,163,184,0.3)'
+    ctx.lineWidth = 1
+    for (let a = 1; a < A; a++) gline(-pad, a * alleeStride - 0.7, maxX + pad, a * alleeStride - 0.7)
+    // Séparateurs de rayons (X) par zone — légers.
+    ctx.strokeStyle = 'rgba(148,163,184,0.22)'
+    for (let zi = 0; zi < Z; zi++)
+      for (let r = 1; r < R; r++) {
+        const xl = zi * zoneStride + r * (E * colW + rayonGap) - rayonGap / 2
+        gline(xl, -pad, xl, maxZ + pad)
+      }
 
     // Peintre : du plus loin au plus proche.
     quads.sort((a, b) => a.depth - b.depth)
@@ -213,7 +239,7 @@ export default function LocationPreview3D({ rayons, etageres, niveaux, positions
   }, [draw])
 
   // Redessine sur changement de quantités.
-  useEffect(() => { draw() }, [rayons, etageres, niveaux, positions, draw])
+  useEffect(() => { draw() }, [rayons, etageres, niveaux, positions, vZones, vAllees, draw])
 
   // Dimensionnement (DPI + resize).
   useEffect(() => {
@@ -278,6 +304,13 @@ export default function LocationPreview3D({ rayons, etageres, niveaux, positions
         </div>
       </div>
 
+      {/* Aperçu entrepôt : zones × allées (visualisation uniquement) */}
+      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl bg-gray-50/70 px-3 py-2 dark:bg-white/5">
+        <Stepper label={labels.zone} value={vZones} set={setVZones} min={1} max={10} color="#f59e0b" />
+        <Stepper label={labels.allee} value={vAllees} set={setVAllees} min={1} max={16} color="#0ea5e9" />
+        <span className="text-[10px] italic text-gray-400 dark:text-zinc-500">{labels.viewNote}</span>
+      </div>
+
       <div
         ref={wrapRef}
         className="relative h-[320px] w-full cursor-grab overflow-hidden rounded-xl bg-gradient-to-b from-gray-50 to-gray-100 active:cursor-grabbing dark:from-[#0d0d14] dark:to-[#15151f] sm:h-[380px]"
@@ -314,6 +347,22 @@ export default function LocationPreview3D({ rayons, etageres, niveaux, positions
           {simplified && <span className="ml-auto text-amber-500">{labels.simplified}</span>}
         </div>
       )}
+    </div>
+  )
+}
+
+function Stepper({ label, value, set, min, max, color }: { label: string; value: number; set: (n: number) => void; min: number; max: number; color: string }) {
+  const clamp = (n: number) => Math.max(min, Math.min(max, n))
+  return (
+    <div className="flex items-center gap-2">
+      <span className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-600 dark:text-zinc-300">
+        <span className="h-2.5 w-2.5 rounded-sm" style={{ background: color }} />{label}
+      </span>
+      <div className="flex items-center overflow-hidden rounded-lg border border-gray-200 dark:border-white/10">
+        <button onClick={() => set(clamp(value - 1))} disabled={value <= min} className="px-2 py-0.5 text-gray-500 transition hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-white/10">−</button>
+        <span className="w-7 text-center text-xs font-bold tabular-nums text-gray-800 dark:text-zinc-100">{value}</span>
+        <button onClick={() => set(clamp(value + 1))} disabled={value >= max} className="px-2 py-0.5 text-gray-500 transition hover:bg-gray-100 disabled:opacity-30 dark:hover:bg-white/10">+</button>
+      </div>
     </div>
   )
 }

@@ -182,7 +182,7 @@ function Content() {
           labels={{
             title: t('gen_3d_title'), empty: t('gen_3d_empty'), drag: t('gen_3d_drag'),
             spin: t('gen_3d_spin'), reset: t('gen_3d_reset'), simplified: t('gen_3d_simplified'),
-            zone: t('wms_zone'), allee: t('wms_allee'),
+            viewNote: t('gen_3d_view_note'), zone: t('wms_zone'), allee: t('wms_allee'),
             rayon: t('wms_rayon'), etagere: t('wms_etagere'), niveau: t('wms_niveau'), position: t('wms_position'),
           }}
         />

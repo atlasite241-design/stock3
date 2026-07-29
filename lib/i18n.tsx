@@ -598,6 +598,7 @@ const DICT = {
   gen_3d_spin: { fr: 'Rotation automatique', ar: 'دوران تلقائي' },
   gen_3d_reset: { fr: 'Réinitialiser la vue', ar: 'إعادة ضبط العرض' },
   gen_3d_simplified: { fr: 'Aperçu simplifié (volume élevé)', ar: 'معاينة مبسطة (حجم كبير)' },
+  gen_3d_view_note: { fr: 'Aperçu uniquement — la génération reste sur l’allée choisie.', ar: 'للمعاينة فقط — التوليد يبقى على الممر المختار.' },
   gen_generate: { fr: 'Générer', ar: 'توليد' },
   gen_confirm_title: { fr: 'Confirmer la génération', ar: 'تأكيد التوليد' },
   gen_confirm_desc: { fr: 'Ces emplacements seront créés sous l’allée sélectionnée.', ar: 'ستُنشأ هذه المواقع تحت الممر المحدد.' },
