@@ -89,19 +89,14 @@ function Content() {
     setTimeout(() => {
       try {
         const { added, updated } = importProducts(rows, replace)
-        // Le rechargement (coûteux) n'est nécessaire QUE pour les très gros
-        // catalogues : garder des dizaines de milliers de produits dans le
-        // renderer saturait l'onglet. En dessous du seuil, on met à jour en
-        // place → seamless, aucun rechargement.
-        const RELOAD_THRESHOLD = 6000
-        if (rows.length > RELOAD_THRESHOLD) {
-          setImportState(null)
-          setFinishing(added + updated)
-          setTimeout(() => window.location.reload(), 1300)
-        } else {
-          setImportState(null)
-          toast(`✓ ${t('set_toast_import_added')} ${added} ${t('set_toast_import_added_suffix')} ${updated} ${t('set_toast_import_updated_suffix')}`)
-        }
+        // Rechargement systématique après un import catalogue : sans ça, l'onglet
+        // garde en mémoire l'ancien catalogue + le texte CSV + le parse + l'état
+        // de l'assistant + le nouveau catalogue → saturation et plantage
+        // (« This page couldn't load »), même sur quelques milliers de produits.
+        // Le reload repart d'une mémoire propre (pas de splash : session active).
+        setImportState(null)
+        setFinishing(added + updated)
+        setTimeout(() => window.location.reload(), 650)
       } catch {
         // Dépassement de quota du stockage navigateur sur un fichier trop volumineux.
         toast(t('set_import_quota'), 'error')
