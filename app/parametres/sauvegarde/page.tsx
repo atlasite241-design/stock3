@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { Cloud, Database, FileDown, FileSpreadsheet, FileUp, RefreshCcw, RotateCcw, Save, Trash2 } from 'lucide-react'
+import { CheckCircle2, Cloud, Database, FileDown, FileSpreadsheet, FileUp, RefreshCcw, RotateCcw, Save, Trash2 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import ImportPicker from '@/components/ImportPicker'
 import Modal from '@/components/Modal'
@@ -32,6 +32,7 @@ function Content() {
   const [backups, setBackups] = useState<Backup[]>([])
   const [restoreTarget, setRestoreTarget] = useState<Backup | null>(null)
   const [importState, setImportState] = useState<{ msg: string; pct: number | null } | null>(null)
+  const [finishing, setFinishing] = useState<number | null>(null)
   // Lignes lues du CSV, en attente du choix catégories / sous-catégories.
   const [pending, setPending] = useState<ReturnType<typeof parseProductsCSV> | null>(null)
   const jsonInputRef = useRef<HTMLInputElement>(null)
@@ -88,13 +89,13 @@ function Content() {
     setTimeout(() => {
       try {
         const { added, updated } = importProducts(rows, replace)
-        toast(`✓ ${t('set_toast_import_added')} ${added} ${t('set_toast_import_added_suffix')} ${updated} ${t('set_toast_import_updated_suffix')}`)
-        // Recharge la page (comme l'import JSON / la restauration) : sur un gros
-        // catalogue, garder les milliers de produits dans le renderer courant +
-        // re-rendre toute l'app (recherche Topbar…) faisait planter l'onglet
-        // (« This page couldn't load »). Le catalogue est déjà persisté ; la
-        // synchro reprend au chargement en arrière-plan.
-        setTimeout(() => window.location.reload(), 700)
+        // Transition fluide (écran plein) au lieu d'une disparition brutale : sur
+        // un gros catalogue, garder les milliers de produits dans le renderer +
+        // re-rendre toute l'app faisait saturer l'onglet. On persiste puis on
+        // recharge proprement ; la synchro reprend en arrière-plan au chargement.
+        setImportState(null)
+        setFinishing(added + updated)
+        setTimeout(() => window.location.reload(), 1300)
       } catch {
         // Dépassement de quota du stockage navigateur sur un fichier trop volumineux.
         toast(t('set_import_quota'), 'error')
@@ -137,6 +138,20 @@ function Content() {
         onCancel={() => setPending(null)}
         onConfirm={runImport}
       />
+      {finishing !== null && (
+        <div className="fixed inset-0 z-[120] flex flex-col items-center justify-center gap-4 bg-gradient-to-b from-white/95 to-white/90 backdrop-blur-md dark:from-[#0a0a0f]/95 dark:to-[#0a0a0f]/90">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-500">
+            <CheckCircle2 className="h-9 w-9" />
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-bold text-gray-900 dark:text-white">{t('set_import_done')}</p>
+            <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{finishing} {t('set_import_done_products')} · {t('set_import_refreshing')}</p>
+          </div>
+          <div className="mt-2 h-1.5 w-56 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
+            <div className="h-full w-1/3 animate-[pulse_1s_ease-in-out_infinite] rounded-full bg-gradient-to-r from-amber-400 to-emerald-500" />
+          </div>
+        </div>
+      )}
       {importState && (
         <div className="fixed inset-x-3 bottom-3 z-[70] mx-auto max-w-md rounded-2xl border border-sky-200 bg-white/95 p-4 shadow-2xl backdrop-blur dark:border-sky-500/25 dark:bg-[#12121a]/95">
           <div className="flex items-center justify-between text-sm">
