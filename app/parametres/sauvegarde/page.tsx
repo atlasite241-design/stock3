@@ -89,13 +89,19 @@ function Content() {
     setTimeout(() => {
       try {
         const { added, updated } = importProducts(rows, replace)
-        // Transition fluide (écran plein) au lieu d'une disparition brutale : sur
-        // un gros catalogue, garder les milliers de produits dans le renderer +
-        // re-rendre toute l'app faisait saturer l'onglet. On persiste puis on
-        // recharge proprement ; la synchro reprend en arrière-plan au chargement.
-        setImportState(null)
-        setFinishing(added + updated)
-        setTimeout(() => window.location.reload(), 1300)
+        // Le rechargement (coûteux) n'est nécessaire QUE pour les très gros
+        // catalogues : garder des dizaines de milliers de produits dans le
+        // renderer saturait l'onglet. En dessous du seuil, on met à jour en
+        // place → seamless, aucun rechargement.
+        const RELOAD_THRESHOLD = 6000
+        if (rows.length > RELOAD_THRESHOLD) {
+          setImportState(null)
+          setFinishing(added + updated)
+          setTimeout(() => window.location.reload(), 1300)
+        } else {
+          setImportState(null)
+          toast(`✓ ${t('set_toast_import_added')} ${added} ${t('set_toast_import_added_suffix')} ${updated} ${t('set_toast_import_updated_suffix')}`)
+        }
       } catch {
         // Dépassement de quota du stockage navigateur sur un fichier trop volumineux.
         toast(t('set_import_quota'), 'error')
