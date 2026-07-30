@@ -626,6 +626,7 @@ const DICT = {
   x3_stock_min: { fr: 'Stock mini', ar: 'الحد الأدنى' },
   x3_last_in: { fr: 'Dernière entrée', ar: 'آخر دخول' },
   x3_last_out: { fr: 'Dernière sortie', ar: 'آخر خروج' },
+  x3_view_in_3d: { fr: 'Voir dans l’explorateur 3D', ar: 'عرض في المستكشف ثلاثي الأبعاد' },
   gen_generate: { fr: 'Générer', ar: 'توليد' },
   gen_confirm_title: { fr: 'Confirmer la génération', ar: 'تأكيد التوليد' },
   gen_confirm_desc: { fr: 'Ces emplacements seront créés sous l’allée sélectionnée.', ar: 'ستُنشأ هذه المواقع تحت الممر المحدد.' },

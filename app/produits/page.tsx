@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { Camera, ChevronLeft, ChevronRight, ImagePlus, MapPin, Package, Pencil, Plus, Printer, Scissors, Search, Trash2, Wand2 } from 'lucide-react'
@@ -316,9 +317,13 @@ function ProduitsContent() {
                         <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{p.name}</p>
                         <p className="font-mono text-xs text-gray-400 dark:text-zinc-500">{p.barcode || '—'}</p>
                         {p.emplacementComplet && (
-                          <p className="mt-0.5 flex items-center gap-1 font-mono text-[11px] text-amber-600 dark:text-amber-400">
+                          <Link
+                            href={`/magasins/explorateur?code=${encodeURIComponent(p.emplacementComplet)}`}
+                            title={t('x3_view_in_3d')}
+                            className="mt-0.5 flex w-fit items-center gap-1 font-mono text-[11px] text-amber-600 transition hover:underline dark:text-amber-400"
+                          >
                             <MapPin className="h-3 w-3" />{p.emplacementComplet}
-                          </p>
+                          </Link>
                         )}
                       </div>
                     </div>

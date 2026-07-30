@@ -1,6 +1,8 @@
 'use client'
 
+import { Suspense } from 'react'
 import dynamic from 'next/dynamic'
+import { useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Rotate3d } from 'lucide-react'
 import AppShell from '@/components/AppShell'
@@ -10,6 +12,13 @@ import { useLanguage } from '@/lib/i18n'
 // Le canvas 3D (three.js) n'est chargé que côté client, et uniquement sur
 // cette route (import dynamique → n'alourdit pas le reste de l'app).
 const Explorer3D = dynamic(() => import('@/components/wms3d/Explorer3D'), { ssr: false, loading: () => <Loader /> })
+
+// useSearchParams doit vivre sous <Suspense> (App Router).
+function ExplorerWithCode() {
+  const params = useSearchParams()
+  const code = params.get('code') ?? undefined
+  return <Explorer3D initialCode={code} />
+}
 
 export default function ExplorateurPage() {
   const { t } = useLanguage()
@@ -21,7 +30,9 @@ export default function ExplorateurPage() {
         </h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{t('x3_subtitle')}</p>
       </motion.div>
-      <Explorer3D />
+      <Suspense fallback={<Loader />}>
+        <ExplorerWithCode />
+      </Suspense>
     </AppShell>
   )
 }

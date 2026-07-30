@@ -23,7 +23,7 @@ import NiveauPlanks from './NiveauPlanks'
 import { Breadcrumb, DetailPanel, Legend, MiniMap, SearchBar } from './Overlays'
 import { levelOf, type PosNode, type Sel } from './types'
 
-export default function Explorer3D() {
+export default function Explorer3D({ initialCode }: { initialCode?: string }) {
   const { t } = useLanguage()
   const tree = useWmsTree()
   const layout = useMemo(() => computeLayout(tree), [tree])
@@ -72,6 +72,14 @@ export default function Explorer3D() {
   }, [tree])
 
   const pickPos = useCallback((node: PosNode) => setPanelPos(node), [])
+
+  // Lien profond (?code=…) : vol direct vers la position au premier arbre prêt.
+  const appliedCode = useRef<string | null>(null)
+  useEffect(() => {
+    if (!initialCode || tree.flat.length === 0 || appliedCode.current === initialCode) return
+    appliedCode.current = initialCode
+    search(initialCode)
+  }, [initialCode, tree, search])
 
   const hintKey = (`x3_hint_${lvl}`) as Parameters<typeof t>[0]
 

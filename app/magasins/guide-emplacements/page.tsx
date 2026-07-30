@@ -60,6 +60,7 @@ const SECTIONS: Section[] = [
     title: { fr: 'Gagner du temps', ar: 'ربح الوقت' },
     steps: [
       { path: { fr: 'Magasins › Allées › « Allées par défaut »', ar: 'المتاجر › الممرات › «ممرات افتراضية»' }, desc: { fr: 'Crée automatiquement le **modèle AtlasStock** d’allées adapté à la zone choisie.', ar: 'ينشئ تلقائيًا **نموذج AtlasStock** للممرات المناسب للمنطقة المختارة.' } },
+      { path: { fr: 'Magasins › Explorateur 3D', ar: 'المتاجر › المستكشف ثلاثي الأبعاد' }, desc: { fr: 'Naviguer **visuellement** de la zone jusqu’à chaque position, ou **rechercher un code** pour voler directement dessus.', ar: 'التنقّل **بصريًا** من المنطقة حتى كل موضع، أو **البحث برمز** للانتقال إليه مباشرة.' } },
       { desc: { fr: '**Export CSV / Excel** : sur chaque niveau, exporter la liste existante (Code, Nom, Emplacement).', ar: '**تصدير CSV / Excel**: في كل مستوى، تصدير القائمة الحالية (الرمز، الاسم، الموقع).' } },
       { desc: { fr: '**Import CSV / Excel** : préparer un fichier (colonne **Code**, colonne **Nom**) et l’importer d’un clic dans le parent sélectionné.', ar: '**استيراد CSV / Excel**: تجهيز ملف (عمود **الرمز**، عمود **الاسم**) واستيراده بنقرة في الأب المحدد.' } },
     ],
