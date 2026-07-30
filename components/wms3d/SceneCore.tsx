@@ -58,7 +58,7 @@ export function FlyRig({ goal, maxDist }: { goal: CamGoal; maxDist: number }) {
 
 export function GlowBox({
   position, size, color, opacity = 0.92, active = false, ghost = false,
-  onClick, cursor = true, radiusTop = false,
+  onClick, cursor = true, radiusTop = false, onHoverChange,
 }: {
   position: [number, number, number]
   size: [number, number, number]
@@ -71,6 +71,8 @@ export function GlowBox({
   onClick?: () => void
   cursor?: boolean
   radiusTop?: boolean
+  /** Notifie le parent du survol (étiquettes contextuelles). */
+  onHoverChange?: (hovered: boolean) => void
 }) {
   const mat = useRef<THREE.MeshStandardMaterial>(null)
   const mesh = useRef<THREE.Mesh>(null)
@@ -100,8 +102,8 @@ export function GlowBox({
       castShadow={!ghost}
       receiveShadow
       onClick={ghost ? undefined : (e) => { e.stopPropagation(); onClick?.() }}
-      onPointerOver={ghost ? undefined : (e) => { e.stopPropagation(); setHover(true) }}
-      onPointerOut={ghost ? undefined : () => setHover(false)}
+      onPointerOver={ghost ? undefined : (e) => { e.stopPropagation(); setHover(true); onHoverChange?.(true) }}
+      onPointerOut={ghost ? undefined : () => { setHover(false); onHoverChange?.(false) }}
     >
       <boxGeometry args={size} />
       <meshStandardMaterial

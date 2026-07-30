@@ -4,6 +4,7 @@
 // Cliquer une zone zoome dessus et masque les autres ; la dalle de la zone
 // sélectionnée reste visible aux niveaux inférieurs (elle sert de sol).
 
+import { useState } from 'react'
 import { GlowBox, Tag } from './SceneCore'
 import type { Layout } from './layout'
 import { levelOf, type Sel, type WmsTree } from './types'
@@ -16,6 +17,10 @@ export default function ZoneBlocks({ tree, layout, sel, onPick }: {
 }) {
   const lvl = levelOf(sel)
   const atZones = lvl === 'zones'
+  // Au-delà de 8 zones, les noms complets se chevauchent : on n'affiche que le
+  // code, et le nom apparaît au survol de la zone.
+  const [hover, setHover] = useState<string | null>(null)
+  const dense = tree.zones.length > 8
 
   return (
     <group>
@@ -34,10 +39,11 @@ export default function ZoneBlocks({ tree, layout, sel, onPick }: {
               opacity={atZones ? 0.92 : 0.3}
               active={selected && atZones}
               onClick={() => onPick(z.id)}
+              onHoverChange={atZones ? (h) => setHover(h ? z.id : null) : undefined}
             />
             {atZones && (
-              <Tag position={[r.x + r.w / 2, 1.15, r.z + r.d / 2]} onClick={() => onPick(z.id)}>
-                {z.code}{z.name ? ` · ${z.name}` : ''}
+              <Tag position={[r.x + r.w / 2, 1.15, r.z + r.d / 2]} accent={hover === z.id} onClick={() => onPick(z.id)}>
+                {dense && hover !== z.id ? z.code : `${z.code}${z.name ? ` · ${z.name}` : ''}`}
               </Tag>
             )}
             {/* Rainures des allées, en aperçu sur la dalle */}

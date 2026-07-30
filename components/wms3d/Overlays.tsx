@@ -147,13 +147,14 @@ export function Legend({ tree }: { tree: WmsTree }) {
     for (const f of tree.flat) c[f.node.status]++
     return c
   }, [tree])
+  // Grille 3 colonnes : largeur bornée, jamais tronquée quelle que soit la vue.
   return (
-    <div className="pointer-events-auto flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-black/50 px-3 py-2 backdrop-blur-xl">
+    <div className="pointer-events-auto grid w-fit max-w-[19rem] grid-cols-2 gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-black/60 px-3 py-2 backdrop-blur-xl sm:grid-cols-3">
       {ST_KEYS.map((k) => (
-        <span key={k} className="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-300">
-          <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: STATUS_COLOR[k] }} />
+        <span key={k} className="flex items-center gap-1.5 whitespace-nowrap text-[10px] font-semibold text-zinc-300">
+          <span className="h-2.5 w-2.5 shrink-0 rounded-[3px]" style={{ background: STATUS_COLOR[k] }} />
           {t(`x3_st_${k}` as Parameters<typeof t>[0])}
-          <span className="tabular-nums text-zinc-500">{counts[k]}</span>
+          <span className="ml-auto tabular-nums text-zinc-500">{counts[k]}</span>
         </span>
       ))}
     </div>

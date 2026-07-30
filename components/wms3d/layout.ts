@@ -75,12 +75,24 @@ export function computeLayout(tree: WmsTree): Layout {
     znD.set(z.id, z.allees.length * BAY_D + Math.max(0, z.allees.length - 1) * AISLE + ZONE_PAD * 2)
   }
 
-  // --- Passe 2 : placement des zones en lignes (grille fluide) ---
-  const perRow = Math.max(1, Math.ceil(Math.sqrt(tree.zones.length)))
+  // --- Passe 2 : placement des zones en lignes ---
+  // Les zones ont des tailles très inégales (une zone de 15 allées est bien plus
+  // profonde qu'une zone de 2). Un simple « n par ligne » produisait une longue
+  // traînée illisible en perspective : on remplit donc chaque ligne jusqu'à une
+  // largeur cible dérivée de la surface totale, pour une empreinte ~carrée.
+  const rowTarget = (() => {
+    let area = 0, sumW = 0
+    for (const z of tree.zones) {
+      const w = znW.get(z.id) ?? 4, d = znD.get(z.id) ?? 4
+      area += (w + ZONE_GAP) * (d + ZONE_GAP)
+      sumW = Math.max(sumW, w)
+    }
+    return Math.max(sumW, Math.sqrt(area) * 1.15)
+  })()
   let zx = 0, zz = 0, rowD = 0, minX = Infinity, minZ = Infinity, maxX = -Infinity, maxZ = -Infinity
   tree.zones.forEach((z, i) => {
     const w = znW.get(z.id) ?? 4, d = znD.get(z.id) ?? 4
-    if (i > 0 && i % perRow === 0) { zx = 0; zz += rowD + ZONE_GAP; rowD = 0 }
+    if (i > 0 && zx + w > rowTarget) { zx = 0; zz += rowD + ZONE_GAP; rowD = 0 }
     L.zones.set(z.id, { x: zx, z: zz, w, d })
     rowD = Math.max(rowD, d)
     minX = Math.min(minX, zx); minZ = Math.min(minZ, zz)
@@ -125,7 +137,11 @@ export function computeLayout(tree: WmsTree): Layout {
       }
     })
   })
-  L.world = { x: minX, z: minZ, w: maxX - minX, d: maxZ - minZ }
+  // Aucune zone : les bornes restent infinies — trois.js ne doit jamais recevoir
+  // de géométrie non finie (fog/ombres/caméra deviennent NaN).
+  L.world = tree.zones.length === 0
+    ? { x: 0, z: 0, w: 10, d: 10 }
+    : { x: minX, z: minZ, w: maxX - minX, d: maxZ - minZ }
   return L
 }
 
@@ -162,7 +178,9 @@ export function focusFor(sel: Sel, L: Layout): Focus {
 /** Position caméra idéale pour un focus donné (angle qui s'abaisse en profondeur). */
 export function cameraFor(sel: Sel, f: Focus): { pos: [number, number, number]; tgt: [number, number, number] } {
   const lvl = levelOf(sel)
-  const pitch = lvl === 'zones' ? 0.95 : lvl === 'allees' ? 0.78 : lvl === 'rayons' ? 0.5 : lvl === 'etageres' ? 0.34 : 0.22
+  // Vue d'ensemble presque à la verticale (lecture de plan) puis inclinaison
+  // progressive en descendant : à 21 zones, un angle rasant écrasait tout.
+  const pitch = lvl === 'zones' ? 1.15 : lvl === 'allees' ? 0.82 : lvl === 'rayons' ? 0.5 : lvl === 'etageres' ? 0.34 : 0.22
   const yaw = -0.62
   const dist = f.size * (lvl === 'zones' ? 0.95 : lvl === 'allees' ? 0.92 : lvl === 'rayons' ? 0.85 : lvl === 'etageres' ? 0.9 : 1.0) + 1.6
   const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch)
