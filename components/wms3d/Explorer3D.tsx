@@ -188,9 +188,21 @@ export default function Explorer3D({ initialCode, onReady, tree: treeOverride, c
       </Canvas>
       </GlErrorBoundary>
 
-      {/* ---- Overlays ---- */}
+      {/* ---- Overlays ----
+           La légende est ancrée EN HAUT : en bas, elle était recouverte par la
+           bannière « Installer l'application » et les toasts (éléments fixes de
+           la page, contre lesquels un z-index local ne peut rien). */}
       <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-wrap items-start justify-between gap-2">
-        <Breadcrumb tree={tree} sel={sel} onNavigate={(s) => { setSel(s); setPanelPos(null) }} />
+        <div className="flex max-w-full flex-col items-start gap-2">
+          <Breadcrumb tree={tree} sel={sel} onNavigate={(s) => { setSel(s); setPanelPos(null) }} />
+          <Legend tree={tree} />
+          {tree.demo && (
+            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+              className="pointer-events-auto flex w-fit items-center gap-1.5 rounded-lg border border-violet-400/30 bg-violet-500/20 px-2.5 py-1 text-[10px] font-bold text-violet-300 backdrop-blur-xl">
+              <FlaskConical className="h-3 w-3" />{t('x3_demo')}
+            </motion.div>
+          )}
+        </div>
         <div className="pointer-events-auto flex items-start gap-2">
           <SearchBar onSearch={search} />
           <button
@@ -203,23 +215,14 @@ export default function Explorer3D({ initialCode, onReady, tree: treeOverride, c
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10 flex flex-wrap items-end justify-between gap-2">
-        <div className="flex flex-col gap-2">
-          {tree.demo && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              className="pointer-events-auto flex w-fit items-center gap-1.5 rounded-lg border border-violet-400/30 bg-violet-500/20 px-2.5 py-1 text-[10px] font-bold text-violet-300 backdrop-blur-xl">
-              <FlaskConical className="h-3 w-3" />{t('x3_demo')}
-            </motion.div>
-          )}
-          <Legend tree={tree} />
-        </div>
-        <div className="flex flex-col items-end gap-2">
-          <motion.p key={lvl} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/50 px-2.5 py-1 text-[10px] font-semibold text-zinc-300 backdrop-blur-xl">
-            <Boxes className="h-3 w-3 text-amber-400" />{t(hintKey)}
-          </motion.p>
-          <MiniMap tree={tree} layout={layout} sel={sel} onJump={(zone) => { setSel({ zone }); setPanelPos(null) }} />
-        </div>
+      {/* La mini-carte reste en bas à droite : la bannière d'installation est
+          centrée/à gauche, elle ne la masque pas. */}
+      <div className="pointer-events-none absolute bottom-3 right-3 z-10 flex flex-col items-end gap-2">
+        <motion.p key={lvl} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/50 px-2.5 py-1 text-[10px] font-semibold text-zinc-300 backdrop-blur-xl">
+          <Boxes className="h-3 w-3 text-amber-400" />{t(hintKey)}
+        </motion.p>
+        <MiniMap tree={tree} layout={layout} sel={sel} onJump={(zone) => { setSel({ zone }); setPanelPos(null) }} />
       </div>
 
       <DetailPanel pos={panelPos} onClose={() => setPanelPos(null)} />

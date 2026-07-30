@@ -147,14 +147,15 @@ export function Legend({ tree }: { tree: WmsTree }) {
     for (const f of tree.flat) c[f.node.status]++
     return c
   }, [tree])
-  // Grille 3 colonnes : largeur bornée, jamais tronquée quelle que soit la vue.
+  // Une ligne quand la largeur le permet, sinon repli sur 3 puis 2 colonnes.
+  // `w-fit` + `whitespace-nowrap` garantissent qu'aucun libellé n'est tronqué.
   return (
-    <div className="pointer-events-auto grid w-fit max-w-[19rem] grid-cols-2 gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-black/60 px-3 py-2 backdrop-blur-xl sm:grid-cols-3">
+    <div className="pointer-events-auto grid w-fit max-w-full grid-cols-2 gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-black/60 px-3 py-1.5 backdrop-blur-xl sm:grid-cols-3 xl:grid-cols-6">
       {ST_KEYS.map((k) => (
         <span key={k} className="flex items-center gap-1.5 whitespace-nowrap text-[10px] font-semibold text-zinc-300">
           <span className="h-2.5 w-2.5 shrink-0 rounded-[3px]" style={{ background: STATUS_COLOR[k] }} />
           {t(`x3_st_${k}` as Parameters<typeof t>[0])}
-          <span className="ml-auto tabular-nums text-zinc-500">{counts[k]}</span>
+          <span className="ml-auto tabular-nums text-zinc-500">{counts[k].toLocaleString('fr-FR')}</span>
         </span>
       ))}
     </div>
