@@ -6,6 +6,7 @@
 
 import { useState } from 'react'
 import { GlowBox, Tag } from './SceneCore'
+import { MAT } from './materials'
 import type { Layout } from './layout'
 import { levelOf, type Sel, type WmsTree } from './types'
 
@@ -46,14 +47,15 @@ export default function ZoneBlocks({ tree, layout, sel, onPick }: {
                 {dense && hover !== z.id ? z.code : `${z.code}${z.name ? ` · ${z.name}` : ''}`}
               </Tag>
             )}
-            {/* Rainures des allées, en aperçu sur la dalle */}
+            {/* Rangées de rayonnages vues du dessus : la zone se lit comme un
+                plan d'entrepôt (blocs bleus = racks, vides = couloirs). */}
             {atZones && z.allees.map((a) => {
               const b = layout.allees.get(a.id)
               if (!b) return null
               return (
-                <mesh key={a.id} position={[b.x + b.w / 2, slabH + 0.012, b.z + b.d / 2]} receiveShadow>
-                  <boxGeometry args={[b.w, 0.02, b.d]} />
-                  <meshStandardMaterial color="#0f172a" transparent opacity={0.35} roughness={0.8} />
+                <mesh key={a.id} position={[b.x + b.w / 2, slabH + 0.09, b.z + b.d / 2]} castShadow receiveShadow>
+                  <boxGeometry args={[b.w, 0.18, b.d]} />
+                  <meshStandardMaterial color={MAT.upright} roughness={0.45} metalness={0.5} />
                 </mesh>
               )
             })}

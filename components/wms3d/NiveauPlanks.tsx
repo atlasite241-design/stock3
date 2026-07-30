@@ -9,6 +9,7 @@ import { useMemo } from 'react'
 import { GlowBox, InstancedBoxes, Tag, type InstBox } from './SceneCore'
 import PositionsInstanced, { type CellItem } from './PositionsInstanced'
 import { BASE_Y, NH, PLANK_T, type Layout } from './layout'
+import { MAT } from './materials'
 import { levelOf, type PosNode, type Sel, type WmsTree } from './types'
 
 export default function NiveauPlanks({ tree, layout, sel, onPickNiveau, onPickPos, pulseId }: {
@@ -65,7 +66,7 @@ export default function NiveauPlanks({ tree, layout, sel, onPickNiveau, onPickPo
         )
       })}
 
-      <InstancedBoxes items={frame} color="#94a3b8" metal={0.7} rough={0.3} />
+      <InstancedBoxes items={frame} color={MAT.upright} metal={0.55} rough={0.42} />
 
       {/* Planches = niveaux cliquables */}
       {etagere.niveaux.map((n, ni) => {
@@ -76,7 +77,7 @@ export default function NiveauPlanks({ tree, layout, sel, onPickNiveau, onPickPo
             <GlowBox
               position={[eb.x + eb.w / 2, py, eb.z + eb.d / 2]}
               size={[eb.w - 0.08, PLANK_T, eb.d]}
-              color={selected ? '#fbbf24' : '#cbd5e1'}
+              color={selected ? '#fbbf24' : MAT.shelf}
               opacity={0.96}
               active={selected}
               onClick={() => onPickNiveau(n.id)}

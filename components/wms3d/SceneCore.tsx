@@ -188,6 +188,29 @@ export function Tag({ position, children, accent = false, small = false, onClick
   )
 }
 
+/* ------------------------------ SignPlate --------------------------------- */
+
+/**
+ * Plaque de repérage suspendue en tête d'allée, comme dans un entrepôt réel
+ * (fond jaune, code en gros caractères noirs).
+ */
+export function SignPlate({ position, code, onClick }: {
+  position: [number, number, number]
+  code: string
+  onClick?: () => void
+}) {
+  return (
+    <Html position={position} center zIndexRange={[45, 0]} style={{ pointerEvents: onClick ? 'auto' : 'none' }}>
+      <div
+        onClick={onClick}
+        className={`select-none rounded-[3px] border-2 border-amber-700/60 bg-[#f5c518] px-2 py-0.5 text-center font-mono text-[13px] font-extrabold leading-tight tracking-widest text-black shadow-lg ${onClick ? 'cursor-pointer hover:brightness-110' : ''}`}
+      >
+        {code}
+      </div>
+    </Html>
+  )
+}
+
 /* ------------------------------ SceneLights ------------------------------- */
 
 export function SceneLights({ world }: { world: { x: number; z: number; w: number; d: number } }) {

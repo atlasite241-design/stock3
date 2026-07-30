@@ -9,6 +9,7 @@ import { useMemo } from 'react'
 import { GlowBox, InstancedBoxes, Tag, type InstBox } from './SceneCore'
 import PositionsInstanced, { type CellItem } from './PositionsInstanced'
 import { BASE_Y, NH, PLANK_T, type Layout } from './layout'
+import { MAT } from './materials'
 import { levelOf, type Sel, type WmsTree } from './types'
 
 export default function EtagereBays({ tree, layout, sel, onPick }: {
@@ -69,8 +70,8 @@ export default function EtagereBays({ tree, layout, sel, onPick }: {
           </group>
         )
       })}
-      <InstancedBoxes items={posts} color="#94a3b8" metal={0.7} rough={0.3} />
-      <InstancedBoxes items={planks} color="#cbd5e1" metal={0.5} rough={0.4} />
+      <InstancedBoxes items={posts} color={MAT.upright} metal={0.55} rough={0.42} />
+      <InstancedBoxes items={planks} color={MAT.shelf} metal={0.65} rough={0.35} />
       <PositionsInstanced cells={cells} />
     </group>
   )

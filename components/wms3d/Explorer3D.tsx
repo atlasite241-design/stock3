@@ -14,6 +14,7 @@ import { Boxes, FlaskConical, Maximize2, Minimize2 } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n'
 import { findByCode, useWmsTree } from './data'
 import { cameraFor, computeLayout, focusFor } from './layout'
+import { MAT } from './materials'
 import { checkWebGL, GlErrorBoundary, SupportScreen, type GlSupport } from './SupportGate'
 import { FlyRig, SceneLights } from './SceneCore'
 import ZoneBlocks from './ZoneBlocks'
@@ -169,7 +170,7 @@ export default function Explorer3D({ initialCode, onReady, tree: treeOverride, c
         )}
         <mesh position={[layout.world.x + layout.world.w / 2, -0.06, layout.world.z + layout.world.d / 2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
           <planeGeometry args={[layout.world.w + 60, layout.world.d + 60]} />
-          <meshStandardMaterial color="#0e1019" roughness={0.85} metalness={0.2} />
+          <meshStandardMaterial color={MAT.floor} roughness={0.9} metalness={0.1} />
         </mesh>
 
         {/* Vues par niveau de la hiérarchie */}
@@ -192,27 +193,28 @@ export default function Explorer3D({ initialCode, onReady, tree: treeOverride, c
            La légende est ancrée EN HAUT : en bas, elle était recouverte par la
            bannière « Installer l'application » et les toasts (éléments fixes de
            la page, contre lesquels un z-index local ne peut rien). */}
-      <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-wrap items-start justify-between gap-2">
-        <div className="flex max-w-full flex-col items-start gap-2">
-          <Breadcrumb tree={tree} sel={sel} onNavigate={(s) => { setSel(s); setPanelPos(null) }} />
-          <Legend tree={tree} />
-          {tree.demo && (
-            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-              className="pointer-events-auto flex w-fit items-center gap-1.5 rounded-lg border border-violet-400/30 bg-violet-500/20 px-2.5 py-1 text-[10px] font-bold text-violet-300 backdrop-blur-xl">
-              <FlaskConical className="h-3 w-3" />{t('x3_demo')}
-            </motion.div>
-          )}
-        </div>
-        <div className="pointer-events-auto flex items-start gap-2">
-          <SearchBar onSearch={search} />
-          <button
-            onClick={() => setFull((f) => !f)}
-            title={t(full ? 'x3_exit_fullscreen' : 'x3_fullscreen')}
-            className="rounded-xl border border-white/10 bg-black/50 p-2 text-zinc-300 backdrop-blur-xl transition hover:bg-black/70 hover:text-white"
-          >
-            {full ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-          </button>
-        </div>
+      {/* Deux ancrages INDÉPENDANTS : dans un seul conteneur flex-wrap, la
+          légende (large) renvoyait la recherche à la ligne, donc à gauche. */}
+      <div className="pointer-events-none absolute left-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-col items-start gap-2 sm:max-w-[calc(100%-19rem)]">
+        <Breadcrumb tree={tree} sel={sel} onNavigate={(s) => { setSel(s); setPanelPos(null) }} />
+        <Legend tree={tree} />
+        {tree.demo && (
+          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+            className="pointer-events-auto flex w-fit items-center gap-1.5 rounded-lg border border-violet-400/30 bg-violet-500/20 px-2.5 py-1 text-[10px] font-bold text-violet-300 backdrop-blur-xl">
+            <FlaskConical className="h-3 w-3" />{t('x3_demo')}
+          </motion.div>
+        )}
+      </div>
+
+      <div className="pointer-events-auto absolute right-3 top-3 z-10 flex items-start gap-2">
+        <SearchBar onSearch={search} />
+        <button
+          onClick={() => setFull((f) => !f)}
+          title={t(full ? 'x3_exit_fullscreen' : 'x3_fullscreen')}
+          className="shrink-0 rounded-xl border border-white/10 bg-black/50 p-2 text-zinc-300 backdrop-blur-xl transition hover:bg-black/70 hover:text-white"
+        >
+          {full ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+        </button>
       </div>
 
       {/* La mini-carte reste en bas à droite : la bannière d'installation est
