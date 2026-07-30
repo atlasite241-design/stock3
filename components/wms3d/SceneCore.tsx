@@ -114,7 +114,8 @@ export function GlowBox({
         roughness={0.38}
         metalness={0.15}
       />
-      {!ghost && <Edges scale={radiusTop ? 1.0001 : 1.001} color={hover || active ? '#fbbf24' : '#00000035'} />}
+      {/* THREE.Color n'accepte pas l'alpha en hex : couleur opaque + opacité du matériau. */}
+      {!ghost && <Edges scale={radiusTop ? 1.0001 : 1.001} color={hover || active ? '#fbbf24' : '#1f2937'} />}
     </mesh>
   )
 }

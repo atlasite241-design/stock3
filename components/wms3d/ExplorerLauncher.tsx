@@ -22,7 +22,9 @@ import { useLanguage } from '@/lib/i18n'
 
 const Explorer3D = dynamic(() => import('./Explorer3D'), { ssr: false, loading: () => <Loader /> })
 
-const FLAG = 'dp_x3_crash'
+// Le suffixe est versionné : après un correctif du moteur 3D, les témoins
+// laissés par l'ancienne version ne doivent plus bloquer le lancement.
+const FLAG = 'dp_x3_crash_r19'
 const shellClass =
   'relative flex h-[calc(100dvh-180px)] min-h-[480px] flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#0b0b12] to-[#12121d] p-8 text-center shadow-2xl'
 

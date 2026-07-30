@@ -8,11 +8,6 @@ const nextConfig = {
     root: __dirname,
   },
   outputFileTracingRoot: path.join(__dirname),
-  // drei est un « barrel » : sans ceci, tout drei (three-mesh-bvh, etc.)
-  // part dans le chunk de l'explorateur 3D. On ne garde que les modules utilisés.
-  experimental: {
-    optimizePackageImports: ['@react-three/drei'],
-  },
 }
 
 module.exports = nextConfig

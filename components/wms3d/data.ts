@@ -137,16 +137,25 @@ function buildDemoTree(): WmsTree {
   return { zones, demo: true, flat }
 }
 
+// L'arbre de démonstration est statique : on le construit UNE fois par session
+// (sinon chaque rendu ré-allouait ~5 000 nœuds → mémoire qui grimpe).
+let demoCache: WmsTree | null = null
+const getDemoTree = (): WmsTree => (demoCache ??= buildDemoTree())
+
 /** Arbre WMS (réel, sinon démo) mémoïsé. */
 export function useWmsTree(): WmsTree {
   const d = useDroguerie()
+  // Les collections du store changent d'identité à chaque rendu du provider :
+  // on ne recalcule que si leur TAILLE change (la structure d'emplacements est
+  // stable pendant l'exploration), sinon la 3D reconstruirait tout en boucle.
+  const sig = `${d.ready ? 1 : 0}|${d.activeStoreId}|${d.zones.length}.${d.allees.length}.${d.rayons.length}.${d.etageres.length}.${d.niveaux.length}.${d.positions.length}|${d.products.length}|${d.depots.length}.${d.stores.length}`
   return useMemo(() => {
     const hasStructure = d.positions.some((p) => p.storeId === d.activeStoreId)
     const real = hasStructure ? buildRealTree(d) : null
     if (real && real.flat.length > 0) return real
-    return buildDemoTree()
+    return getDemoTree()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [d.ready, d.activeStoreId, d.zones, d.allees, d.rayons, d.etageres, d.niveaux, d.positions, d.products, d.depots, d.stores])
+  }, [sig])
 }
 
 /** Recherche d'un emplacement par code (complet ou suffixe). */
