@@ -9,15 +9,15 @@ import AppShell from '@/components/AppShell'
 import Loader from '@/components/Loader'
 import { useLanguage } from '@/lib/i18n'
 
-// Le canvas 3D (three.js) n'est chargé que côté client, et uniquement sur
-// cette route (import dynamique → n'alourdit pas le reste de l'app).
-const Explorer3D = dynamic(() => import('@/components/wms3d/Explorer3D'), { ssr: false, loading: () => <Loader /> })
+// Le lanceur décide s'il faut monter la 3D (et n'importe three.js qu'à ce
+// moment-là) : la page reste saine même si le rendu 3D fait tomber l'onglet.
+const ExplorerLauncher = dynamic(() => import('@/components/wms3d/ExplorerLauncher'), { ssr: false, loading: () => <Loader /> })
 
 // useSearchParams doit vivre sous <Suspense> (App Router).
 function ExplorerWithCode() {
   const params = useSearchParams()
   const code = params.get('code') ?? undefined
-  return <Explorer3D initialCode={code} />
+  return <ExplorerLauncher initialCode={code} />
 }
 
 export default function ExplorateurPage() {

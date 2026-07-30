@@ -24,7 +24,7 @@ import NiveauPlanks from './NiveauPlanks'
 import { Breadcrumb, DetailPanel, Legend, MiniMap, SearchBar } from './Overlays'
 import { levelOf, type PosNode, type Sel } from './types'
 
-export default function Explorer3D({ initialCode }: { initialCode?: string }) {
+export default function Explorer3D({ initialCode, onReady }: { initialCode?: string; onReady?: () => void }) {
   const { t } = useLanguage()
   const tree = useWmsTree()
   const layout = useMemo(() => computeLayout(tree), [tree])
@@ -137,6 +137,7 @@ export default function Explorer3D({ initialCode }: { initialCode?: string }) {
         dpr={liteMode ? 1 : [1, 1.5]}
         gl={{ powerPreference: 'high-performance', antialias: !liteMode, failIfMajorPerformanceCaveat: false }}
         camera={{ position: goal.pos, fov: 46, near: 0.1, far: 600 }}
+        onCreated={() => onReady?.()}
         onPointerMissed={() => { if (panelPos) setPanelPos(null); else goUp() }}
       >
         <color attach="background" args={['#0b0b12']} />
@@ -144,17 +145,20 @@ export default function Explorer3D({ initialCode }: { initialCode?: string }) {
         <SceneLights world={layout.world} />
         <FlyRig goal={goal} maxDist={maxDist} />
 
-        {/* Sol */}
-        <Grid
-          position={[layout.world.x + layout.world.w / 2, -0.01, layout.world.z + layout.world.d / 2]}
-          args={[layout.world.w + 40, layout.world.d + 40]}
-          cellSize={1}
-          cellColor="#1e293b"
-          sectionSize={5}
-          sectionColor="#334155"
-          fadeDistance={maxDist * 0.8}
-          fadeStrength={1.5}
-        />
+        {/* Sol — la grille drei est un shader (dérivées) que certains vieux
+            pilotes digèrent mal : on l'omet en mode allégé. */}
+        {!liteMode && (
+          <Grid
+            position={[layout.world.x + layout.world.w / 2, -0.01, layout.world.z + layout.world.d / 2]}
+            args={[layout.world.w + 40, layout.world.d + 40]}
+            cellSize={1}
+            cellColor="#1e293b"
+            sectionSize={5}
+            sectionColor="#334155"
+            fadeDistance={maxDist * 0.8}
+            fadeStrength={1.5}
+          />
+        )}
         <mesh position={[layout.world.x + layout.world.w / 2, -0.06, layout.world.z + layout.world.d / 2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
           <planeGeometry args={[layout.world.w + 60, layout.world.d + 60]} />
           <meshStandardMaterial color="#0e1019" roughness={0.85} metalness={0.2} />
