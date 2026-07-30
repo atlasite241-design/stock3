@@ -14,6 +14,7 @@ import { Boxes, FlaskConical, Maximize2, Minimize2 } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n'
 import { findByCode, useWmsTree } from './data'
 import { cameraFor, computeLayout, focusFor } from './layout'
+import { checkWebGL, GlErrorBoundary, SupportScreen, type GlSupport } from './SupportGate'
 import { FlyRig, SceneLights } from './SceneCore'
 import ZoneBlocks from './ZoneBlocks'
 import AlleeRacks from './AlleeRacks'
@@ -33,6 +34,15 @@ export default function Explorer3D({ initialCode }: { initialCode?: string }) {
   const [pulseId, setPulseId] = useState<string | null>(null)
   const [full, setFull] = useState(false)
   const pulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Support WebGL : sondé au montage ; rendu logiciel = écran d'avertissement
+  // (le forcer reste possible, en qualité minimale).
+  const [gl, setGl] = useState<GlSupport | null>(null)
+  const [forceSoft, setForceSoft] = useState(false)
+  useEffect(() => { setGl(checkWebGL()) }, [])
+  const softMode = gl?.soft ?? false
+  // Mode allégé : rendu logiciel forcé OU vieux GPU Intel (drivers fragiles).
+  const liteMode = softMode || (gl?.lite ?? false)
 
   const lvl = levelOf(sel)
   const focus = useMemo(() => focusFor(sel, layout), [sel, layout])
@@ -94,13 +104,38 @@ export default function Explorer3D({ initialCode }: { initialCode?: string }) {
 
   const hintKey = (`x3_hint_${lvl}`) as Parameters<typeof t>[0]
 
+  // --- Garde d'entrée : WebGL absent ou logiciel ---
+  if (gl && !gl.ok) {
+    return (
+      <div className="relative h-[calc(100dvh-180px)] min-h-[480px] overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#0b0b12] to-[#12121d] shadow-2xl">
+        <SupportScreen title={t('x3_no_webgl_title')} desc={t('x3_no_webgl_desc')} detail={gl.renderer} />
+      </div>
+    )
+  }
+  if (gl && gl.soft && !forceSoft) {
+    return (
+      <div className="relative h-[calc(100dvh-180px)] min-h-[480px] overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#0b0b12] to-[#12121d] shadow-2xl">
+        <SupportScreen
+          title={t('x3_soft_title')}
+          desc={t('x3_soft_desc')}
+          detail={gl.renderer}
+          actionLabel={t('x3_try_anyway')}
+          onAction={() => setForceSoft(true)}
+        />
+      </div>
+    )
+  }
+  if (!gl) return null
+
   return (
     <div className={`overflow-hidden border border-white/10 bg-gradient-to-b from-[#0b0b12] to-[#12121d] shadow-2xl ${
       full ? 'fixed inset-0 z-[120] rounded-none' : 'relative h-[calc(100dvh-180px)] min-h-[480px] rounded-2xl'
     }`}>
+      <GlErrorBoundary title={t('x3_error_title')} reloadLabel={t('x3_reload')}>
       <Canvas
-        shadows
-        dpr={[1, 2]}
+        shadows={!liteMode}
+        dpr={liteMode ? 1 : [1, 1.5]}
+        gl={{ powerPreference: 'high-performance', antialias: !liteMode, failIfMajorPerformanceCaveat: false }}
         camera={{ position: goal.pos, fov: 46, near: 0.1, far: 600 }}
         onPointerMissed={() => { if (panelPos) setPanelPos(null); else goUp() }}
       >
@@ -139,6 +174,7 @@ export default function Explorer3D({ initialCode }: { initialCode?: string }) {
           pulseId={pulseId}
         />
       </Canvas>
+      </GlErrorBoundary>
 
       {/* ---- Overlays ---- */}
       <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-wrap items-start justify-between gap-2">

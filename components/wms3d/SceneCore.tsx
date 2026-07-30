@@ -198,7 +198,7 @@ export function SceneLights({ world }: { world: { x: number; z: number; w: numbe
         position={[cx + span * 0.4, span * 0.8 + 6, cz + span * 0.35]}
         intensity={1.15}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[1024, 1024]}
         shadow-bias={-0.0004}
         shadow-camera-left={-span * 0.75}
         shadow-camera-right={span * 0.75}
