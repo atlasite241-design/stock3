@@ -1,6 +1,6 @@
 'use client'
 
-import { turso, tursoConfigured } from './turso'
+import { apiAll, apiCounts, apiPull, apiUpsert, syncStatus, UPSERT_LIMIT, type UpsertRow } from './sync-api'
 import { storageGet, storageSet } from './pstore'
 
 /**
@@ -58,21 +58,14 @@ export const COLLECTIONS: Collection[] = [
 const KEY_TO_COL = new Map(COLLECTIONS.map((c) => [c.key, c]))
 const COL_BY_NAME = new Map(COLLECTIONS.map((c) => [c.collection, c]))
 
-const UPSERT = `INSERT INTO records (collection, id, store_id, data, updated_at, deleted)
-VALUES (?, ?, ?, ?, ?, 0)
-ON CONFLICT(collection, id) DO UPDATE SET
-  store_id = excluded.store_id, data = excluded.data,
-  updated_at = excluded.updated_at, deleted = 0`
-
-type Stmt = { sql: string; args: (string | number | null)[] }
 type Row = Record<string, unknown> & { id?: string; storeId?: string }
 
-function upsertStmt(collection: string, id: string, storeId: string | null, data: unknown, now: number): Stmt {
-  return { sql: UPSERT, args: [collection, id, storeId, JSON.stringify(data), now] }
+function upsertStmt(collection: string, id: string, storeId: string | null, data: unknown, now: number): UpsertRow {
+  return { collection, id, storeId, data: JSON.stringify(data), updated_at: now }
 }
 
-function upsertStmtRaw(collection: string, id: string, storeId: string | null, data: string, now: number): Stmt {
-  return { sql: UPSERT, args: [collection, id, storeId, data, now] }
+function upsertStmtRaw(collection: string, id: string, storeId: string | null, data: string, now: number): UpsertRow {
+  return { collection, id, storeId, data, updated_at: now }
 }
 
 // Empreinte du dernier état poussé (collection → id → signature courte). Sans elle,
@@ -135,12 +128,11 @@ async function pushOne(c: Collection, now: number): Promise<number> {
   } catch {
     return 0
   }
-  const db = turso()
   let nextSnapshot: Map<string, string> | null = null
   let total = 0
 
   if (c.singleton) {
-    await db.batch([upsertStmt(c.collection, 'global', null, parsed, now)])
+    await apiUpsert([upsertStmt(c.collection, 'global', null, parsed, now)])
     total = 1
   } else if (Array.isArray(parsed)) {
     const prev = pushedSnapshot.get(c.collection)
@@ -148,10 +140,10 @@ async function pushOne(c: Collection, now: number): Promise<number> {
     // Envoi par lots au fil de l'eau : on ne garde jamais plus de 100 requêtes
     // (donc 100 chaînes JSON) en mémoire. Auparavant on matérialisait toutes les
     // requêtes d'un coup → pic mémoire fatal sur un gros import.
-    let batch: Stmt[] = []
+    let batch: UpsertRow[] = []
     const flush = async () => {
       if (batch.length === 0) return
-      await db.batch(batch)
+      await apiUpsert(batch)
       total += batch.length
       batch = []
     }
@@ -162,7 +154,7 @@ async function pushOne(c: Collection, now: number): Promise<number> {
       nextSnapshot.set(rec.id, s)
       if (prev && prev.get(rec.id) === s) continue // inchangé depuis le dernier envoi
       batch.push(upsertStmtRaw(c.collection, rec.id, rec.storeId ?? null, data, now))
-      if (batch.length >= 100) await flush()
+      if (batch.length >= UPSERT_LIMIT) await flush()
     }
     await flush()
   }
@@ -188,8 +180,7 @@ export async function pushAll(onProgress?: (collection: string, n: number) => vo
 }
 
 export async function countRemote(): Promise<{ collection: string; n: number }[]> {
-  const db = turso()
-  const r = await db.execute('SELECT collection, COUNT(*) AS n FROM records WHERE deleted = 0 GROUP BY collection ORDER BY collection')
+  const r = await apiCounts()
   return r.rows.map((row) => ({ collection: String(row.collection), n: Number(row.n) }))
 }
 
@@ -249,6 +240,16 @@ async function flushOne(c: Collection) {
     syncState.lastError = msg
     pushLog(`✗ échec ${c.collection}: ${msg}`)
   }
+}
+
+// La configuration de la synchro n'est plus lisible depuis le navigateur (le
+// token vit côté serveur) : on interroge /api/sync une fois et on mémorise.
+let configured = true
+export function tursoConfigured(): boolean { return configured }
+export async function refreshSyncConfig(): Promise<boolean> {
+  const st = await syncStatus()
+  configured = st.configured
+  return configured
 }
 
 /** Réessaie toutes les collections en attente (au démarrage / à la reconnexion). */
@@ -316,7 +317,6 @@ export async function pull(): Promise<void> {
 }
 
 async function pullInner(): Promise<void> {
-  const db = turso()
   const since0 = getCursor()
   let since = since0
   let maxTs = since0
@@ -327,10 +327,7 @@ async function pullInner(): Promise<void> {
   // produits (~15 Mo : JSON.parse + JSON.stringify) une fois par lot, ce qui
   // figeait l'onglet plusieurs secondes (« Page ne répondant pas »).
   for (let batch = 0; batch < 200; batch++) {
-    const res = await db.execute({
-      sql: 'SELECT collection, id, data, updated_at, deleted FROM records WHERE updated_at > ? ORDER BY updated_at ASC LIMIT 1000',
-      args: [since],
-    })
+    const res = await apiPull(since)
     if (res.rows.length === 0) break
     for (const r of res.rows as unknown as RemoteRow[]) {
       maxTs = Math.max(maxTs, Number(r.updated_at))
@@ -338,7 +335,7 @@ async function pullInner(): Promise<void> {
       list.push(r)
       byCol.set(r.collection, list)
     }
-    if (res.rows.length < 1000) break
+    if (res.rows.length < res.page) break
     since = maxTs
   }
   if (byCol.size === 0) return
@@ -406,13 +403,29 @@ async function pullInner(): Promise<void> {
  * horodatage non-unique) qui « sautait » des enregistrements. Utile après un import
  * côté serveur ou l'ajout d'une nouvelle collection.
  */
+/**
+ * Télécharge TOUTE la base par pages (curseur rowid). La pagination est
+ * imposée par la passerelle serveur : une réponse de fonction serverless est
+ * plafonnée, un SELECT complet de 100 000 lignes ne passerait pas.
+ */
+async function fetchAllRows(): Promise<{ collection: string; id: string; data: string; updated_at: number }[]> {
+  const out: { collection: string; id: string; data: string; updated_at: number }[] = []
+  let after = 0
+  for (let page = 0; page < 5000; page++) {
+    const res = await apiAll(after)
+    out.push(...res.rows)
+    if (res.rows.length < res.page) break
+    after = res.cursor
+  }
+  return out
+}
+
 export async function resyncFromStart(): Promise<number> {
-  const db = turso()
-  const res = await db.execute('SELECT collection, id, data, updated_at FROM records WHERE deleted = 0')
+  const rows = await fetchAllRows()
 
   let maxTs = 0
   const byCol = new Map<string, { data: string }[]>()
-  for (const r of res.rows as unknown as (RemoteRow & { updated_at: number })[]) {
+  for (const r of rows) {
     maxTs = Math.max(maxTs, Number(r.updated_at))
     const list = byCol.get(String(r.collection)) ?? []
     list.push({ data: String(r.data) })
@@ -457,15 +470,14 @@ export async function resyncFromStart(): Promise<number> {
  * est vide (première installation → on laissera le seed s'exécuter).
  */
 export async function bootstrapFromRemote(): Promise<boolean> {
-  const db = turso()
-  const res = await db.execute('SELECT collection, id, data, updated_at FROM records WHERE deleted = 0')
-  if (res.rows.length === 0) return false
+  const rows = await fetchAllRows()
+  if (rows.length === 0) return false
 
   const byKey = new Map<string, unknown[]>()
   const singles = new Map<string, string>()
   const snaps = new Map<string, Map<string, string>>() // collection -> empreinte
   let maxTs = 0
-  for (const r of res.rows as unknown as (RemoteRow & { updated_at: number })[]) {
+  for (const r of rows) {
     maxTs = Math.max(maxTs, Number(r.updated_at))
     const c = COL_BY_NAME.get(String(r.collection))
     if (!c) continue
@@ -488,7 +500,7 @@ export async function bootstrapFromRemote(): Promise<boolean> {
   // Empreinte reconstruite = pas de re-push complet après l'amorçage.
   for (const [collection, snap] of snaps) { pushedSnapshot.set(collection, snap); saveSnapshot(collection) }
   setCursor(maxTs)
-  pushLog(`⇣ amorçage depuis Turso : ${res.rows.length} enregistrements`)
+  pushLog(`⇣ amorçage depuis le serveur : ${rows.length} enregistrements`)
   return true
 }
 
@@ -506,8 +518,10 @@ function localProductsEmpty(): boolean {
 }
 
 export function startSync() {
-  if (syncState.started || typeof window === 'undefined' || !tursoConfigured()) return
+  if (syncState.started || typeof window === 'undefined') return
   syncState.started = true
+  // Confirme auprès du serveur que la synchro est configurée (sans bloquer).
+  void refreshSyncConfig()
 
   // Empreinte anti-re-push : on charge celle de la session précédente. Pour les
   // collections sans empreinte (1re fois après cette mise à jour), on l'initialise

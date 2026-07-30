@@ -4,7 +4,9 @@ import 'server-only'
 // Utilise le token serveur (TURSO_AUTH_TOKEN) — jamais exposé au navigateur.
 // On passe par HTTPS (et non le protocole libsql) pour une portée réseau maximale.
 
-type Arg = { type: 'text' | 'integer'; value: string }
+// `null` n'a pas de champ `value` dans le protocole Turso : store_id doit
+// pouvoir rester NULL (une chaîne vide n'a pas la même sémantique).
+type Arg = { type: 'text' | 'integer'; value: string } | { type: 'null' }
 type Stmt = { sql: string; args?: Arg[] }
 
 function httpBase(): string {

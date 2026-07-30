@@ -24,7 +24,7 @@ import Loader from '@/components/Loader'
 import { useAuth } from '@/lib/auth-context'
 import { hashSecret, verifySecret } from '@/lib/auth'
 import { useDroguerie, type AppUser } from '@/lib/store'
-import { turso, tursoConfigured } from '@/lib/turso'
+import { fetchPublicUsers } from '@/lib/sync-api'
 import { useLanguage, type TKey } from '@/lib/i18n'
 
 const REMEMBER_KEY = 'dp_remember_user'
@@ -40,7 +40,7 @@ const ROLE_KEY: Record<AppUser['role'], TKey> = {
 const norm = (s: string) => s.trim().toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ')
 
 export default function LoginPage() {
-  const { ready, session, needsSetup, loginIdentifier, loginPin, establishSession, logout } = useAuth()
+  const { ready, session, needsSetup, loginIdentifier, loginRemote, loginPin, establishSession, logout } = useAuth()
   const { users, updateUser, addUser, bootPhase } = useDroguerie()
   const { t } = useLanguage()
   const router = useRouter()
@@ -50,34 +50,19 @@ export default function LoginPage() {
     if (session) router.replace('/')
   }, [session, router])
 
-  // La page de connexion rafraîchit TOUJOURS les comptes depuis Turso :
-  // évite les utilisateurs locaux périmés qui empêchent la connexion.
+  // Comptes existant CÔTÉ SERVEUR. Deux usages :
+  //  - savoir s'il s'agit d'une toute première installation (aucun compte
+  //    distant) : seul ce cas doit ouvrir l'assistant « Première configuration » ;
+  //  - ne PAS écrire ces comptes en local : la route les renvoie assainis (sans
+  //    empreinte de mot de passe), et les enregistrer ferait croire à
+  //    l'application que plus personne n'a d'identifiant — offrant à n'importe
+  //    qui de redéfinir les accès. La connexion d'un compte inconnu localement
+  //    passe par la vérification serveur (loginRemote).
+  const [remoteAccounts, setRemoteAccounts] = useState<number | null>(null)
   useEffect(() => {
-    if (!tursoConfigured()) return
     ;(async () => {
-      try {
-        const db = turso()
-        const res = await db.execute("SELECT data FROM records WHERE collection='users' AND deleted=0")
-        if (res.rows.length === 0) return
-        type U = { id?: string }
-        const remote: U[] = []
-        for (const row of res.rows) {
-          try {
-            remote.push(JSON.parse(String(row.data)))
-          } catch {}
-        }
-        if (remote.length === 0) return
-        let local: U[] = []
-        try {
-          local = JSON.parse(localStorage.getItem('dp_users') || '[]')
-        } catch {}
-        const ids = new Set(remote.map((u) => u.id))
-        const merged = [...remote, ...local.filter((u) => u.id && !ids.has(u.id))]
-        localStorage.setItem('dp_users', JSON.stringify(merged))
-        window.dispatchEvent(new CustomEvent('droguerie-sync-pull'))
-      } catch {
-        /* hors-ligne : on garde les comptes locaux */
-      }
+      const remote = await fetchPublicUsers()
+      setRemoteAccounts(remote.filter((u) => u.active).length)
     })()
   }, [])
 
@@ -120,7 +105,7 @@ export default function LoginPage() {
           </span>
         </div>
 
-        {needsSetup ? (
+        {needsSetup && remoteAccounts === 0 ? (
           <SetupForm users={users} updateUser={updateUser} establishSession={establishSession} />
         ) : (
           <LoginForm
@@ -129,6 +114,7 @@ export default function LoginPage() {
             updateUser={updateUser}
             establishSession={establishSession}
             loginIdentifier={loginIdentifier}
+            loginRemote={loginRemote}
             loginPin={loginPin}
             onFullReset={() => setResetOpen(true)}
           />
@@ -200,6 +186,7 @@ function LoginForm({
   updateUser,
   establishSession,
   loginIdentifier,
+  loginRemote,
   loginPin,
   onFullReset,
 }: {
@@ -208,6 +195,7 @@ function LoginForm({
   updateUser: ReturnType<typeof useDroguerie>['updateUser']
   establishSession: (u: AppUser) => void
   loginIdentifier: (id: string, p: string) => { ok: boolean }
+  loginRemote: (id: string, p: string) => Promise<{ ok: boolean }>
   loginPin: (id: string, pin: string) => { ok: boolean }
   onFullReset: () => void
 }) {
@@ -253,21 +241,11 @@ function LoginForm({
   // Polling temps réel : tant que la demande est en attente, on interroge
   // Turso toutes les 3 s pour détecter l'approbation par l'administrateur.
   useEffect(() => {
-    if (mode !== 'pending' || !pendingName || !tursoConfigured()) return
+    if (mode !== 'pending' || !pendingName) return
     const id = setInterval(async () => {
       try {
-        const db = turso()
-        const res = await db.execute("SELECT data FROM records WHERE collection='users' AND deleted=0")
-        let found: AppUser | null = null
-        for (const row of res.rows) {
-          try {
-            const u = JSON.parse(String(row.data)) as AppUser
-            if (norm(u.name) === norm(pendingName)) {
-              found = u
-              break
-            }
-          } catch {}
-        }
+        const remote = await fetchPublicUsers()
+        const found = (remote.find((u) => norm(u.name) === norm(pendingName)) ?? null) as AppUser | null
         if (found && found.active && !found.pendingApproval) {
           // Approuvé → synchronise la liste locale puis affiche la célébration.
           try {
@@ -288,7 +266,7 @@ function LoginForm({
     return () => clearInterval(id)
   }, [mode, pendingName])
 
-  const submitPassword = () => {
+  const submitPassword = async () => {
     setError('')
     setNotice('')
     const id = norm(identifier)
@@ -299,9 +277,15 @@ function LoginForm({
       setMode('pending')
       return
     }
+    // 1) Vérification locale (fonctionne hors-ligne).
+    // 2) Sinon vérification par le SERVEUR : appareil neuf, compte jamais
+    //    synchronisé localement — c'est le cas normal d'une première connexion.
     if (!loginIdentifier(identifier, pw).ok) {
-      setError(t('auth_bad_credentials'))
-      return
+      const remote = await loginRemote(identifier, pw)
+      if (!remote.ok) {
+        setError(t('auth_bad_credentials'))
+        return
+      }
     }
     try {
       if (remember) localStorage.setItem(REMEMBER_KEY, identifier)

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { countRemote, localCounts, pushAll, resyncFromStart, syncState } from '@/lib/sync'
-import { tursoConfigured } from '@/lib/turso'
+import { tursoConfigured } from '@/lib/sync'
 import { useDroguerie } from '@/lib/store'
 
 export default function SyncPage() {

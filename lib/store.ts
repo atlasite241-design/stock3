@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { bootstrapFromRemote, startSync, syncOnSave } from './sync'
-import { tursoConfigured } from './turso'
+import { syncStatus } from './sync-api'
 import { getSession } from './auth'
 import {
   PRODUCTS_KEY,
@@ -1067,8 +1067,39 @@ function iso(daysAgo: number, h = 10, m = 0) {
   return d.toISOString()
 }
 
+/**
+ * Jeu de démonstration. DÉSACTIVÉ par défaut : en production, un appareil neuf
+ * doit démarrer VIDE et passer par l'assistant de configuration — jamais avec
+ * des ventes, clients ou produits fictifs risquant d'être pris pour du réel.
+ * Réactivable pour une démonstration commerciale : NEXT_PUBLIC_DEMO_DATA=1.
+ */
+export const DEMO_DATA = process.env.NEXT_PUBLIC_DEMO_DATA === '1'
+
+// Collections transactionnelles : vides au premier lancement en production.
+const EMPTY_ON_FIRST_RUN = [
+  'sales', 'clients', 'clientPayments', 'credits', 'loyalty', 'suppliers',
+  'supplierPayments', 'expenses', 'purchases', 'movements', 'quotes',
+  'returns', 'transfers', 'activity', 'sessions',
+] as const
+
 export function ensureSeeded() {
   if (typeof window === 'undefined') return
+
+  // Production : on pose des collections VIDES avant les blocs de démonstration
+  // ci-dessous ; ceux-ci ne s'exécutent que si la clé est absente, donc ils sont
+  // naturellement ignorés. Aucun autre code n'a besoin d'être modifié.
+  if (!DEMO_DATA) {
+    for (const name of EMPTY_ON_FIRST_RUN) {
+      const key = (K as unknown as Record<string, string>)[name]
+      if (key && !localStorage.getItem(key)) save(key, [])
+    }
+    if (!storageGet(K.products)) save(K.products, [])
+    if (!localStorage.getItem(K.users)) {
+      // Un seul compte administrateur SANS identifiant : l'assistant de
+      // configuration demandera de définir mot de passe et code PIN.
+      save(K.users, [{ id: 'u1', name: 'Administrateur', phone: '', role: 'Administrateur', active: true }] satisfies AppUser[])
+    }
+  }
 
   if (!storageGet(K.products)) {
     save(K.products, seedProducts.map((p, i) => ({ ...p, id: `p${i + 1}` })))
@@ -1647,7 +1678,9 @@ export function useDroguerieState() {
       // (sinon l'appareil re-pousserait son ancien catalogue et regonflerait la
       // nouvelle base). Automatique et sûr pour TOUS les appareils.
       try {
-        const dbId = process.env.NEXT_PUBLIC_TURSO_DATABASE_URL || ''
+        // L'URL de la base n'est plus connue du navigateur : le serveur renvoie
+        // une EMPREINTE stable, suffisante pour détecter un changement de base.
+        const dbId = (await syncStatus()).dbId
         if (dbId) {
           const stored = localStorage.getItem('dp_db_id')
           const localHasData = !!storageGet(K.products) || !!localStorage.getItem(K.stores)
@@ -1667,16 +1700,18 @@ export function useDroguerieState() {
         }
       } catch { /* ignore : au pire on garde l'ancien local */ }
 
-      // Appareil neuf (aucune donnée locale) + Turso configuré → rapatrier les vraies
-      // données au lieu de générer des données de démo divergentes.
+      // Appareil neuf : on tente de rapatrier les vraies données. L'appel exige
+      // une session serveur — au tout premier lancement il échoue (personne n'est
+      // encore connecté) et l'app démarre VIDE ; la synchro hydratera l'appareil
+      // juste après la connexion. C'est le comportement voulu en production.
       const fresh = !storageGet(K.products) && !localStorage.getItem(K.stores)
-      if (fresh && tursoConfigured()) {
+      if (fresh) {
         try {
           mark('bootstrap', 'Première synchronisation…')
           const hadRemote = await bootstrapFromRemote()
           if (!hadRemote) ensureSeeded()
         } catch {
-          ensureSeeded() // hors-ligne : on démarre avec le jeu de démo local
+          ensureSeeded() // pas de session / hors-ligne : démarrage local
         }
       } else {
         ensureSeeded()

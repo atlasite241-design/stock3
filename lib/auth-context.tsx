@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { clearSession, getSession, makeSession, setSession, verifySecret, type Session } from './auth'
 import { useDroguerie, type AppUser } from './store'
+import { serverLogin, serverLogout } from './sync-api'
 
 interface AuthValue {
   ready: boolean
@@ -11,6 +12,8 @@ interface AuthValue {
   needsSetup: boolean
   loginPassword: (email: string, password: string) => { ok: boolean }
   loginIdentifier: (identifier: string, password: string) => { ok: boolean }
+  /** Vérification par le serveur (appareil neuf, compte absent en local). */
+  loginRemote: (identifier: string, password: string) => Promise<{ ok: boolean }>
   loginPin: (userId: string, pin: string) => { ok: boolean }
   establishSession: (user: AppUser) => void
   logout: () => void
@@ -23,6 +26,7 @@ const AuthContext = createContext<AuthValue>({
   needsSetup: false,
   loginPassword: () => ({ ok: false }),
   loginIdentifier: () => ({ ok: false }),
+  loginRemote: async () => ({ ok: false }),
   loginPin: () => ({ ok: false }),
   establishSession: () => {},
   logout: () => {},
@@ -38,17 +42,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setChecked(true)
   }, [])
 
-  const loginWith = (u: AppUser | undefined | null, secret: string, stored?: string) => {
+  const loginWith = (u: AppUser | undefined | null, secret: string, stored?: string, identifier?: string) => {
     if (!u || !u.active || !verifySecret(secret, stored)) return { ok: false }
     const s = makeSession(u)
     setSession(s)
     setSessionState(s)
+    // Ouvre AUSSI la session serveur : c'est elle qui autorise la synchro
+    // (le navigateur n'a plus d'accès direct à la base). En cas d'échec réseau,
+    // l'application reste utilisable hors-ligne et la synchro reprendra ensuite.
+    void serverLogin(identifier ?? u.email ?? u.name ?? '', secret)
     return { ok: true }
   }
 
   const loginPassword = (email: string, password: string) => {
     const u = users.find((x) => x.active && x.email && x.email.toLowerCase() === email.trim().toLowerCase())
-    return loginWith(u, password, u?.passwordHash)
+    return loginWith(u, password, u?.passwordHash, email)
   }
 
   // Connexion par identifiant : email OU nom d'utilisateur.
@@ -67,7 +75,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const starts = users.filter((x) => x.active && x.name && norm(x.name).startsWith(id + ' '))
       if (starts.length === 1) u = starts[0]
     }
-    return loginWith(u, password, u?.passwordHash)
+    return loginWith(u, password, u?.passwordHash, identifier)
+  }
+
+  /**
+   * Repli SERVEUR : sur un appareil neuf, la liste locale d'utilisateurs est
+   * vide (plus de données de démo, et la base n'est plus lisible sans session).
+   * Le serveur vérifie alors les identifiants et renvoie le compte, qu'on met en
+   * cache pour permettre les connexions hors-ligne suivantes.
+   */
+  const loginRemote = async (identifier: string, password: string): Promise<{ ok: boolean }> => {
+    const r = await serverLogin(identifier, password)
+    if (!r.ok || !r.user) return { ok: false }
+    const u = r.user as unknown as AppUser
+    try {
+      const local: AppUser[] = JSON.parse(localStorage.getItem('dp_users') || '[]')
+      const next = local.some((x) => x.id === u.id) ? local.map((x) => (x.id === u.id ? u : x)) : [u, ...local]
+      localStorage.setItem('dp_users', JSON.stringify(next))
+      window.dispatchEvent(new CustomEvent('droguerie-sync-pull'))
+    } catch { /* stockage indisponible : la session fonctionne quand même */ }
+    const s = makeSession(u)
+    setSession(s)
+    setSessionState(s)
+    return { ok: true }
   }
 
   const loginPin = (userId: string, pin: string) => {
@@ -88,6 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     clearSession()
     setSessionState(null)
+    void serverLogout()
   }
 
   const currentUser = session ? users.find((u) => u.id === session.userId) ?? null : null
@@ -96,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const needsSetup = dataReady && activeUsers.length > 0 && activeUsers.every((u) => !u.passwordHash && !u.pinHash)
 
   return (
-    <AuthContext.Provider value={{ ready: dataReady && checked, session, currentUser, needsSetup, loginPassword, loginIdentifier, loginPin, establishSession, logout }}>
+    <AuthContext.Provider value={{ ready: dataReady && checked, session, currentUser, needsSetup, loginPassword, loginIdentifier, loginRemote, loginPin, establishSession, logout }}>
       {children}
     </AuthContext.Provider>
   )
