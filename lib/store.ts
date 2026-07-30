@@ -1808,6 +1808,51 @@ export function useDroguerieState() {
     if (prev) logActivity(`Emplacement modifié : ${prev.name}`, { target: prev.name, oldValue: prev.emplacementComplet || '—', newValue: patch.emplacementComplet || '—' })
   }
 
+  /**
+   * Affecte en masse des produits à des positions (assistant d'affectation du
+   * catalogue). UNE SEULE écriture pour tout le lot, quel que soit le nombre de
+   * produits — le rangement d'un catalogue entier ne doit pas générer des
+   * milliers d'écritures de synchro.
+   *
+   * `rows` porte l'identifiant de position ET le chemin complet déjà résolu,
+   * pour éviter de re-parcourir la hiérarchie ici.
+   */
+  const bulkAssignLocations = (
+    rows: { productId: string; zoneId: string; alleeId: string; rayonId: string; etagereId: string; niveauId: string; positionId: string; emplacementComplet: string }[]
+  ): number => {
+    if (rows.length === 0) return 0
+    const byId = new Map(rows.map((r) => [r.productId, r]))
+    let n = 0
+    const next = products.map((p) => {
+      const r = byId.get(p.id)
+      if (!r) return p
+      n++
+      return {
+        ...p,
+        zoneId: r.zoneId, alleeId: r.alleeId, rayonId: r.rayonId,
+        etagereId: r.etagereId, niveauId: r.niveauId, positionId: r.positionId,
+        emplacementComplet: r.emplacementComplet,
+      }
+    })
+    persistProducts(next)
+    logActivity(`Affectation du catalogue : ${n} produits rangés`)
+    return n
+  }
+
+  /** Retire l'emplacement des produits d'un magasin (annulation d'affectation). */
+  const clearProductLocations = (storeId: string): number => {
+    let n = 0
+    const next = products.map((p) => {
+      if ((p.storeId && p.storeId !== storeId) || !p.emplacementComplet) return p
+      n++
+      const { zoneId, alleeId, rayonId, etagereId, niveauId, positionId, emplacementComplet, ...rest } = p
+      void zoneId; void alleeId; void rayonId; void etagereId; void niveauId; void positionId; void emplacementComplet
+      return rest as Product
+    })
+    if (n > 0) { persistProducts(next); logActivity(`Emplacements retirés de ${n} produits`) }
+    return n
+  }
+
   const deleteProduct = (id: string) => {
     const p = products.find((x) => x.id === id)
     persistProducts(products.filter((x) => x.id !== id))
@@ -3274,6 +3319,7 @@ export function useDroguerieState() {
     zones, allees, rayons, etageres, niveaux, positions, emplacements,
     addZone, updateZone, deleteZone, seedDefaultZones, bulkAddZones,
     addAllee, updateAllee, deleteAllee, seedZoneAllees, generateSubStructure, bulkAddLocations, commitStructureTree,
+    bulkAssignLocations, clearProductLocations,
     addRayon, updateRayon, deleteRayon,
     addEtagere, updateEtagere, deleteEtagere,
     addNiveau, updateNiveau, deleteNiveau,

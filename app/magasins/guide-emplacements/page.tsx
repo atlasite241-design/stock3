@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Boxes, Info, Layers, MousePointerClick, Printer, Sparkles, Wand2 } from 'lucide-react'
+import { Boxes, Camera, Info, Layers, MousePointerClick, Printer, Sparkles, Wand2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import { useLanguage } from '@/lib/i18n'
@@ -66,8 +66,23 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    accent: 'border-violet-500', badge: 'bg-violet-500/15 text-violet-600 dark:text-violet-400', icon: Camera,
+    tag: { fr: 'Voie rapide', ar: 'المسار السريع' },
+    title: { fr: 'Depuis des photos, jusqu’au catalogue rangé', ar: 'من الصور حتى كتالوج مرتّب' },
+    intro: { fr: 'La démarche complète pour un magasin neuf : **quelques minutes** au lieu d’une saisie manuelle. Faites-la dans cet ordre — chaque étape a besoin de la précédente.', ar: 'المسار الكامل لمتجر جديد: **بضع دقائق** بدل الإدخال اليدوي. اتبع هذا الترتيب — كل خطوة تحتاج سابقتها.' },
+    steps: [
+      { path: { fr: 'Produits › Importer', ar: 'المنتجات › استيراد' }, desc: { fr: '**D’abord le catalogue.** Importez vos produits avec une **catégorie correcte** sur chaque article : c’est elle qui décidera de la zone de rangement. Sans catégorie, un produit ne pourra pas être rangé automatiquement.', ar: '**الكتالوج أولًا.** استورد منتجاتك مع **فئة صحيحة** لكل صنف: هي التي تحدد منطقة الترتيب. بدون فئة لا يمكن ترتيب المنتج تلقائيًا.' } },
+      { path: { fr: 'Magasins › Magasin depuis photos', ar: 'المتاجر › متجر من الصور' }, desc: { fr: 'Déposez **2 à 6 photos** prises depuis le bout de chaque allée (ou un plan). Une photo large montrant plusieurs rangées vaut mieux qu’un gros plan.', ar: 'أضف **2 إلى 6 صور** مأخوذة من طرف كل ممر (أو مخططًا). صورة واسعة تُظهر عدة صفوف أفضل من لقطة قريبة.' } },
+      { desc: { fr: 'À l’écran **Détections**, renommez les zones proposées pour qu’elles **portent exactement le nom de vos catégories** (« Peinture », « Électricité »…). C’est ce qui rendra l’affectation automatique fiable.', ar: 'في شاشة **الاكتشافات**، أعد تسمية المناطق المقترحة لتحمل **نفس أسماء فئاتك** («الطلاء»، «الكهرباء»…). هذا ما يجعل الربط التلقائي دقيقًا.' } },
+      { desc: { fr: 'À l’écran **Correction**, ajustez le nombre d’**étagères / niveaux / positions**. Repère utile : *positions ≈ nombre de références que vous voulez loger dans la zone*.', ar: 'في شاشة **التعديل**، اضبط عدد **الأرفف / المستويات / المواضع**. قاعدة مفيدة: *المواضع ≈ عدد المراجع المراد وضعها في المنطقة*.' } },
+      { desc: { fr: 'Contrôlez l’**Aperçu 3D**, puis à la **Validation** choisissez « magasin actif » (ou un nouveau magasin) et cliquez **Créer la structure**.', ar: 'راجع **المعاينة ثلاثية الأبعاد**، ثم في **التأكيد** اختر «المتجر النشط» (أو متجرًا جديدًا) واضغط **إنشاء البنية**.' } },
+      { path: { fr: 'Magasins › Affecter le catalogue', ar: 'المتاجر › ربط الكتالوج' }, desc: { fr: '**Le maillon final.** Vérifiez la table **catégorie → zone** (corrigez les lignes « Ignorée »), regardez l’aperçu et les **non rangés**, puis **Appliquer le rangement**. Chaque produit reçoit son code d’emplacement.', ar: '**الحلقة الأخيرة.** تحقّق من جدول **الفئة ← المنطقة** (صحّح أسطر «مُتجاهلة»)، راجع المعاينة و**غير المرتبة**، ثم **طبّق الترتيب**. يحصل كل منتج على رمز موقعه.' } },
+      { path: { fr: 'Magasins › Rapports › Produits mal localisés', ar: 'المتاجر › التقارير › منتجات بموقع خاطئ' }, desc: { fr: 'Contrôle final : la liste doit être **vide**. Puis imprimez les étiquettes d’emplacement (Magasins › Impression) et collez-les sur les rayonnages.', ar: 'التحقق النهائي: يجب أن تكون القائمة **فارغة**. ثم اطبع ملصقات المواقع (المتاجر › الطباعة) والصقها على الرفوف.' } },
+    ],
+  },
+  {
     accent: 'border-cyan-500', badge: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400', icon: Boxes,
-    tag: { fr: 'Dernière étape', ar: 'الخطوة الأخيرة' },
+    tag: { fr: 'Au cas par cas', ar: 'حالة بحالة' },
     title: { fr: 'Affecter un produit à un emplacement', ar: 'ربط منتج بموقع' },
     intro: { fr: 'Créer les emplacements ne suffit pas : il faut **y ranger les produits**.', ar: 'إنشاء المواقع لا يكفي: يجب **ترتيب المنتجات فيها**.' },
     steps: [

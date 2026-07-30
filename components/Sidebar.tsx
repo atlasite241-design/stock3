@@ -182,6 +182,7 @@ const NAV: NavItem[] = [
       { href: '/magasins/emplacements', labelKey: 'nav_stores_emplacements' },
       { href: '/magasins/generateur', labelKey: 'nav_stores_generator' },
       { href: '/magasins/assistant-photos', labelKey: 'nav_stores_photo_wizard' },
+      { href: '/magasins/affectation', labelKey: 'nav_stores_assign' },
       { href: '/magasins/guide-emplacements', labelKey: 'nav_stores_loc_guide' },
       { href: '/magasins/explorateur', labelKey: 'nav_stores_explorer' },
       { href: '/magasins/plan', labelKey: 'nav_stores_plan' },
