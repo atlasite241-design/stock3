@@ -53,13 +53,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Connexion par identifiant : email OU nom d'utilisateur.
   // Comparaison tolérante : casse, points et espaces multiples ignorés
-  // (« yassir a » ≡ « Yassir A. »).
+  // (« yassir a » ≡ « Yassir A. »). À défaut de correspondance exacte, on
+  // accepte le prénom seul (« yassir » → « Yassir A. ») SI un seul compte
+  // actif commence ainsi — sinon on refuse plutôt que de deviner.
   const loginIdentifier = (identifier: string, password: string) => {
     const norm = (s: string) => s.trim().toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ')
     const id = norm(identifier)
-    const u = users.find(
+    if (!id) return { ok: false }
+    let u = users.find(
       (x) => x.active && ((x.email && norm(x.email) === id) || (x.name && norm(x.name) === id))
     )
+    if (!u) {
+      const starts = users.filter((x) => x.active && x.name && norm(x.name).startsWith(id + ' '))
+      if (starts.length === 1) u = starts[0]
+    }
     return loginWith(u, password, u?.passwordHash)
   }
 
