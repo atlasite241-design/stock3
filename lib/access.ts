@@ -89,6 +89,7 @@ export const ROUTE_PERM: Record<string, string> = {
   '/magasins/niveaux': 'loc.view',
   '/magasins/emplacements': 'loc.view',
   '/magasins/generateur': 'loc.create',
+  '/magasins/assistant-photos': 'loc.create',
   '/magasins/explorateur': 'loc.view',
   '/magasins/plan': 'loc.view',
   '/magasins/rangement': 'loc.move',

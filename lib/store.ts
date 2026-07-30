@@ -2881,6 +2881,75 @@ export function useDroguerieState() {
     logActivity(`Structure générée (${total} éléments, ${mode})`, { target: allees.find((a) => a.id === alleeId)?.code })
     return { ok: true, total, counts: c }
   }
+  /**
+   * Écrit d'un coup une arborescence complète Zone → Position (assistant
+   * « magasin à partir de photos »). UNE SEULE écriture par collection, quel
+   * que soit le volume : indispensable pour ne pas exploser le quota de lignes
+   * écrites de la synchro. Les codes de zone déjà présents sont ignorés.
+   */
+  const commitStructureTree = (
+    storeId: string,
+    tree: {
+      code: string; name: string; type?: 'commerciale' | 'logistique'
+      allees: { code: string; name?: string; rayons: { code: string; name?: string; etageres: number; niveaux: number; positions: number }[] }[]
+    }[]
+  ): { ok: boolean; counts: { zones: number; allees: number; rayons: number; etageres: number; niveaux: number; positions: number }; total: number } => {
+    const depotId = depots.find((x) => x.storeId === storeId)?.id
+    const taken = new Set(zones.filter((z) => z.storeId === storeId).map((z) => z.code.toUpperCase()))
+    const base = zones.filter((z) => z.storeId === storeId).length
+
+    const newZ: Zone[] = [], newA: Allee[] = [], newR: Rayon[] = []
+    const newE: Etagere[] = [], newN: Niveau[] = [], newP: Position[] = []
+    const p2 = (n: number) => String(n).padStart(2, '0')
+    const p3 = (n: number) => String(n).padStart(3, '0')
+
+    tree.forEach((z) => {
+      const code = String(z.code ?? '').trim().toUpperCase()
+      if (!code || taken.has(code)) return
+      taken.add(code)
+      const zid = uid()
+      newZ.push({
+        id: zid, storeId, depotId, code, name: (z.name || code).trim(),
+        type: z.type === 'logistique' ? 'logistique' : 'commerciale',
+        active: true, order: base + newZ.length,
+      })
+      z.allees.forEach((a, ai) => {
+        const aid = uid()
+        newA.push({ id: aid, storeId, zoneId: zid, code: String(a.code || p2(ai + 1)).toUpperCase(), name: a.name?.trim() || undefined })
+        a.rayons.forEach((r, ri) => {
+          const rid = uid()
+          newR.push({ id: rid, storeId, alleeId: aid, code: String(r.code || 'R' + p2(ri + 1)).toUpperCase(), name: r.name?.trim() || undefined })
+          const E = Math.max(1, Math.min(20, Math.round(r.etageres)))
+          const N = Math.max(1, Math.min(12, Math.round(r.niveaux)))
+          const P = Math.max(1, Math.min(60, Math.round(r.positions)))
+          for (let e = 1; e <= E; e++) {
+            const eid = uid()
+            newE.push({ id: eid, storeId, rayonId: rid, code: 'E' + p2(e) })
+            for (let n = 1; n <= N; n++) {
+              const nid2 = uid()
+              newN.push({ id: nid2, storeId, etagereId: eid, code: 'N' + p2(n) })
+              for (let p = 1; p <= P; p++) newP.push({ id: uid(), storeId, niveauId: nid2, code: 'P' + p3(p) })
+            }
+          }
+        })
+      })
+    })
+
+    if (newZ.length === 0) return { ok: false, counts: { zones: 0, allees: 0, rayons: 0, etageres: 0, niveaux: 0, positions: 0 }, total: 0 }
+
+    persistZones([...newZ, ...zones])
+    persistAllees([...newA, ...allees])
+    persistRayons([...newR, ...rayons])
+    persistEtageres([...newE, ...etageres])
+    persistNiveaux([...newN, ...niveaux])
+    persistPositions([...newP, ...positions])
+
+    const counts = { zones: newZ.length, allees: newA.length, rayons: newR.length, etageres: newE.length, niveaux: newN.length, positions: newP.length }
+    const total = Object.values(counts).reduce((a, b) => a + b, 0)
+    logActivity(`Structure créée depuis photos (${total} éléments)`, { target: stores.find((s) => s.id === storeId)?.name })
+    return { ok: true, counts, total }
+  }
+
   const updateAllee = (id: string, data: Partial<Allee>) => persistAllees(allees.map((a) => (a.id === id ? { ...a, ...data } : a)))
   const deleteAllee = (id: string) => {
     if (rayons.some((r) => r.alleeId === id)) return { ok: false as const, error: 'children' as const }
@@ -3204,7 +3273,7 @@ export function useDroguerieState() {
     // Emplacements (WMS) — listes brutes (filtrées par storeId dans les pages) + actions.
     zones, allees, rayons, etageres, niveaux, positions, emplacements,
     addZone, updateZone, deleteZone, seedDefaultZones, bulkAddZones,
-    addAllee, updateAllee, deleteAllee, seedZoneAllees, generateSubStructure, bulkAddLocations,
+    addAllee, updateAllee, deleteAllee, seedZoneAllees, generateSubStructure, bulkAddLocations, commitStructureTree,
     addRayon, updateRayon, deleteRayon,
     addEtagere, updateEtagere, deleteEtagere,
     addNiveau, updateNiveau, deleteNiveau,

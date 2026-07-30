@@ -22,11 +22,19 @@ import RayonUnits from './RayonUnits'
 import EtagereBays from './EtagereBays'
 import NiveauPlanks from './NiveauPlanks'
 import { Breadcrumb, DetailPanel, Legend, MiniMap, SearchBar } from './Overlays'
-import { levelOf, type PosNode, type Sel } from './types'
+import { levelOf, type PosNode, type Sel, type WmsTree } from './types'
 
-export default function Explorer3D({ initialCode, onReady }: { initialCode?: string; onReady?: () => void }) {
+export default function Explorer3D({ initialCode, onReady, tree: treeOverride, className }: {
+  initialCode?: string
+  onReady?: () => void
+  /** Arbre fourni de l'extérieur (aperçu d'un brouillon non encore enregistré). */
+  tree?: WmsTree
+  /** Remplace la hauteur/bordure par défaut du conteneur. */
+  className?: string
+}) {
   const { t } = useLanguage()
-  const tree = useWmsTree()
+  const storeTree = useWmsTree()
+  const tree = treeOverride ?? storeTree
   const layout = useMemo(() => computeLayout(tree), [tree])
 
   const [sel, setSel] = useState<Sel>({})
@@ -129,7 +137,7 @@ export default function Explorer3D({ initialCode, onReady }: { initialCode?: str
 
   return (
     <div className={`overflow-hidden border border-white/10 bg-gradient-to-b from-[#0b0b12] to-[#12121d] shadow-2xl ${
-      full ? 'fixed inset-0 z-[120] rounded-none' : 'relative h-[calc(100dvh-180px)] min-h-[480px] rounded-2xl'
+      full ? 'fixed inset-0 z-[120] rounded-none' : className ?? 'relative h-[calc(100dvh-180px)] min-h-[480px] rounded-2xl'
     }`}>
       <GlErrorBoundary title={t('x3_error_title')} reloadLabel={t('x3_reload')}>
       <Canvas
