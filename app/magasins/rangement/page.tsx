@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import Loader from '@/components/Loader'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, Camera, Check, MapPin, Package, PackageX, ScanLine, Undo2 } from 'lucide-react'
+import { ArrowRight, Camera, Check, MapPin, Package, PackageX, Rotate3d, ScanLine, Undo2 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import CameraScanner from '@/components/CameraScanner'
 import LocationPicker, { type ProductLocation } from '@/components/LocationPicker'
@@ -128,7 +129,17 @@ function Content() {
                 {/* Actuel → Nouveau */}
                 <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl bg-gray-50 p-3 text-sm dark:bg-white/5">
                   <span className="text-gray-400 dark:text-zinc-500">{t('put_current')} :</span>
-                  <span className="font-mono font-bold text-gray-700 dark:text-zinc-200">{current.emplacementComplet || '—'}</span>
+                  {current.emplacementComplet ? (
+                    <Link
+                      href={`/magasins/explorateur?code=${encodeURIComponent(current.emplacementComplet)}`}
+                      title={t('x3_view_in_3d')}
+                      className="flex items-center gap-1 font-mono font-bold text-gray-700 transition hover:text-amber-600 hover:underline dark:text-zinc-200 dark:hover:text-amber-400"
+                    >
+                      {current.emplacementComplet}<Rotate3d className="h-3.5 w-3.5 text-amber-500" />
+                    </Link>
+                  ) : (
+                    <span className="font-mono font-bold text-gray-700 dark:text-zinc-200">—</span>
+                  )}
                   <ArrowRight className="h-4 w-4 text-amber-500" />
                   <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{loc.emplacementComplet || '—'}</span>
                 </div>
@@ -170,8 +181,13 @@ function Content() {
               {history.map((h, i) => (
                 <li key={i} className="rounded-lg border border-gray-100 p-2.5 text-xs dark:border-white/10">
                   <p className="truncate font-semibold text-gray-800 dark:text-zinc-200">{h.name}</p>
-                  <p className="mt-0.5 flex items-center gap-1 font-mono text-[11px] text-gray-400 dark:text-zinc-500">
-                    {h.from}<ArrowRight className="h-3 w-3 text-amber-500" /><span className="text-amber-600 dark:text-amber-400">{h.to}</span>
+                  <p className="mt-0.5 flex flex-wrap items-center gap-1 font-mono text-[11px] text-gray-400 dark:text-zinc-500">
+                    {h.from}<ArrowRight className="h-3 w-3 text-amber-500" />
+                    {h.to !== '—' ? (
+                      <Link href={`/magasins/explorateur?code=${encodeURIComponent(h.to)}`} title={t('x3_view_in_3d')} className="text-amber-600 hover:underline dark:text-amber-400">{h.to}</Link>
+                    ) : (
+                      <span className="text-amber-600 dark:text-amber-400">—</span>
+                    )}
                   </p>
                 </li>
               ))}

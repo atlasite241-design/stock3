@@ -1,9 +1,10 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { AlertTriangle, BarChart3, Download, FileSpreadsheet, MapPinOff, Package, Printer } from 'lucide-react'
+import { AlertTriangle, BarChart3, Download, FileSpreadsheet, MapPinOff, Package, Printer, Rotate3d } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import { availableStock, fmtDH, useDroguerie, type Product } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
@@ -257,7 +258,19 @@ function Content() {
                 <tr key={p.id} className="border-b border-gray-50 last:border-0 dark:border-white/5">
                   <td className="px-5 py-2.5 font-mono text-xs text-gray-500">{p.barcode || '—'}</td>
                   <td className="px-5 py-2.5 font-semibold text-gray-900 dark:text-white">{p.name}</td>
-                  <td className="px-5 py-2.5 font-mono text-xs text-rose-500">{p.emplacementComplet || '—'}</td>
+                  <td className="px-5 py-2.5 font-mono text-xs">
+                    {p.emplacementComplet ? (
+                      <Link
+                        href={`/magasins/explorateur?code=${encodeURIComponent(p.emplacementComplet)}`}
+                        title={t('x3_view_in_3d')}
+                        className="flex w-fit items-center gap-1 text-rose-500 transition hover:underline"
+                      >
+                        {p.emplacementComplet}<Rotate3d className="h-3.5 w-3.5 text-amber-500" />
+                      </Link>
+                    ) : (
+                      <span className="text-rose-500">—</span>
+                    )}
+                  </td>
                   <td className="px-5 py-2.5 text-center tabular-nums text-gray-600 dark:text-zinc-300">{availableStock(p)}</td>
                 </tr>
               ))}

@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Grid } from '@react-three/drei'
 import { motion } from 'framer-motion'
-import { Boxes, FlaskConical } from 'lucide-react'
+import { Boxes, FlaskConical, Maximize2, Minimize2 } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n'
 import { findByCode, useWmsTree } from './data'
 import { cameraFor, computeLayout, focusFor } from './layout'
@@ -31,6 +31,7 @@ export default function Explorer3D({ initialCode }: { initialCode?: string }) {
   const [sel, setSel] = useState<Sel>({})
   const [panelPos, setPanelPos] = useState<PosNode | null>(null)
   const [pulseId, setPulseId] = useState<string | null>(null)
+  const [full, setFull] = useState(false)
   const pulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const lvl = levelOf(sel)
@@ -49,15 +50,17 @@ export default function Explorer3D({ initialCode }: { initialCode?: string }) {
     })
   }, [])
 
+  // Échap : ferme le panneau, sinon remonte d'un niveau, sinon quitte le plein écran.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       if (panelPos) setPanelPos(null)
-      else goUp()
+      else if (lvl !== 'zones') goUp()
+      else if (full) setFull(false)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [panelPos, goUp])
+  }, [panelPos, goUp, lvl, full])
 
   // Recherche : sélectionne le chemin, pulse la position, ouvre le panneau.
   const search = useCallback((q: string): boolean => {
@@ -73,6 +76,14 @@ export default function Explorer3D({ initialCode }: { initialCode?: string }) {
 
   const pickPos = useCallback((node: PosNode) => setPanelPos(node), [])
 
+  // Plein écran : bloque le défilement de la page en arrière-plan.
+  useEffect(() => {
+    if (!full) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [full])
+
   // Lien profond (?code=…) : vol direct vers la position au premier arbre prêt.
   const appliedCode = useRef<string | null>(null)
   useEffect(() => {
@@ -84,7 +95,9 @@ export default function Explorer3D({ initialCode }: { initialCode?: string }) {
   const hintKey = (`x3_hint_${lvl}`) as Parameters<typeof t>[0]
 
   return (
-    <div className="relative h-[calc(100dvh-180px)] min-h-[480px] overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#0b0b12] to-[#12121d] shadow-2xl">
+    <div className={`overflow-hidden border border-white/10 bg-gradient-to-b from-[#0b0b12] to-[#12121d] shadow-2xl ${
+      full ? 'fixed inset-0 z-[120] rounded-none' : 'relative h-[calc(100dvh-180px)] min-h-[480px] rounded-2xl'
+    }`}>
       <Canvas
         shadows
         dpr={[1, 2]}
@@ -130,7 +143,16 @@ export default function Explorer3D({ initialCode }: { initialCode?: string }) {
       {/* ---- Overlays ---- */}
       <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-wrap items-start justify-between gap-2">
         <Breadcrumb tree={tree} sel={sel} onNavigate={(s) => { setSel(s); setPanelPos(null) }} />
-        <SearchBar onSearch={search} />
+        <div className="pointer-events-auto flex items-start gap-2">
+          <SearchBar onSearch={search} />
+          <button
+            onClick={() => setFull((f) => !f)}
+            title={t(full ? 'x3_exit_fullscreen' : 'x3_fullscreen')}
+            className="rounded-xl border border-white/10 bg-black/50 p-2 text-zinc-300 backdrop-blur-xl transition hover:bg-black/70 hover:text-white"
+          >
+            {full ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
 
       <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10 flex flex-wrap items-end justify-between gap-2">
