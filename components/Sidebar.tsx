@@ -157,6 +157,16 @@ const NAV: NavItem[] = [
         ],
       },
       {
+        sectionKey: 'nav_stock_sec_reports',
+        items: [
+          { href: '/stock/rapports/valorisation', labelKey: 'nav_stock_rep_value' },
+          { href: '/stock/rapports/rotation', labelKey: 'nav_stock_rep_rotation' },
+          { href: '/stock/rapports/historique', labelKey: 'nav_stock_rep_history' },
+          { href: '/rapports/stock', labelKey: 'nav_stock_rep_state' },
+          { href: '/stock/rapports/export', labelKey: 'nav_stock_rep_export' },
+        ],
+      },
+      {
         sectionKey: 'nav_stock_sec_control',
         items: [
           { href: '/stock/controle/expires', labelKey: 'nav_stock_expired' },
