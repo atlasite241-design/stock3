@@ -349,6 +349,8 @@ export interface Product {
   reserved?: number
   lot?: string
   serial?: string
+  /** Date de péremption (AAAA-MM-JJ). Utilisée par Stock › Contrôle › Produits expirés. */
+  expiryDate?: string
   // Localisation (WMS) : chaîne d'emplacement + code complet auto (MAG01-A-02-…).
   zoneId?: string
   alleeId?: string

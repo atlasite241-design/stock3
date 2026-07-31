@@ -29,6 +29,7 @@ const EMPTY_FORM = {
   cost: '',
   stock: '',
   minStock: '5',
+  expiryDate: '',
   image: '',
 }
 
@@ -145,6 +146,7 @@ function ProduitsContent() {
       cost: String(p.cost),
       stock: String(p.stock),
       minStock: String(p.minStock),
+      expiryDate: p.expiryDate ?? '',
       image: p.image ?? '',
     })
     setLoc({
@@ -192,6 +194,7 @@ function ProduitsContent() {
       cost: num(form.cost),
       stock: Math.max(0, Math.round(num(form.stock))),
       minStock: Math.max(0, Math.round(num(form.minStock))),
+      expiryDate: form.expiryDate || undefined,
       image: form.image || undefined,
       // Localisation (WMS)
       zoneId: loc.zoneId, alleeId: loc.alleeId, rayonId: loc.rayonId, etagereId: loc.etagereId,
@@ -588,6 +591,15 @@ function ProduitsContent() {
                 value={form.minStock}
                 onChange={(e) => setForm({ ...form, minStock: e.target.value })}
                 placeholder="5"
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="field-label">{t('prod_expiry_label')}</label>
+              <input
+                type="date"
+                value={form.expiryDate}
+                onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
                 className="input-field"
               />
             </div>

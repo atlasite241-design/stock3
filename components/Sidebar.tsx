@@ -35,12 +35,25 @@ interface NavChild {
   labelKey: TKey
 }
 
+/** Regroupement intermédiaire (3e niveau) : « Stock › Inventaires › … ». */
+interface NavSection {
+  sectionKey: TKey
+  items: NavChild[]
+}
+
+type NavEntry = NavChild | NavSection
+const isSection = (e: NavEntry): e is NavSection => 'sectionKey' in e
+
 interface NavItem {
   labelKey: TKey
   icon: LucideIcon
   href?: string
-  children?: NavChild[]
+  children?: NavEntry[]
 }
+
+/** Toutes les entrées finales d'un groupe, sections aplaties. */
+const leavesOf = (item: NavItem): NavChild[] =>
+  (item.children ?? []).flatMap((e) => (isSection(e) ? e.items : [e]))
 
 const NAV: NavItem[] = [
   { labelKey: 'nav_dashboard', icon: LayoutDashboard, href: '/' },
@@ -87,16 +100,72 @@ const NAV: NavItem[] = [
     labelKey: 'nav_stock',
     icon: Boxes,
     children: [
-      { href: '/stock', labelKey: 'nav_stock_current' },
-      { href: '/stock/stock-initial', labelKey: 'nav_stock_initial' },
-      { href: '/stock/par-magasin', labelKey: 'nav_stock_by_store' },
-      { href: '/stock/par-depot', labelKey: 'nav_stock_by_depot' },
-      { href: '/stock/inventaire', labelKey: 'nav_stock_inventory' },
-      { href: '/stock/consultation', labelKey: 'nav_stock_consult' },
-      { href: '/stock/reapprovisionnement', labelKey: 'nav_stock_reappro' },
-      { href: '/stock/mouvements', labelKey: 'nav_stock_history' },
-      { href: '/stock/transferts', labelKey: 'nav_stock_transfers' },
-      { href: '/stock/transferts/details', labelKey: 'nav_stock_transfers_detail' },
+      {
+        sectionKey: 'nav_stock_sec_overview',
+        items: [
+          { href: '/stock', labelKey: 'nav_stock_current' },
+          { href: '/stock/par-magasin', labelKey: 'nav_stock_by_store' },
+          { href: '/stock/par-depot', labelKey: 'nav_stock_by_depot' },
+          { href: '/stock/consultation', labelKey: 'nav_stock_consult' },
+        ],
+      },
+      {
+        sectionKey: 'nav_stock_sec_init',
+        items: [
+          { href: '/stock/stock-initial', labelKey: 'nav_stock_initial' },
+          { href: '/stock/stock-initial?mode=import', labelKey: 'nav_stock_import' },
+          { href: '/stock/ajustement', labelKey: 'nav_stock_adjust' },
+        ],
+      },
+      {
+        sectionKey: 'nav_stock_sec_inventory',
+        items: [
+          { href: '/stock/inventaire', labelKey: 'nav_stock_inventory' },
+          { href: '/stock/inventaire?scope=zone', labelKey: 'nav_stock_inv_zone' },
+          { href: '/stock/inventaire?scope=emplacement', labelKey: 'nav_stock_inv_loc' },
+          { href: '/stock/comptage', labelKey: 'nav_stock_quickcount' },
+          { href: '/stock/ecarts', labelKey: 'nav_stock_variances' },
+        ],
+      },
+      {
+        sectionKey: 'nav_stock_sec_moves',
+        items: [
+          { href: '/achats/entrees-stock', labelKey: 'nav_stock_in' },
+          { href: '/stock/mouvements?flux=sorties', labelKey: 'nav_stock_out' },
+          { href: '/stock/mouvements', labelKey: 'nav_stock_history' },
+          { href: '/stock/mouvements?vue=historique', labelKey: 'nav_stock_moves_history' },
+          { href: '/stock/annulation', labelKey: 'nav_stock_cancel_move' },
+        ],
+      },
+      {
+        sectionKey: 'nav_stock_sec_transfers',
+        items: [
+          { href: '/stock/transferts/nouveau', labelKey: 'nav_stock_transfer_new' },
+          { href: '/stock/transferts', labelKey: 'nav_stock_transfers' },
+          { href: '/stock/transferts/details', labelKey: 'nav_stock_transfers_detail' },
+          { href: '/stock/transferts?tab=reception', labelKey: 'nav_stock_transfer_recv' },
+          { href: '/stock/transferts?tab=historique', labelKey: 'nav_stock_transfer_hist' },
+        ],
+      },
+      {
+        sectionKey: 'nav_stock_sec_reappro',
+        items: [
+          { href: '/stock/reapprovisionnement', labelKey: 'nav_stock_reappro' },
+          { href: '/stock/critique', labelKey: 'nav_stock_critical' },
+          { href: '/stock/suggestions', labelKey: 'nav_stock_suggestions' },
+          { href: '/stock/previsions', labelKey: 'nav_stock_forecast' },
+        ],
+      },
+      {
+        sectionKey: 'nav_stock_sec_control',
+        items: [
+          { href: '/stock/controle/expires', labelKey: 'nav_stock_expired' },
+          { href: '/stock/controle/negatif', labelKey: 'nav_stock_negative' },
+          { href: '/stock/controle/sans-emplacement', labelKey: 'nav_stock_nolocation' },
+          { href: '/stock/controle/dormants', labelKey: 'nav_stock_dormant' },
+          { href: '/stock/controle/anomalies', labelKey: 'nav_stock_anomalies' },
+        ],
+      },
     ],
   },
   {
@@ -232,9 +301,14 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
   const { can } = usePermissions()
 
   // Masquage des entrées selon les permissions de l'utilisateur connecté.
-  const visibleNav = NAV.map((item) =>
-    item.children ? { ...item, children: item.children.filter((c) => can(ROUTE_PERM[basePath(c.href)])) } : item
-  ).filter((item) => (item.children ? item.children.length > 0 : can(ROUTE_PERM[basePath(item.href ?? '/')])))
+  const allowed = (c: NavChild) => can(ROUTE_PERM[basePath(c.href)])
+  const visibleNav = NAV.map((item) => {
+    if (!item.children) return item
+    const children = item.children
+      .map((e) => (isSection(e) ? { ...e, items: e.items.filter(allowed) } : e))
+      .filter((e) => (isSection(e) ? e.items.length > 0 : allowed(e)))
+    return { ...item, children }
+  }).filter((item) => (item.children ? item.children.length > 0 : can(ROUTE_PERM[basePath(item.href ?? '/')])))
 
   useEffect(() => {
     const read = () => {
@@ -261,7 +335,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
 
   // Auto-expand the group containing the current page (accordéon : seul ce groupe).
   useEffect(() => {
-    const group = NAV.find((n) => n.children?.some((c) => basePath(c.href) === pathname))
+    const group = NAV.find((n) => leavesOf(n).some((c) => basePath(c.href) === pathname))
     if (group && !expanded.includes(group.labelKey)) {
       setExpanded([group.labelKey])
     }
@@ -288,8 +362,68 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
     })
   }, [expanded])
 
-  const groupActive = (item: NavItem) =>
-    item.children?.some((c) => basePath(c.href) === pathname) ?? false
+  const groupActive = (item: NavItem) => leavesOf(item).some((c) => basePath(c.href) === pathname)
+
+  // Section ouverte (3e niveau). Par défaut : celle qui contient la page courante.
+  const [openSection, setOpenSection] = useState<string | null>(null)
+  useEffect(() => {
+    for (const item of NAV) {
+      for (const e of item.children ?? []) {
+        if (isSection(e) && e.items.some((c) => basePath(c.href) === pathname)) {
+          setOpenSection(e.sectionKey)
+          return
+        }
+      }
+    }
+  }, [pathname])
+
+  // Rendu d'une entrée finale (utilisé au 2e comme au 3e niveau).
+  const renderLeaf = (c: NavChild) => {
+    const childActive = c.href === currentFull
+    const disabled =
+      (c.labelKey === 'nav_pos_suspend' && cartCount === 0) ||
+      (c.labelKey === 'nav_pos_resume' && cartCount > 0) ||
+      (c.labelKey === 'nav_caisse_close' && !caisseOpen) ||
+      (c.labelKey === 'nav_caisse_open' && caisseOpen) ||
+      (c.labelKey === 'nav_caisse_endday' && caisseOpen)
+
+    if (disabled) {
+      const title =
+        c.labelKey === 'nav_pos_suspend'
+          ? 'Le panier est vide'
+          : c.labelKey === 'nav_caisse_close'
+            ? 'La caisse est déjà fermée'
+            : c.labelKey === 'nav_caisse_open'
+              ? 'La caisse est déjà ouverte'
+              : c.labelKey === 'nav_caisse_endday'
+                ? 'Fermez la caisse pour consulter la fin de journée'
+                : 'Videz ou suspendez le panier actuel avant de reprendre une vente'
+      return (
+        <span
+          key={c.href + c.labelKey}
+          title={title}
+          className="block cursor-not-allowed rounded-lg px-3 py-2 text-[13px] font-medium text-gray-300 dark:text-zinc-600"
+        >
+          {t(c.labelKey)}
+        </span>
+      )
+    }
+
+    return (
+      <Link
+        key={c.href + c.labelKey}
+        href={c.href}
+        onClick={onClose}
+        className={`block rounded-lg px-3 py-2 text-[13px] transition-colors ${
+          childActive
+            ? 'bg-amber-50 font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300'
+            : 'font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white'
+        }`}
+      >
+        {t(c.labelKey)}
+      </Link>
+    )
+  }
 
   return (
     <>
@@ -378,50 +512,29 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
                   </button>
                   {isOpen && (
                     <div className="ml-[26px] mt-1 space-y-0.5 border-l border-gray-100 pl-3 dark:border-white/10 rtl:ml-0 rtl:mr-[26px] rtl:border-l-0 rtl:border-r rtl:pl-0 rtl:pr-3">
-                      {item.children.map((c) => {
-                        const childActive = c.href === currentFull
-                        const disabled =
-                          (c.labelKey === 'nav_pos_suspend' && cartCount === 0) ||
-                          (c.labelKey === 'nav_pos_resume' && cartCount > 0) ||
-                          (c.labelKey === 'nav_caisse_close' && !caisseOpen) ||
-                          (c.labelKey === 'nav_caisse_open' && caisseOpen) ||
-                          (c.labelKey === 'nav_caisse_endday' && caisseOpen)
-
-                        if (disabled) {
-                          const title =
-                            c.labelKey === 'nav_pos_suspend'
-                              ? 'Le panier est vide'
-                              : c.labelKey === 'nav_caisse_close'
-                                ? 'La caisse est déjà fermée'
-                                : c.labelKey === 'nav_caisse_open'
-                                  ? 'La caisse est déjà ouverte'
-                                  : c.labelKey === 'nav_caisse_endday'
-                                    ? 'Fermez la caisse pour consulter la fin de journée'
-                                    : 'Videz ou suspendez le panier actuel avant de reprendre une vente'
-                          return (
-                            <span
-                              key={c.href + c.labelKey}
-                              title={title}
-                              className="block cursor-not-allowed rounded-lg px-3 py-2 text-[13px] font-medium text-gray-300 dark:text-zinc-600"
-                            >
-                              {t(c.labelKey)}
-                            </span>
-                          )
-                        }
-
+                      {item.children.map((entry) => {
+                        if (!isSection(entry)) return renderLeaf(entry)
+                        const secOpen = openSection === entry.sectionKey
+                        const secActive = entry.items.some((c) => basePath(c.href) === pathname)
                         return (
-                          <Link
-                            key={c.href + c.labelKey}
-                            href={c.href}
-                            onClick={onClose}
-                            className={`block rounded-lg px-3 py-2 text-[13px] transition-colors ${
-                              childActive
-                                ? 'bg-amber-50 font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300'
-                                : 'font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white'
-                            }`}
-                          >
-                            {t(c.labelKey)}
-                          </Link>
+                          <div key={entry.sectionKey}>
+                            <button
+                              onClick={() => setOpenSection(secOpen ? null : entry.sectionKey)}
+                              className={`flex w-full items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                                secActive
+                                  ? 'text-amber-600 dark:text-amber-400'
+                                  : 'text-gray-400 hover:text-gray-600 dark:text-zinc-500 dark:hover:text-zinc-300'
+                              }`}
+                            >
+                              <span className="flex-1 text-left rtl:text-right">{t(entry.sectionKey)}</span>
+                              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${secOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            {secOpen && (
+                              <div className="ml-2 space-y-0.5 border-l border-gray-100 pl-2 dark:border-white/10 rtl:ml-0 rtl:mr-2 rtl:border-l-0 rtl:border-r rtl:pl-0 rtl:pr-2">
+                                {entry.items.map((c) => renderLeaf(c))}
+                              </div>
+                            )}
+                          </div>
                         )
                       })}
                     </div>
