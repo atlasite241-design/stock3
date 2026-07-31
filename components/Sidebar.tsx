@@ -245,7 +245,17 @@ const NAV: NavItem[] = [
       { href: '/rapports/caisse', labelKey: 'nav_reports_cash' },
     ],
   },
-  { labelKey: 'nav_alerts', icon: Bell, href: '/alertes' },
+  {
+    labelKey: 'nav_alerts',
+    icon: Bell,
+    children: [
+      { href: '/alertes?type=stock', labelKey: 'nav_alerts_stock' },
+      { href: '/alertes?type=commandes', labelKey: 'nav_alerts_orders' },
+      { href: '/alertes?type=paiements', labelKey: 'nav_alerts_payments' },
+      { href: '/alertes?type=inventaires', labelKey: 'nav_alerts_inventory' },
+      { href: '/alertes?type=sauvegardes', labelKey: 'nav_alerts_backups' },
+    ],
+  },
   {
     labelKey: 'nav_stores',
     icon: Building2,
