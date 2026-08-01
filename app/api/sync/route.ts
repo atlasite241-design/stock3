@@ -40,13 +40,21 @@ export async function POST(req: NextRequest) {
   // --- status : public, sans donnée métier ---
   if (op === 'status') {
     const url = process.env.TURSO_DATABASE_URL || ''
-    return NextResponse.json({
-      ok: true,
-      configured: !!(url && process.env.TURSO_AUTH_TOKEN),
-      // Empreinte de la base : permet au client de détecter un changement de
-      // base sans jamais connaître son URL réelle.
-      dbId: url ? crypto.createHash('sha256').update(url).digest('hex').slice(0, 16) : '',
-    })
+    const token = process.env.TURSO_AUTH_TOKEN || ''
+    const configured = !!(url && token)
+    // Empreinte de la base : permet au client de détecter un changement de base
+    // sans jamais connaître son URL réelle.
+    const dbId = url ? crypto.createHash('sha256').update(url).digest('hex').slice(0, 16) : ''
+
+    // `check: true` teste RÉELLEMENT la connexion. Savoir que les variables
+    // existent ne dit pas si le token est valide — c'est cette confusion qui
+    // rendait la panne indéchiffrable. La réponse ne contient qu'un code
+    // d'erreur (ex. « http_401 »), jamais le secret lui-même.
+    if (body.check && configured) {
+      const ping = await tursoExec([{ sql: 'SELECT 1' }])
+      return NextResponse.json({ ok: true, configured, dbId, reachable: ping.ok, error: ping.error ?? null })
+    }
+    return NextResponse.json({ ok: true, configured, dbId })
   }
 
   // --- toutes les autres opérations exigent une session serveur ---

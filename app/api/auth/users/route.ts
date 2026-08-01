@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET() {
   const res = await tursoExec([{ sql: "SELECT data FROM records WHERE collection = 'users' AND deleted = 0" }])
-  if (!res.ok) return NextResponse.json({ ok: false, error: 'unavailable' }, { status: 502 })
+  if (!res.ok) return NextResponse.json({ ok: false, error: 'unavailable', detail: res.error ?? null }, { status: 502 })
 
   const users: { id: string; name: string; email: string; role: string; active: boolean; pendingApproval: boolean; hasPin: boolean }[] = []
   for (const row of rowsOf(res.results?.[0])) {
