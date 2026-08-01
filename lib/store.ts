@@ -1510,6 +1510,19 @@ export interface Backup {
   data: Record<string, unknown>
 }
 
+/**
+ * Même empreinte que celle calculée par le serveur (sha256 tronqué), pour
+ * pouvoir comparer un ancien repère au format URL avec le nouveau format.
+ */
+async function sha256Hex(input: string): Promise<string> {
+  try {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input))
+    return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 16)
+  } catch {
+    return '' // crypto.subtle indisponible (http) : on préfère ne pas conclure
+  }
+}
+
 export function listBackups(): Backup[] {
   return load<Backup[]>(K.backups, [])
 }
@@ -1686,17 +1699,31 @@ export function useDroguerieState() {
         if (dbId) {
           const stored = localStorage.getItem('dp_db_id')
           const localHasData = !!storageGet(K.products) || !!localStorage.getItem(K.stores)
-          // Base changée (id différent) OU données présentes sans id mémorisé
-          // (appareil d'avant cette détection, données d'une base antérieure).
-          const switched = stored ? stored !== dbId : localHasData
+
+          // Les appareils antérieurs ont mémorisé l'URL BRUTE, pas l'empreinte.
+          // Sans cette conversion, le simple changement de format ferait croire
+          // à un changement de base et effacerait tout le local à tort.
+          const isLegacyUrl = !!stored && /^(libsql|https?):\/\//.test(stored)
+          const storedId = isLegacyUrl ? await sha256Hex(stored as string) : stored
+
+          // Effacer le local est IRRÉVERSIBLE : on ne le fait que sur un
+          // changement de base réellement constaté (deux empreintes connues et
+          // différentes), jamais sur une simple absence de repère.
+          const switched = !!storedId && storedId !== dbId
           if (switched) {
             mark('dbswitch', 'Nouvelle base : réinitialisation locale…')
+            // Filet de sécurité : une copie horodatée avant l'effacement.
+            try { createBackup(`Avant changement de base — ${new Date().toLocaleString('fr-FR')}`) } catch {}
             for (const key of Object.values(K)) {
               if (key === K.backups) continue // on garde les sauvegardes locales
               if (key === K.products) productsRemove()
               else localStorage.removeItem(key)
             }
             localStorage.removeItem('dp_sync_cursor')
+          } else if (!storedId && localHasData) {
+            // Données présentes sans repère : on adopte l'empreinte courante
+            // sans rien détruire — l'utilisateur reste maître de ses données.
+            console.info('[boot] base inconnue, aucune donnée effacée')
           }
           localStorage.setItem('dp_db_id', dbId)
         }
