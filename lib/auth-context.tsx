@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { clearSession, getSession, makeSession, setSession, verifySecret, type Session } from './auth'
 import { useDroguerie, type AppUser } from './store'
-import { serverLogin, serverLogout } from './sync-api'
+import { AUTH_EXPIRED, serverLogin, serverLogout } from './sync-api'
 
 interface AuthValue {
   ready: boolean
@@ -40,6 +40,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setSessionState(getSession())
     setChecked(true)
+  }, [])
+
+  // Le serveur est l'autorité : s'il refuse la session (cookie absent ou
+  // expiré), la session locale ne vaut plus rien — on déconnecte pour ramener
+  // l'utilisateur à l'écran de connexion plutôt que de le laisser travailler
+  // sur un appareil qui ne se synchronise plus.
+  useEffect(() => {
+    const onExpired = () => {
+      clearSession()
+      setSessionState(null)
+    }
+    window.addEventListener(AUTH_EXPIRED, onExpired)
+    return () => window.removeEventListener(AUTH_EXPIRED, onExpired)
   }, [])
 
   const loginWith = (u: AppUser | undefined | null, secret: string, stored?: string, identifier?: string) => {

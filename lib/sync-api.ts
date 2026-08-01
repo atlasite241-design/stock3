@@ -13,6 +13,9 @@ export interface UpsertRow { collection: string; id: string; storeId: string | n
 /** Nombre maximal d'enregistrements acceptés par appel d'écriture (cf. route). */
 export const UPSERT_LIMIT = 200
 
+/** Événement émis quand le serveur refuse la session (cookie absent/expiré). */
+export const AUTH_EXPIRED = 'droguerie-auth-expired'
+
 async function call<T>(payload: Record<string, unknown>): Promise<T> {
   const res = await fetch('/api/sync', {
     method: 'POST',
@@ -22,6 +25,16 @@ async function call<T>(payload: Record<string, unknown>): Promise<T> {
     credentials: 'same-origin',
     cache: 'no-store',
   })
+
+  // 401 = session serveur absente ou expirée. Cas typique : l'utilisateur était
+  // déjà connecté AVANT la mise en place de l'authentification serveur, donc
+  // aucun cookie n'a jamais été posé. Sans ce signal, la synchro échouait en
+  // silence et l'appareil divergeait sans que personne ne le sache.
+  if (res.status === 401) {
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(AUTH_EXPIRED))
+    throw new Error('unauthorized')
+  }
+
   const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string } & T
   if (!res.ok || !json.ok) throw new Error(json.error || `http_${res.status}`)
   return json
