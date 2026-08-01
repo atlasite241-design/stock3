@@ -302,6 +302,7 @@ const NAV: NavItem[] = [
       { href: '/parametres/sauvegarde', labelKey: 'nav_settings_backup' },
       { href: '/parametres/theme', labelKey: 'nav_settings_theme' },
       { href: '/parametres/reinitialisation', labelKey: 'nav_settings_reset' },
+      { href: '/parametres/remise-a-zero', labelKey: 'nav_settings_wipe' },
       { href: '/parametres/licences', labelKey: 'nav_settings_licenses' },
       { href: '/sync', labelKey: 'nav_settings_sync' },
       { href: '/parametres/administration', labelKey: 'nav_settings_admin' },

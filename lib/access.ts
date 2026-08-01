@@ -125,6 +125,7 @@ export const ROUTE_PERM: Record<string, string> = {
   '/parametres/impression': 'set.print',
   '/parametres/sauvegarde': 'set.backup',
   '/parametres/reinitialisation': 'set.reset_stats',
+  '/parametres/remise-a-zero': 'set.reset_stats',
   '/parametres/licences': 'set.company',
   '/parametres/administration': 'set.users',
   '/sync': 'set.backup',
