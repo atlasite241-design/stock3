@@ -10,16 +10,18 @@ import { Download, FileSpreadsheet, Scale, TrendingDown, TrendingUp } from 'luci
 import AppShell from '@/components/AppShell'
 import Loader from '@/components/Loader'
 import { fmtDH, useDroguerie } from '@/lib/store'
+import { useLanguage, type TKey } from '@/lib/i18n'
 
-const PERIODS = [
-  { days: 30, label: '30 jours' },
-  { days: 90, label: '90 jours' },
-  { days: 365, label: '1 an' },
-  { days: 0, label: 'Tout' },
+const PERIODS: { days: number; key: TKey }[] = [
+  { days: 30, key: 'sk_var_p30' },
+  { days: 90, key: 'sk_var_p90' },
+  { days: 365, key: 'sk_var_p365' },
+  { days: 0, key: 'sk_var_pall' },
 ]
 
 function Content() {
   const { ready, movements, products, activeStoreId, activeStore } = useDroguerie()
+  const { t } = useLanguage()
   const [days, setDays] = useState(90)
 
   const rows = useMemo(() => {
@@ -45,7 +47,7 @@ function Content() {
 
   if (!ready) return <Loader />
 
-  const headers = ['Date', 'Produit', 'Type', 'Écart', 'Valeur', 'Note']
+  const headers = [t('sk_var_date'), t('sa_col_product'), t('sk_var_origin'), t('sk_cnt_gap'), t('sa_col_value'), t('sk_var_note')]
   const data = () => rows.map((r) => [
     new Date(r.date).toLocaleDateString('fr-FR'), r.productName, r.type,
     r.qty, r.value.toFixed(2), r.note ?? '',
@@ -67,10 +69,10 @@ function Content() {
         className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
-            <Scale className="h-6 w-6 text-amber-500" />Écarts d’inventaire
+            <Scale className="h-6 w-6 text-amber-500" />{t('sk_var_title')}
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
-            Régularisations constatées — <span className="font-semibold text-amber-600 dark:text-amber-400">{activeStore?.name}</span>
+            {t('sk_var_sub')} — <span className="font-semibold text-amber-600 dark:text-amber-400">{activeStore?.name}</span>
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -83,17 +85,17 @@ function Content() {
         {PERIODS.map((p) => (
           <button key={p.days} onClick={() => setDays(p.days)}
             className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${days === p.days ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/10 dark:text-zinc-300'}`}>
-            {p.label}
+            {t(p.key)}
           </button>
         ))}
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { v: totals.count, l: 'Régularisations', c: 'text-gray-900 dark:text-white' },
-          { v: `+${totals.plus}`, l: 'Écarts positifs', c: 'text-emerald-600 dark:text-emerald-400' },
-          { v: `−${totals.minus}`, l: 'Écarts négatifs', c: 'text-rose-500' },
-          { v: fmtDH(totals.value), l: 'Impact valorisé', c: totals.value < 0 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400' },
+          { v: totals.count, l: t('sk_var_count'), c: 'text-gray-900 dark:text-white' },
+          { v: `+${totals.plus}`, l: t('sk_var_plus'), c: 'text-emerald-600 dark:text-emerald-400' },
+          { v: `−${totals.minus}`, l: t('sk_var_minus'), c: 'text-rose-500' },
+          { v: fmtDH(totals.value), l: t('sk_var_value'), c: totals.value < 0 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400' },
         ].map((s, i) => (
           <div key={i} className="glass-card p-4 text-center">
             <p className={`text-xl font-extrabold tabular-nums ${s.c}`}>{s.v}</p>
@@ -106,15 +108,15 @@ function Content() {
         {rows.length === 0 ? (
           <div className="flex flex-col items-center gap-3 p-12 text-center">
             <Scale className="h-10 w-10 text-gray-300 dark:text-zinc-700" />
-            <p className="text-sm text-gray-500 dark:text-zinc-400">Aucun écart sur la période — le stock théorique correspond au comptage.</p>
+            <p className="text-sm text-gray-500 dark:text-zinc-400">{t('sk_var_empty')}</p>
           </div>
         ) : (
           <table className="w-full min-w-[680px] text-sm">
             <thead>
               <tr className="border-b border-gray-100 text-left text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:border-white/10 dark:text-zinc-500">
-                <th className="px-4 py-3">Date</th><th className="px-4 py-3">Produit</th>
-                <th className="px-4 py-3">Origine</th><th className="px-4 py-3 text-center">Écart</th>
-                <th className="px-4 py-3 text-right">Valeur</th><th className="px-4 py-3">Note</th>
+                <th className="px-4 py-3">{t('sk_var_date')}</th><th className="px-4 py-3">{t('sa_col_product')}</th>
+                <th className="px-4 py-3">{t('sk_var_origin')}</th><th className="px-4 py-3 text-center">{t('sk_cnt_gap')}</th>
+                <th className="px-4 py-3 text-right">{t('sa_col_value')}</th><th className="px-4 py-3">{t('sk_var_note')}</th>
               </tr>
             </thead>
             <tbody>
@@ -122,7 +124,7 @@ function Content() {
                 <tr key={r.id} className="border-b border-gray-50 last:border-0 dark:border-white/5">
                   <td className="px-4 py-2.5 text-xs text-gray-500">{new Date(r.date).toLocaleDateString('fr-FR')}</td>
                   <td className="px-4 py-2.5 font-semibold text-gray-900 dark:text-white">{r.productName}</td>
-                  <td className="px-4 py-2.5 text-xs text-gray-500">{r.type === 'inventaire' ? 'Inventaire' : 'Ajustement'}</td>
+                  <td className="px-4 py-2.5 text-xs text-gray-500">{r.type === 'inventaire' ? t('sk_var_from_inv') : t('sk_var_from_adj')}</td>
                   <td className="px-4 py-2.5 text-center">
                     <span className={`inline-flex items-center gap-1 font-bold tabular-nums ${r.qty < 0 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
                       {r.qty < 0 ? <TrendingDown className="h-3.5 w-3.5" /> : <TrendingUp className="h-3.5 w-3.5" />}

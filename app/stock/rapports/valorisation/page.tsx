@@ -10,11 +10,13 @@ import { Coins, Download, FileSpreadsheet, Printer } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Loader from '@/components/Loader'
 import { availableStock, fmtDH, useDroguerie } from '@/lib/store'
+import { useLanguage } from '@/lib/i18n'
 
 const HUES = ['#f59e0b', '#6366f1', '#10b981', '#ef4444', '#0ea5e9', '#a855f7', '#f43f5e', '#84cc16']
 
 function Content() {
   const { ready, products, activeStoreId, activeStore } = useDroguerie()
+  const { t } = useLanguage()
 
   const { rows, totals } = useMemo(() => {
     const mine = products.filter((p) => !activeStoreId || !p.storeId || p.storeId === activeStoreId)
@@ -28,7 +30,7 @@ function Content() {
       qty += s
       cost += s * p.cost
       sale += s * p.price
-      const key = p.category || 'Sans catégorie'
+      const key = p.category || t('sk_ano_r_no_cat')
       const c = byCat.get(key) ?? { qty: 0, cost: 0, sale: 0, refs: 0 }
       c.qty += s; c.cost += s * p.cost; c.sale += s * p.price; c.refs++
       byCat.set(key, c)
@@ -43,7 +45,7 @@ function Content() {
 
   if (!ready) return <Loader />
 
-  const headers = ['Catégorie', 'Références', 'Quantité', 'Valeur achat', 'Valeur vente', 'Marge potentielle']
+  const headers = [t('sa_col_category'), t('sk_val_refs'), t('sk_val_qty'), t('sk_val_cost'), t('sk_val_sale'), t('sk_val_margin')]
   const data = () => rows.map((r) => [r.category, r.refs, r.qty, r.cost.toFixed(2), r.sale.toFixed(2), r.margin.toFixed(2)])
   const exportCsv = () => {
     const csv = [headers, ...data()].map((x) => x.join(';')).join('\n')
@@ -66,10 +68,10 @@ function Content() {
         className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
-            <Coins className="h-6 w-6 text-amber-500" />Valorisation du stock
+            <Coins className="h-6 w-6 text-amber-500" />{t('sk_val_title')}
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
-            Capital immobilisé et potentiel de vente — <span className="font-semibold text-amber-600 dark:text-amber-400">{activeStore?.name}</span>
+            {t('sk_val_sub')} — <span className="font-semibold text-amber-600 dark:text-amber-400">{activeStore?.name}</span>
           </p>
         </div>
         <div className="flex flex-wrap gap-2 no-print">
@@ -81,11 +83,11 @@ function Content() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         {[
-          { v: totals.refs.toLocaleString('fr-FR'), l: 'Références', c: 'text-gray-900 dark:text-white' },
-          { v: totals.qty.toLocaleString('fr-FR'), l: 'Unités en stock', c: 'text-indigo-600 dark:text-indigo-400' },
-          { v: fmtDH(totals.cost), l: 'Valeur d’achat', c: 'text-amber-600 dark:text-amber-400' },
-          { v: fmtDH(totals.sale), l: 'Valeur de vente', c: 'text-emerald-600 dark:text-emerald-400' },
-          { v: fmtDH(totals.margin), l: 'Marge potentielle', c: 'text-violet-600 dark:text-violet-400' },
+          { v: totals.refs.toLocaleString('fr-FR'), l: t('sk_val_refs'), c: 'text-gray-900 dark:text-white' },
+          { v: totals.qty.toLocaleString('fr-FR'), l: t('sk_val_units'), c: 'text-indigo-600 dark:text-indigo-400' },
+          { v: fmtDH(totals.cost), l: t('sk_val_cost'), c: 'text-amber-600 dark:text-amber-400' },
+          { v: fmtDH(totals.sale), l: t('sk_val_sale'), c: 'text-emerald-600 dark:text-emerald-400' },
+          { v: fmtDH(totals.margin), l: t('sk_val_margin'), c: 'text-violet-600 dark:text-violet-400' },
         ].map((s, i) => (
           <div key={i} className="glass-card p-4 text-center">
             <p className={`text-xl font-extrabold tabular-nums ${s.c}`}>{s.v}</p>
@@ -96,13 +98,13 @@ function Content() {
 
       {totals.zero > 0 && (
         <p className="rounded-xl border border-dashed border-gray-200 p-3 text-xs text-gray-500 dark:border-white/15 dark:text-zinc-400">
-          {totals.zero.toLocaleString('fr-FR')} référence(s) sans stock ne sont pas valorisées.
+          {totals.zero.toLocaleString('fr-FR')} {t('sk_val_zero')}
         </p>
       )}
 
       {chart.length > 0 && (
         <div className="glass-card p-4">
-          <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400 dark:text-zinc-500">Valeur d’achat par catégorie (top 10)</h2>
+          <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-gray-400 dark:text-zinc-500">{t('sk_val_chart')}</h2>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={chart} margin={{ top: 4, right: 8, bottom: 4, left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#94a3b833" vertical={false} />
@@ -121,9 +123,9 @@ function Content() {
         <table className="w-full min-w-[680px] text-sm">
           <thead>
             <tr className="border-b border-gray-100 text-left text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:border-white/10 dark:text-zinc-500">
-              <th className="px-4 py-3">Catégorie</th><th className="px-4 py-3 text-center">Réf.</th>
-              <th className="px-4 py-3 text-center">Quantité</th><th className="px-4 py-3 text-right">Valeur achat</th>
-              <th className="px-4 py-3 text-right">Valeur vente</th><th className="px-4 py-3 text-right">Marge</th>
+              <th className="px-4 py-3">{t('sa_col_category')}</th><th className="px-4 py-3 text-center">{t('sk_val_short_refs')}</th>
+              <th className="px-4 py-3 text-center">{t('sk_val_qty')}</th><th className="px-4 py-3 text-right">{t('sk_val_cost')}</th>
+              <th className="px-4 py-3 text-right">{t('sk_val_sale')}</th><th className="px-4 py-3 text-right">{t('sk_val_short_margin')}</th>
             </tr>
           </thead>
           <tbody>
@@ -137,7 +139,7 @@ function Content() {
                 <td className="px-4 py-2.5 text-right tabular-nums text-violet-600 dark:text-violet-400">{fmtDH(r.margin)}</td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-400">Aucun stock à valoriser.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-400">{t('sk_val_empty')}</td></tr>}
           </tbody>
         </table>
       </div>

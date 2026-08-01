@@ -11,9 +11,12 @@ import Loader from '@/components/Loader'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
 import { availableStock, useDroguerie, type Product } from '@/lib/store'
-import { useLanguage } from '@/lib/i18n'
+import { useLanguage, type TKey } from '@/lib/i18n'
 
-const MOTIFS = ['Casse', 'Perte', 'Vol', 'Erreur de saisie', 'Retour fournisseur', 'Don / échantillon', 'Autre']
+const MOTIFS: TKey[] = [
+  'sk_adj_r_break', 'sk_adj_r_loss', 'sk_adj_r_theft', 'sk_adj_r_typo',
+  'sk_adj_r_return', 'sk_adj_r_gift', 'sk_adj_r_other',
+]
 
 function Content() {
   const { ready, products, activeStoreId, adjustStock, depots } = useDroguerie()
@@ -23,7 +26,7 @@ function Content() {
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Product | null>(null)
   const [target, setTarget] = useState('')
-  const [motif, setMotif] = useState(MOTIFS[0])
+  const [motif, setMotif] = useState<TKey>(MOTIFS[0])
   const [depotId, setDepotId] = useState('')
   const [done, setDone] = useState<{ name: string; delta: number } | null>(null)
 
@@ -46,7 +49,9 @@ function Content() {
 
   const apply = () => {
     if (!selected || delta === 0) return
-    adjustStock(selected.id, delta, `Ajustement : ${motif}`, depotId || undefined)
+    // Le motif est stocké traduit : la note du mouvement doit rester lisible
+    // telle quelle dans l'historique, même si la langue change ensuite.
+    adjustStock(selected.id, delta, `${t('sk_adj_title')} : ${t(motif)}`, depotId || undefined)
     setDone({ name: selected.name, delta })
     setSelected(null); setTarget(''); setQuery('')
     toast(`✓ ${selected.name} : ${delta > 0 ? '+' : ''}${delta}`)
@@ -56,11 +61,9 @@ function Content() {
     <>
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
-          <Scale className="h-6 w-6 text-amber-500" />Ajustement de stock
+          <Scale className="h-6 w-6 text-amber-500" />{t('sk_adj_title')}
         </h1>
-        <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-zinc-400">
-          Corrigez la quantité réelle d’un article. L’écart est enregistré comme mouvement, avec son motif.
-        </p>
+        <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-zinc-400">{t('sk_adj_sub')}</p>
       </motion.div>
 
       <div className="glass-card p-4">
@@ -69,7 +72,7 @@ function Content() {
           <input
             value={query}
             onChange={(e) => { setQuery(e.target.value); setSelected(null) }}
-            placeholder="Rechercher un produit (nom ou code-barres)…"
+            placeholder={t('sk_adj_search')}
             className="input-field pl-9"
             autoFocus
           />
@@ -97,26 +100,26 @@ function Content() {
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="field-label">Quantité comptée</label>
+              <label className="field-label">{t('sk_adj_counted')}</label>
               <input type="number" min="0" value={target} onChange={(e) => setTarget(e.target.value)} className="input-field text-center text-lg font-bold" />
             </div>
             <div>
-              <label className="field-label">Motif</label>
-              <Select value={motif} onChange={setMotif} options={MOTIFS.map((m) => ({ value: m, label: m }))} />
+              <label className="field-label">{t('sk_adj_reason')}</label>
+              <Select value={motif} onChange={(v) => setMotif(v as TKey)} options={MOTIFS.map((m) => ({ value: m, label: t(m) }))} />
             </div>
           </div>
 
           {storeDepots.length > 1 && (
             <div className="mt-3">
-              <label className="field-label">Dépôt (optionnel)</label>
+              <label className="field-label">{t('sk_adj_depot')}</label>
               <Select value={depotId} onChange={setDepotId}
-                options={[{ value: '', label: '— Tous dépôts —' }, ...storeDepots.map((d) => ({ value: d.id, label: d.name }))]} />
+                options={[{ value: '', label: `— ${t('sk_adj_all_depots')} —` }, ...storeDepots.map((d) => ({ value: d.id, label: d.name }))]} />
             </div>
           )}
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-3 rounded-xl bg-gray-50 p-4 dark:bg-white/5">
             <span className="text-2xl font-extrabold tabular-nums text-gray-400">{current}</span>
-            <ArrowRight className="h-5 w-5 text-amber-500" />
+            <ArrowRight className="h-5 w-5 text-amber-500 rtl:rotate-180" />
             <span className="text-2xl font-extrabold tabular-nums text-gray-900 dark:text-white">{wanted}</span>
             {delta !== 0 && (
               <span className={`rounded-lg px-2.5 py-1 text-sm font-bold ${delta > 0 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400'}`}>
@@ -128,7 +131,7 @@ function Content() {
           <div className="mt-4 flex justify-end gap-2">
             <button onClick={() => { setSelected(null); setTarget('') }} className="btn-secondary">{t('mag_cancel')}</button>
             <button onClick={apply} disabled={delta === 0} className="btn-primary disabled:opacity-40">
-              <Check className="h-4 w-4" />Valider l’ajustement
+              <Check className="h-4 w-4" />{t('sk_adj_apply')}
             </button>
           </div>
         </motion.div>
@@ -136,7 +139,7 @@ function Content() {
 
       {done && (
         <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-          ✓ {done.name} ajusté de {done.delta > 0 ? '+' : ''}{done.delta}. Consultable dans Stock › Mouvements.
+          ✓ {done.name} {t('sk_adj_done')} {done.delta > 0 ? '+' : ''}{done.delta}. {t('sk_adj_see')}
         </p>
       )}
     </>

@@ -12,11 +12,13 @@ import CameraScanner from '@/components/CameraScanner'
 import Loader from '@/components/Loader'
 import { useToast } from '@/components/Toast'
 import { availableStock, useDroguerie, type Product } from '@/lib/store'
+import { useLanguage } from '@/lib/i18n'
 
 interface Line { productId: string; name: string; theoretical: number; counted: number }
 
 function Content() {
   const { ready, products, activeStoreId, adjustStock } = useDroguerie()
+  const { t } = useLanguage()
   const toast = useToast()
 
   const [code, setCode] = useState('')
@@ -42,7 +44,7 @@ function Content() {
     const c = raw.trim()
     if (!c) return
     const found = byBarcode.get(c)
-    if (!found) { toast(`Code inconnu : ${c}`, 'error'); setCode(''); return }
+    if (!found) { toast(`${t('sk_cnt_unknown')} : ${c}`, 'error'); setCode(''); return }
     setPending(found)
     setQty('')
     setCode('')
@@ -70,9 +72,9 @@ function Content() {
     let n = 0
     for (const l of lines) {
       const delta = l.counted - l.theoretical
-      if (delta !== 0) { adjustStock(l.productId, delta, 'Comptage rapide'); n++ }
+      if (delta !== 0) { adjustStock(l.productId, delta, t('sk_cnt_title')); n++ }
     }
-    toast(n > 0 ? `✓ ${n} écart(s) régularisé(s)` : 'Aucun écart à régulariser')
+    toast(n > 0 ? `✓ ${n} ${t('sk_cnt_fixed')}` : t('sk_cnt_nothing'))
     setLines([])
   }
 
@@ -82,11 +84,9 @@ function Content() {
     <>
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
-          <ScanLine className="h-6 w-6 text-amber-500" />Comptage rapide
+          <ScanLine className="h-6 w-6 text-amber-500" />{t('sk_cnt_title')}
         </h1>
-        <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-zinc-400">
-          Scannez un article, saisissez la quantité comptée, passez au suivant. Rien n’est écrit avant la validation finale.
-        </p>
+        <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-zinc-400">{t('sk_cnt_sub')}</p>
       </motion.div>
 
       <div className="glass-card flex flex-wrap items-end gap-2 p-3">
@@ -95,7 +95,7 @@ function Content() {
           <input
             ref={codeRef} value={code} onChange={(e) => setCode(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') lookup(code) }}
-            placeholder="Scanner un code-barres…" className="input-field h-12 pl-11 font-mono text-lg" autoComplete="off"
+            placeholder={t('sk_cnt_scan')} className="input-field h-12 pl-11 font-mono text-lg" autoComplete="off"
           />
         </div>
         <button onClick={() => setCameraOpen(true)} className="btn-secondary h-12 shrink-0"><Camera className="h-5 w-5" /></button>
@@ -107,14 +107,18 @@ function Content() {
             <div className="flex flex-wrap items-end gap-3">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-base font-bold text-gray-900 dark:text-white">{pending.name}</p>
-                <p className="text-xs text-gray-400">Stock théorique : <span className="font-bold tabular-nums">{availableStock(pending)}</span></p>
+                <p className="text-xs text-gray-400">
+                  {t('sk_cnt_theoretical')} : <span className="font-bold tabular-nums">{availableStock(pending)}</span>
+                </p>
               </div>
               <div className="w-32">
-                <label className="field-label">Compté</label>
+                <label className="field-label">{t('sk_cnt_counted')}</label>
                 <input ref={qtyRef} type="number" min="0" value={qty} onChange={(e) => setQty(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') addLine() }} className="input-field text-center text-lg font-bold" />
               </div>
-              <button onClick={addLine} disabled={qty === ''} className="btn-primary h-11 disabled:opacity-40"><Check className="h-4 w-4" />Ajouter</button>
+              <button onClick={addLine} disabled={qty === ''} className="btn-primary h-11 disabled:opacity-40">
+                <Check className="h-4 w-4" />{t('sk_cnt_add')}
+              </button>
               <button onClick={() => setPending(null)} className="btn-secondary h-11"><Undo2 className="h-4 w-4" /></button>
             </div>
           </motion.div>
@@ -125,9 +129,9 @@ function Content() {
         <>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { v: lines.length, l: 'Articles comptés', c: 'text-gray-900 dark:text-white' },
-              { v: totals.ecarts, l: 'Avec écart', c: totals.ecarts ? 'text-amber-500' : 'text-gray-400' },
-              { v: `${totals.diff > 0 ? '+' : ''}${totals.diff}`, l: 'Écart net', c: totals.diff < 0 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400' },
+              { v: lines.length, l: t('sk_cnt_items'), c: 'text-gray-900 dark:text-white' },
+              { v: totals.ecarts, l: t('sk_cnt_with_gap'), c: totals.ecarts ? 'text-amber-500' : 'text-gray-400' },
+              { v: `${totals.diff > 0 ? '+' : ''}${totals.diff}`, l: t('sk_cnt_net'), c: totals.diff < 0 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400' },
             ].map((s, i) => (
               <div key={i} className="glass-card p-3 text-center">
                 <p className={`text-xl font-extrabold tabular-nums ${s.c}`}>{s.v}</p>
@@ -140,8 +144,10 @@ function Content() {
             <table className="w-full min-w-[520px] text-sm">
               <thead>
                 <tr className="border-b border-gray-100 text-left text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:border-white/10 dark:text-zinc-500">
-                  <th className="px-4 py-3">Produit</th><th className="px-4 py-3 text-center">Théorique</th>
-                  <th className="px-4 py-3 text-center">Compté</th><th className="px-4 py-3 text-center">Écart</th><th />
+                  <th className="px-4 py-3">{t('sa_col_product')}</th>
+                  <th className="px-4 py-3 text-center">{t('sk_cnt_theoretical')}</th>
+                  <th className="px-4 py-3 text-center">{t('sk_cnt_counted')}</th>
+                  <th className="px-4 py-3 text-center">{t('sk_cnt_gap')}</th><th />
                 </tr>
               </thead>
               <tbody>
@@ -169,7 +175,7 @@ function Content() {
           </div>
 
           <button onClick={validate} className="btn-primary w-full">
-            <Check className="h-4 w-4" />Valider le comptage ({totals.ecarts} écart{totals.ecarts > 1 ? 's' : ''} à régulariser)
+            <Check className="h-4 w-4" />{t('sk_cnt_validate')} ({totals.ecarts})
           </button>
         </>
       )}

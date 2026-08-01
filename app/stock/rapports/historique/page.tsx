@@ -14,16 +14,18 @@ import { Download, History, TrendingDown, TrendingUp } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Loader from '@/components/Loader'
 import { availableStock, fmtDH, useDroguerie } from '@/lib/store'
+import { useLanguage, type TKey } from '@/lib/i18n'
 
-const RANGES = [
-  { days: 30, label: '30 jours' },
-  { days: 90, label: '90 jours' },
-  { days: 180, label: '6 mois' },
-  { days: 365, label: '1 an' },
+const RANGES: { days: number; key: TKey }[] = [
+  { days: 30, key: 'sk_hist_r30' },
+  { days: 90, key: 'sk_hist_r90' },
+  { days: 180, key: 'sk_hist_r180' },
+  { days: 365, key: 'sk_hist_r365' },
 ]
 
 function Content() {
   const { ready, products, movements, activeStoreId, activeStore } = useDroguerie()
+  const { t } = useLanguage()
   const [days, setDays] = useState(90)
 
   const { series, first, last, oldest } = useMemo(() => {
@@ -65,7 +67,7 @@ function Content() {
   const dVal = last.valeur - first.valeur
 
   const exportCsv = () => {
-    const csv = [['Date', 'Quantité', 'Valeur'], ...series.map((s) => [s.date, s.quantité, s.valeur.toFixed(2)])]
+    const csv = [[t('sk_var_date'), t('sk_val_qty'), t('sa_col_value')], ...series.map((s) => [s.date, s.quantité, s.valeur.toFixed(2)])]
       .map((r) => r.join(';')).join('\n')
     const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
     const a = document.createElement('a'); a.href = url; a.download = 'historique-stock.csv'; a.click(); URL.revokeObjectURL(url)
@@ -81,10 +83,10 @@ function Content() {
         className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
-            <History className="h-6 w-6 text-amber-500" />Historique du stock
+            <History className="h-6 w-6 text-amber-500" />{t('sk_hist_title')}
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
-            Évolution du niveau global — <span className="font-semibold text-amber-600 dark:text-amber-400">{activeStore?.name}</span>
+            {t('sk_hist_sub')} — <span className="font-semibold text-amber-600 dark:text-amber-400">{activeStore?.name}</span>
           </p>
         </div>
         <button onClick={exportCsv} className="btn-secondary"><Download className="h-4 w-4" />CSV</button>
@@ -94,17 +96,17 @@ function Content() {
         {RANGES.map((r) => (
           <button key={r.days} onClick={() => setDays(r.days)}
             className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${days === r.days ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/10 dark:text-zinc-300'}`}>
-            {r.label}
+            {t(r.key)}
           </button>
         ))}
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
-          { v: first.quantité.toLocaleString('fr-FR'), l: `Il y a ${days} j`, c: 'text-gray-500' },
-          { v: last.quantité.toLocaleString('fr-FR'), l: 'Aujourd’hui', c: 'text-gray-900 dark:text-white' },
-          { v: `${dQty >= 0 ? '+' : ''}${dQty.toLocaleString('fr-FR')}`, l: 'Variation (unités)', c: dQty < 0 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400' },
-          { v: `${dVal >= 0 ? '+' : ''}${fmtDH(dVal)}`, l: 'Variation (valeur)', c: dVal < 0 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400' },
+          { v: first.quantité.toLocaleString('fr-FR'), l: `${t('sk_hist_ago')} ${days} ${t('sa_days')}`, c: 'text-gray-500' },
+          { v: last.quantité.toLocaleString('fr-FR'), l: t('sk_hist_today'), c: 'text-gray-900 dark:text-white' },
+          { v: `${dQty >= 0 ? '+' : ''}${dQty.toLocaleString('fr-FR')}`, l: t('sk_hist_var_qty'), c: dQty < 0 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400' },
+          { v: `${dVal >= 0 ? '+' : ''}${fmtDH(dVal)}`, l: t('sk_hist_var_val'), c: dVal < 0 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400' },
         ].map((s, i) => (
           <div key={i} className="glass-card p-4 text-center">
             <p className={`text-xl font-extrabold tabular-nums ${s.c}`}>{s.v}</p>
@@ -115,8 +117,8 @@ function Content() {
 
       <p className="flex items-start gap-2 rounded-xl border border-dashed border-gray-200 p-3 text-xs text-gray-500 dark:border-white/15 dark:text-zinc-400">
         {dQty < 0 ? <TrendingDown className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" /> : <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />}
-        Le niveau passé est reconstitué à partir des mouvements (aucune photo quotidienne n’est stockée).
-        {truncated && oldest && ` L’historique ne remonte qu’au ${oldest.toLocaleDateString('fr-FR')} : avant cette date la courbe est plate et sans signification.`}
+        {t('sk_hist_note')}
+        {truncated && oldest && ` ${t('sk_hist_trunc')} ${oldest.toLocaleDateString('fr-FR')} : ${t('sk_hist_trunc2')}`}
       </p>
 
       <div className="glass-card p-4">
@@ -133,7 +135,7 @@ function Content() {
             <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" width={60} />
             <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }}
               formatter={(v: number, n: string) => (n === 'valeur' ? fmtDH(v) : v.toLocaleString('fr-FR'))} />
-            <Area type="monotone" dataKey="quantité" stroke="#f59e0b" strokeWidth={2} fill="url(#gq)" />
+            <Area type="monotone" dataKey="quantité" name={t('sk_val_qty')} stroke="#f59e0b" strokeWidth={2} fill="url(#gq)" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
