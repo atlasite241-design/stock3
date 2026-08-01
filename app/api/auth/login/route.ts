@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { rowsOf, tursoExec } from '@/lib/turso-http'
 import { COOKIE_NAME, issueSession, verifySecret } from '@/lib/server-auth'
+import { effectivePermissions, type RoleName } from '@/lib/permissions'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,6 +23,10 @@ interface StoredUser {
   active?: boolean
   passwordHash?: string
   pinHash?: string
+  /** Dérogation individuelle aux droits du rôle. */
+  permissions?: string[]
+  storeId?: string
+  storeIds?: string[]
 }
 
 export async function POST(req: NextRequest) {
@@ -55,7 +60,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'invalid' }, { status: 401 })
   }
 
-  const c = issueSession(String(match.id ?? ''), String(match.role ?? ''))
+  // Droits personnalisés par rôle : ils vivent dans la collection « settings ».
+  // Une seule lecture supplémentaire, à la connexion uniquement — la session
+  // signée transporte ensuite le résultat.
+  let rolePermissions: Record<string, string[]> | undefined
+  try {
+    const st = await tursoExec([{ sql: "SELECT data FROM records WHERE collection = 'settings' AND deleted = 0 LIMIT 1" }])
+    if (st.ok) {
+      const raw = rowsOf(st.results?.[0])[0]?.[0]?.value
+      if (raw) rolePermissions = (JSON.parse(String(raw)) as { rolePermissions?: Record<string, string[]> }).rolePermissions
+    }
+  } catch { /* réglages illisibles : on retombe sur les droits par défaut du rôle */ }
+
+  const perms = [...effectivePermissions(match.permissions, String(match.role ?? '') as RoleName, rolePermissions)]
+  const storeIds = match.storeIds?.length ? match.storeIds : match.storeId ? [match.storeId] : []
+
+  const c = issueSession(String(match.id ?? ''), String(match.role ?? ''), perms, storeIds)
   // Le compte complet n'est renvoyé qu'APRÈS preuve du mot de passe : le client
   // peut alors le mettre en cache et se reconnecter hors-ligne. C'est sans
   // risque — l'appelant vient précisément de prouver qu'il connaît ce secret.

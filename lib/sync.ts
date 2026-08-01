@@ -328,14 +328,16 @@ async function pullInner(): Promise<void> {
   // figeait l'onglet plusieurs secondes (« Page ne répondant pas »).
   for (let batch = 0; batch < 200; batch++) {
     const res = await apiPull(since)
-    if (res.rows.length === 0) break
+    if (res.scanned === 0) break
     for (const r of res.rows as unknown as RemoteRow[]) {
-      maxTs = Math.max(maxTs, Number(r.updated_at))
       const list = byCol.get(r.collection) ?? []
       list.push(r)
       byCol.set(r.collection, list)
     }
-    if (res.rows.length < res.page) break
+    // Le curseur suit la page examinee par le serveur, pas les lignes recues :
+    // certaines ont pu etre masquees par le perimetre de l'utilisateur.
+    maxTs = Math.max(maxTs, Number(res.maxTs ?? 0))
+    if (res.scanned < res.page) break
     since = maxTs
   }
   if (byCol.size === 0) return
@@ -414,7 +416,7 @@ async function fetchAllRows(): Promise<{ collection: string; id: string; data: s
   for (let page = 0; page < 5000; page++) {
     const res = await apiAll(after)
     out.push(...res.rows)
-    if (res.rows.length < res.page) break
+    if (res.scanned < res.page) break
     after = res.cursor
   }
   return out

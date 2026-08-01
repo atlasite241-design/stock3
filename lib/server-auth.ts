@@ -25,11 +25,26 @@ function sign(payload: string): string {
   return b64u(crypto.createHmac('sha256', secret()).update(payload).digest())
 }
 
-export interface ServerSession { userId: string; role: string; exp: number }
+export interface ServerSession {
+  userId: string
+  role: string
+  /** Permissions effectives, figées à la connexion. */
+  perms: string[]
+  /** Magasins autorisés ; vide = tous. */
+  storeIds: string[]
+  exp: number
+}
 
-/** Fabrique la valeur du cookie : payload base64url + signature HMAC. */
-export function issueSession(userId: string, role: string): { name: string; value: string; maxAge: number } {
-  const data: ServerSession = { userId, role, exp: Date.now() + TTL_MS }
+/**
+ * Fabrique la valeur du cookie : payload base64url + signature HMAC.
+ *
+ * Les permissions et le périmètre magasin y sont EMBARQUÉS plutôt que relus à
+ * chaque requête : la session est signée, donc infalsifiable, et l'API n'ajoute
+ * aucune lecture de base. Contrepartie assumée : un changement de droits ne
+ * prend effet qu'à la reconnexion.
+ */
+export function issueSession(userId: string, role: string, perms: string[] = [], storeIds: string[] = []): { name: string; value: string; maxAge: number } {
+  const data: ServerSession = { userId, role, perms, storeIds, exp: Date.now() + TTL_MS }
   const payload = b64u(Buffer.from(JSON.stringify(data)))
   return { name: COOKIE, value: `${payload}.${sign(payload)}`, maxAge: Math.floor(TTL_MS / 1000) }
 }

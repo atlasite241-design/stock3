@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'node:crypto'
 import { rowsOf, tursoExec } from '@/lib/turso-http'
 import { COOKIE_NAME, readSession } from '@/lib/server-auth'
+import { canRead, canWrite, inScope, type Scope } from '@/lib/api-policy'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,6 +28,16 @@ VALUES (?, ?, ?, ?, ?, 0)
 ON CONFLICT(collection, id) DO UPDATE SET
   store_id = excluded.store_id, data = excluded.data,
   updated_at = excluded.updated_at, deleted = 0`
+
+/**
+ * Magasin d'un enregistrement, lu dans son JSON. On évite JSON.parse sur des
+ * centaines de lignes par requête : une recherche ciblée suffit et coûte bien
+ * moins cher.
+ */
+function storeOf(data: string): string | null {
+  const m = /"storeId"\s*:\s*"([^"]*)"/.exec(data)
+  return m ? m[1] : null
+}
 
 type Cell = { value: string } | undefined
 const txt = (c: Cell) => String(c?.value ?? '')
@@ -61,6 +72,17 @@ export async function POST(req: NextRequest) {
   const session = readSession(req.cookies.get(COOKIE_NAME)?.value)
   if (!session) return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 })
 
+  // Cookie émis AVANT l'ajout du périmètre : il ne porte aucune permission.
+  // L'accepter reviendrait à tout interdire silencieusement ; on le traite donc
+  // comme expiré, ce qui déclenche une reconnexion et régénère un cookie complet.
+  if (!Array.isArray(session.perms)) {
+    return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 })
+  }
+
+  // Périmètre de la session : ce qu'elle a le droit de lire, d'écrire, et sur
+  // quels magasins. Tout est issu du cookie SIGNÉ — rien ne vient du client.
+  const scope: Scope = { perms: new Set(session.perms ?? []), storeIds: session.storeIds ?? [] }
+
   // --- pull : changements depuis un curseur horodaté ---
   if (op === 'pull') {
     const since = Number(body.since ?? 0) || 0
@@ -69,11 +91,17 @@ export async function POST(req: NextRequest) {
       args: [{ type: 'integer', value: String(since) }, { type: 'integer', value: String(PAGE) }],
     }])
     if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 502 })
+    // Le curseur avance sur la page ENTIÈRE, mais on ne renvoie que ce que la
+    // session peut voir : masquer des lignes ne doit pas bloquer la pagination.
+    const all = rowsOf(r.results?.[0]).map((c) => ({
+      collection: txt(c[0]), id: txt(c[1]), data: txt(c[2]), updated_at: num(c[3]), deleted: num(c[4]),
+    }))
+    // maxTs porte sur la page ENTIERE : sans lui, une page entierement filtree
+    // laisserait le curseur immobile et la synchro tournerait en rond.
     return NextResponse.json({
-      ok: true, page: PAGE,
-      rows: rowsOf(r.results?.[0]).map((c) => ({
-        collection: txt(c[0]), id: txt(c[1]), data: txt(c[2]), updated_at: num(c[3]), deleted: num(c[4]),
-      })),
+      ok: true, page: PAGE, scanned: all.length,
+      maxTs: all.reduce((m, x) => Math.max(m, x.updated_at), since),
+      rows: all.filter((x) => canRead(x.collection, scope) && inScope(x.collection, storeOf(x.data), scope)),
     })
   }
 
@@ -86,10 +114,11 @@ export async function POST(req: NextRequest) {
     }])
     if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 502 })
     const rows = rowsOf(r.results?.[0])
+    const mapped = rows.map((c) => ({ collection: txt(c[1]), id: txt(c[2]), data: txt(c[3]), updated_at: num(c[4]) }))
     return NextResponse.json({
-      ok: true, page: PAGE,
+      ok: true, page: PAGE, scanned: rows.length,
       cursor: rows.length ? num(rows[rows.length - 1][0]) : after,
-      rows: rows.map((c) => ({ collection: txt(c[1]), id: txt(c[2]), data: txt(c[3]), updated_at: num(c[4]) })),
+      rows: mapped.filter((x) => canRead(x.collection, scope) && inScope(x.collection, storeOf(x.data), scope)),
     })
   }
 
@@ -97,7 +126,12 @@ export async function POST(req: NextRequest) {
   if (op === 'counts') {
     const r = await tursoExec([{ sql: 'SELECT collection, COUNT(*) AS n FROM records WHERE deleted = 0 GROUP BY collection ORDER BY collection' }])
     if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 502 })
-    return NextResponse.json({ ok: true, rows: rowsOf(r.results?.[0]).map((c) => ({ collection: txt(c[0]), n: num(c[1]) })) })
+    return NextResponse.json({
+      ok: true,
+      rows: rowsOf(r.results?.[0])
+        .map((c) => ({ collection: txt(c[0]), n: num(c[1]) }))
+        .filter((x) => canRead(x.collection, scope)),
+    })
   }
 
   // --- upsert : écriture d'un lot d'enregistrements ---
@@ -105,6 +139,17 @@ export async function POST(req: NextRequest) {
     const raw = Array.isArray(body.rows) ? body.rows : []
     if (raw.length === 0) return NextResponse.json({ ok: true, n: 0 })
     if (raw.length > MAX_UPSERT) return NextResponse.json({ ok: false, error: 'too_many' }, { status: 413 })
+
+    // Une écriture refusée n'est pas ignorée en silence : le client doit savoir
+    // que sa modification n'a pas été enregistrée.
+    for (const x of raw) {
+      const r = x as { collection?: unknown; storeId?: unknown }
+      const col = String(r.collection ?? '')
+      if (!canWrite(col, scope)) return NextResponse.json({ ok: false, error: 'forbidden_collection', collection: col }, { status: 403 })
+      if (!inScope(col, r.storeId == null ? null : String(r.storeId), scope)) {
+        return NextResponse.json({ ok: false, error: 'forbidden_store', collection: col }, { status: 403 })
+      }
+    }
     const stmts = raw.map((x) => {
       const r = x as { collection?: unknown; id?: unknown; storeId?: unknown; data?: unknown; updated_at?: unknown }
       return {

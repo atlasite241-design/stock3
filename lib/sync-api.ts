@@ -56,12 +56,15 @@ export async function syncStatus(): Promise<{ configured: boolean; dbId: string 
 
 /** Changements postérieurs au curseur (une page). */
 export function apiPull(since: number) {
-  return call<{ rows: PullRow[]; page: number }>({ op: 'pull', since })
+  // `scanned` = lignes examinees, `rows` = lignes AUTORISEES. La pagination doit
+  // suivre `scanned`, sinon un utilisateur restreint arreterait de synchroniser
+  // des qu'une page contiendrait des donnees hors de son perimetre.
+  return call<{ rows: PullRow[]; page: number; scanned: number; maxTs: number }>({ op: 'pull', since })
 }
 
 /** Téléchargement complet, page par page (curseur `after` = rowid). */
 export function apiAll(after: number) {
-  return call<{ rows: AllRow[]; page: number; cursor: number }>({ op: 'all', after })
+  return call<{ rows: AllRow[]; page: number; scanned: number; cursor: number }>({ op: 'all', after })
 }
 
 /** Volumétrie par collection (page de diagnostic). */
