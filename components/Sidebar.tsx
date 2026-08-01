@@ -94,6 +94,7 @@ const NAV: NavItem[] = [
       { href: '/produits/marques', labelKey: 'nav_products_brands' },
       { href: '/produits/unites', labelKey: 'nav_products_units' },
       { href: '/produits/codes-barres', labelKey: 'nav_products_barcodes' },
+      { href: '/produits/analyse', labelKey: 'nav_products_analysis' },
     ],
   },
   {

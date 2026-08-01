@@ -1923,6 +1923,22 @@ export function useDroguerieState() {
     if (p) logActivity(`Produit supprimé : ${p.name}`)
   }
 
+  /**
+   * Suppression groupée (nettoyage de doublons). UNE seule écriture quel que
+   * soit le nombre de fiches : supprimer 70 000 produits un par un générerait
+   * autant d'écritures de synchro.
+   */
+  const bulkDeleteProducts = (ids: string[]): number => {
+    if (ids.length === 0) return 0
+    const set = new Set(ids)
+    const next = products.filter((p) => !set.has(p.id))
+    const removed = products.length - next.length
+    if (removed === 0) return 0
+    persistProducts(next)
+    logActivity(`Nettoyage du catalogue : ${removed} fiches supprimées`)
+    return removed
+  }
+
   // Ajoute aux collections `categories`/`subcategories` celles présentes dans les
   // produits importés mais absentes — évite que la page Catégories diverge du
   // catalogue réel (sous-catégorie au format « Catégorie › Sous-catégorie »).
@@ -3404,6 +3420,7 @@ export function useDroguerieState() {
     updateProduct,
     moveProductLocation,
     deleteProduct,
+    bulkDeleteProducts,
     importProducts,
     addMovement,
     initializeStock,

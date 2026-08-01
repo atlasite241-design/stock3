@@ -24,6 +24,7 @@ export const ROUTE_PERM: Record<string, string> = {
   '/produits/marques': 'prod.view',
   '/produits/unites': 'prod.view',
   '/produits/codes-barres': 'prod.scan',
+  '/produits/analyse': 'prod.delete',
   // Stock
   '/stock': 'stock.view',
   '/stock/stock-initial': 'stock.init',
