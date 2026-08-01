@@ -542,7 +542,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
                           <div key={entry.sectionKey}>
                             <button
                               onClick={() => setOpenSection(secOpen ? null : entry.sectionKey)}
-                              className={`flex w-full items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                              className={`flex w-full items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
                                 secActive
                                   ? 'text-amber-600 dark:text-amber-400'
                                   : 'text-gray-400 hover:text-gray-600 dark:text-zinc-500 dark:hover:text-zinc-300'
