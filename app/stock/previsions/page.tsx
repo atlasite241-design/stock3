@@ -6,35 +6,34 @@ import StockAuditView, { colCategory, colStock, type AuditColumn } from '@/compo
 import { availableStock } from '@/lib/store'
 
 /**
- * Jours restants avant rupture = stock disponible ÷ consommation quotidienne
- * moyenne (sorties des 90 derniers jours ÷ 90). Renvoie null si le produit
- * n'a enregistré aucune sortie : sans consommation, aucune date de rupture
- * ne peut être annoncée honnêtement.
+ * Jours avant rupture = stock ÷ consommation quotidienne moyenne. Renvoie null
+ * en l'absence de sortie : aucune date ne pourrait être annoncée honnêtement.
  */
-const daysLeft = (stock: number, out90: number): number | null => {
-  if (out90 <= 0) return null
-  const perDay = out90 / 90
-  return Math.floor(stock / perDay)
-}
+const daysLeft = (stock: number, out90: number): number | null =>
+  out90 > 0 ? Math.floor(stock / (out90 / 90)) : null
 
 const colRate: AuditColumn = {
-  key: 'rate', label: 'Conso / jour', align: 'center',
+  key: 'rate', label: 'sk_fc_col_rate', align: 'center',
   raw: (p, c) => Number(((c.out90.get(p.id) ?? 0) / 90).toFixed(2)),
   render: (p, c) => <span className="tabular-nums text-gray-500">{((c.out90.get(p.id) ?? 0) / 90).toFixed(2)}</span>,
 }
 
 const colDays: AuditColumn = {
-  key: 'days', label: 'Rupture dans', align: 'center',
+  key: 'days', label: 'sk_fc_col_days', align: 'center',
   raw: (p, c) => daysLeft(availableStock(p), c.out90.get(p.id) ?? 0) ?? 9999,
   render: (p, c) => {
     const d = daysLeft(availableStock(p), c.out90.get(p.id) ?? 0)
     if (d === null) return <span className="text-xs text-gray-400">—</span>
-    return <span className={`font-bold tabular-nums ${d <= 7 ? 'text-rose-500' : d <= 21 ? 'text-amber-500' : 'text-emerald-600 dark:text-emerald-400'}`}>{d} j</span>
+    return (
+      <span className={`font-bold tabular-nums ${d <= 7 ? 'text-rose-500' : d <= 21 ? 'text-amber-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
+        {d} {c.t('sa_days')}
+      </span>
+    )
   },
 }
 
 const colDate: AuditColumn = {
-  key: 'date', label: 'Date estimée', align: 'right',
+  key: 'date', label: 'sk_fc_col_date', align: 'right',
   raw: (p, c) => daysLeft(availableStock(p), c.out90.get(p.id) ?? 0) ?? 9999,
   render: (p, c) => {
     const d = daysLeft(availableStock(p), c.out90.get(p.id) ?? 0)
@@ -47,12 +46,12 @@ export default function Page() {
   return (
     <AppShell>
       <StockAuditView
-        title="Prévisions de rupture"
-        subtitle="Produits dont le stock sera épuisé dans les 60 prochains jours au rythme de consommation actuel."
+        title="sk_fc_title"
+        subtitle="sk_fc_sub"
         icon={CalendarClock}
         accent="rose"
-        emptyLabel="Aucune rupture prévue dans les 60 jours 🎉"
-        note="Consommation quotidienne = sorties des 90 derniers jours ÷ 90. Les produits sans aucune sortie sont exclus : aucune prévision ne serait fondée."
+        emptyLabel="sk_fc_empty"
+        note="sk_fc_note"
         filter={(p, c) => {
           const d = daysLeft(availableStock(p), c.out90.get(p.id) ?? 0)
           return d !== null && d <= 60

@@ -6,27 +6,24 @@ import StockAuditView, { colCategory, colMin, colStock, type AuditColumn } from 
 import { availableStock, fmtDH } from '@/lib/store'
 
 /**
- * Quantité conseillée à commander.
- * Règle : ramener au seuil, plus la consommation observée sur 30 jours
- * (extrapolée depuis les sorties des 90 derniers jours). À défaut d'historique,
- * on se contente de reconstituer le seuil.
+ * Quantité conseillée : ramener au seuil, plus la consommation observée sur
+ * 30 jours (extrapolée depuis les sorties des 90 derniers jours).
  */
-const suggested = (stock: number, min: number, out90: number) => {
-  const monthly = Math.ceil(out90 / 3)
-  return Math.max(0, min - stock) + monthly
-}
+const suggested = (stock: number, min: number, out90: number) =>
+  Math.max(0, min - stock) + Math.ceil(out90 / 3)
 
 const colSuggested: AuditColumn = {
-  key: 'sug', label: 'À commander', align: 'center',
+  key: 'sug', label: 'sk_sug_col_order', align: 'center',
   raw: (p, c) => suggested(availableStock(p), p.minStock, c.out90.get(p.id) ?? 0),
-  render: (p, c) => {
-    const q = suggested(availableStock(p), p.minStock, c.out90.get(p.id) ?? 0)
-    return <span className="font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{q}</span>
-  },
+  render: (p, c) => (
+    <span className="font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+      {suggested(availableStock(p), p.minStock, c.out90.get(p.id) ?? 0)}
+    </span>
+  ),
 }
 
 const colCost: AuditColumn = {
-  key: 'cost', label: 'Coût estimé', align: 'right',
+  key: 'cost', label: 'sk_sug_col_cost', align: 'right',
   raw: (p, c) => Number((suggested(availableStock(p), p.minStock, c.out90.get(p.id) ?? 0) * p.cost).toFixed(2)),
   render: (p, c) => (
     <span className="tabular-nums text-gray-600 dark:text-zinc-300">
@@ -39,12 +36,12 @@ export default function Page() {
   return (
     <AppShell>
       <StockAuditView
-        title="Suggestions d'achat"
-        subtitle="Quantités conseillées pour reconstituer le stock et couvrir un mois de consommation."
+        title="sk_sug_title"
+        subtitle="sk_sug_sub"
         icon={ShoppingCart}
         accent="emerald"
-        emptyLabel="Aucun achat à prévoir 🎉"
-        note="Quantité conseillée = (seuil − stock disponible) + consommation mensuelle estimée, déduite des sorties des 90 derniers jours."
+        emptyLabel="sk_sug_empty"
+        note="sk_sug_note"
         filter={(p, c) => suggested(availableStock(p), p.minStock, c.out90.get(p.id) ?? 0) > 0}
         columns={[colCategory, colStock, colMin, colSuggested, colCost]}
         defaultSort={{ key: 'cost', dir: 'desc' }}

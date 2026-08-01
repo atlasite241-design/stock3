@@ -14,11 +14,12 @@ import { Download, FileSpreadsheet, MapPin, Printer, Search } from 'lucide-react
 import type { LucideIcon } from 'lucide-react'
 import Loader from '@/components/Loader'
 import { availableStock, fmtDH, useDroguerie, type Product, type StockMovement } from '@/lib/store'
-import { useLanguage } from '@/lib/i18n'
+import { useLanguage, type TKey } from '@/lib/i18n'
 
 export interface AuditColumn {
   key: string
-  label: string
+  /** Clé de traduction du titre de colonne (jamais un texte figé). */
+  label: TKey
   align?: 'left' | 'center' | 'right'
   /** Valeur affichée ; `raw` sert au tri et à l'export. */
   render: (p: Product, ctx: AuditContext) => React.ReactNode
@@ -33,21 +34,23 @@ export interface AuditContext {
   /** Quantité sortie sur 90 jours, par produit. */
   out90: Map<string, number>
   now: number
+  /** Traduction, pour les libellés produits par les colonnes. */
+  t: (k: TKey) => string
 }
 
 export default function StockAuditView({
   title, subtitle, icon: Icon, accent = 'amber',
   filter, columns, emptyLabel, note, defaultSort,
 }: {
-  title: string
-  subtitle: string
+  title: TKey
+  subtitle: TKey
   icon: LucideIcon
   accent?: 'amber' | 'rose' | 'violet' | 'cyan' | 'emerald'
   filter: (p: Product, ctx: AuditContext) => boolean
   columns: AuditColumn[]
-  emptyLabel: string
+  emptyLabel: TKey
   /** Encart d'explication (méthode de calcul, limite connue…). */
-  note?: React.ReactNode
+  note?: TKey
   defaultSort?: { key: string; dir: 'asc' | 'desc' }
 }) {
   const { ready, products, movements, activeStoreId, activeStore } = useDroguerie()
@@ -68,8 +71,8 @@ export default function StockAuditView({
       if (!lastMove.has(m.productId) || ts > (lastMove.get(m.productId) ?? 0)) lastMove.set(m.productId, ts)
       if (OUT.has(m.type) && ts >= since) out90.set(m.productId, (out90.get(m.productId) ?? 0) + Math.abs(m.qty))
     }
-    return { movements: mine, lastMove, out90, now }
-  }, [movements, activeStoreId])
+    return { movements: mine, lastMove, out90, now, t }
+  }, [movements, activeStoreId, t])
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -88,18 +91,18 @@ export default function StockAuditView({
 
   if (!ready) return <Loader />
 
-  const headers = ['Code-barres', 'Produit', ...columns.map((c) => c.label)]
+  const headers = [t('sa_col_barcode'), t('sa_col_product'), ...columns.map((c) => t(c.label))]
   const dataRows = () => rows.map((p) => [p.barcode, p.name, ...columns.map((c) => c.raw(p, ctx))])
 
   const exportCsv = () => {
     const csv = [headers, ...dataRows()].map((r) => r.join(';')).join('\n')
     const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
-    const a = document.createElement('a'); a.href = url; a.download = `${title}.csv`; a.click(); URL.revokeObjectURL(url)
+    const a = document.createElement('a'); a.href = url; a.download = `${t(title)}.csv`; a.click(); URL.revokeObjectURL(url)
   }
   const exportXlsx = async () => {
     const XLSX = await import('xlsx')
     const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows()])
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Stock'); XLSX.writeFile(wb, `${title}.xlsx`)
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Stock'); XLSX.writeFile(wb, `${t(title)}.xlsx`)
   }
 
   const tone = {
@@ -115,10 +118,10 @@ export default function StockAuditView({
         className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
-            <Icon className={`h-6 w-6 ${tone}`} />{title}
+            <Icon className={`h-6 w-6 ${tone}`} />{t(title)}
           </h1>
           <p className="mt-1 max-w-3xl text-sm text-gray-500 dark:text-zinc-400">
-            {subtitle} — <span className="font-semibold text-amber-600 dark:text-amber-400">{activeStore?.name}</span>
+            {t(subtitle)} — <span className="font-semibold text-amber-600 dark:text-amber-400">{activeStore?.name}</span>
           </p>
         </div>
         <div className="flex flex-wrap gap-2 no-print">
@@ -130,7 +133,7 @@ export default function StockAuditView({
 
       {note && (
         <div className="rounded-xl border border-dashed border-gray-200 p-3 text-xs text-gray-500 dark:border-white/15 dark:text-zinc-400">
-          {note}
+          {t(note)}
         </div>
       )}
 
@@ -148,7 +151,7 @@ export default function StockAuditView({
         {rows.length === 0 ? (
           <div className="flex flex-col items-center gap-3 p-12 text-center">
             <Icon className="h-10 w-10 text-gray-300 dark:text-zinc-700" />
-            <p className="text-sm text-gray-500 dark:text-zinc-400">{emptyLabel}</p>
+            <p className="text-sm text-gray-500 dark:text-zinc-400">{t(emptyLabel)}</p>
           </div>
         ) : (
           <table className="w-full min-w-[680px] text-sm">
@@ -162,7 +165,7 @@ export default function StockAuditView({
                       onClick={() => setSort((s) => ({ key: c.key, dir: s.key === c.key && s.dir === 'asc' ? 'desc' : 'asc' }))}
                       className="transition hover:text-gray-700 dark:hover:text-zinc-200"
                     >
-                      {c.label}{sort.key === c.key ? (sort.dir === 'asc' ? ' ↑' : ' ↓') : ''}
+                      {t(c.label)}{sort.key === c.key ? (sort.dir === 'asc' ? ' ↑' : ' ↓') : ''}
                     </button>
                   </th>
                 ))}
@@ -204,7 +207,7 @@ export default function StockAuditView({
 /* ------------------------- Colonnes réutilisables ------------------------- */
 
 export const colStock: AuditColumn = {
-  key: 'stock', label: 'Stock', align: 'center',
+  key: 'stock', label: 'sa_col_stock', align: 'center',
   raw: (p) => availableStock(p),
   render: (p) => {
     const s = availableStock(p)
@@ -213,34 +216,34 @@ export const colStock: AuditColumn = {
 }
 
 export const colMin: AuditColumn = {
-  key: 'min', label: 'Seuil', align: 'center',
+  key: 'min', label: 'sa_col_min', align: 'center',
   raw: (p) => p.minStock,
   render: (p) => <span className="tabular-nums text-gray-500">{p.minStock}</span>,
 }
 
 export const colCategory: AuditColumn = {
-  key: 'cat', label: 'Catégorie',
+  key: 'cat', label: 'sa_col_category',
   raw: (p) => p.category ?? '',
   render: (p) => <span className="text-gray-500 dark:text-zinc-400">{p.category || '—'}</span>,
 }
 
 export const colValue: AuditColumn = {
-  key: 'value', label: 'Valeur HT', align: 'right',
+  key: 'value', label: 'sa_col_value', align: 'right',
   raw: (p) => Number((availableStock(p) * p.cost).toFixed(2)),
   render: (p) => <span className="tabular-nums text-gray-600 dark:text-zinc-300">{fmtDH(availableStock(p) * p.cost)}</span>,
 }
 
 /** Jours écoulés depuis le dernier mouvement (— si le produit n'a jamais bougé). */
 export const colLastMove: AuditColumn = {
-  key: 'last', label: 'Dernier mouvement', align: 'center',
+  key: 'last', label: 'sa_col_lastmove', align: 'center',
   raw: (p, c) => {
     const ts = c.lastMove.get(p.id)
     return ts ? Math.floor((c.now - ts) / 86400000) : 9999
   },
   render: (p, c) => {
     const ts = c.lastMove.get(p.id)
-    if (!ts) return <span className="text-xs text-gray-400">jamais</span>
+    if (!ts) return <span className="text-xs text-gray-400">{c.t('sa_never')}</span>
     const days = Math.floor((c.now - ts) / 86400000)
-    return <span className={`tabular-nums ${days > 180 ? 'text-rose-500' : days > 90 ? 'text-amber-500' : 'text-gray-500'}`}>{days} j</span>
+    return <span className={`tabular-nums ${days > 180 ? 'text-rose-500' : days > 90 ? 'text-amber-500' : 'text-gray-500'}`}>{days} {c.t('sa_days')}</span>
   },
 }

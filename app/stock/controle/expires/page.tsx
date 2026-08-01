@@ -13,19 +13,33 @@ const daysToExpiry = (iso: string | undefined, now: number): number | null => {
 }
 
 const colExpiry: AuditColumn = {
-  key: 'expiry', label: 'Péremption', align: 'center',
+  key: 'expiry', label: 'sk_exp_col_date', align: 'center',
   raw: (p) => p.expiryDate ?? '',
-  render: (p) => <span className="tabular-nums text-gray-600 dark:text-zinc-300">{p.expiryDate ? new Date(p.expiryDate).toLocaleDateString('fr-FR') : '—'}</span>,
+  render: (p) => (
+    <span className="tabular-nums text-gray-600 dark:text-zinc-300">
+      {p.expiryDate ? new Date(p.expiryDate).toLocaleDateString('fr-FR') : '—'}
+    </span>
+  ),
 }
 
 const colLeft: AuditColumn = {
-  key: 'left', label: 'État', align: 'center',
+  key: 'left', label: 'sk_exp_col_state', align: 'center',
   raw: (p, c) => daysToExpiry(p.expiryDate, c.now) ?? 9999,
   render: (p, c) => {
     const d = daysToExpiry(p.expiryDate, c.now)
     if (d === null) return <span className="text-xs text-gray-400">—</span>
-    if (d < 0) return <span className="rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">expiré depuis {-d} j</span>
-    return <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${d <= 30 ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'}`}>dans {d} j</span>
+    if (d < 0) {
+      return (
+        <span className="rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">
+          {c.t('sk_exp_since')} {-d} {c.t('sa_days')}
+        </span>
+      )
+    }
+    return (
+      <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${d <= 30 ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'}`}>
+        {c.t('sk_exp_in')} {d} {c.t('sa_days')}
+      </span>
+    )
   },
 }
 
@@ -33,12 +47,12 @@ export default function Page() {
   return (
     <AppShell>
       <StockAuditView
-        title="Produits expirés"
-        subtitle="Articles dont la date de péremption est dépassée ou proche (moins de 30 jours)."
+        title="sk_exp_title"
+        subtitle="sk_exp_sub"
         icon={CalendarX2}
         accent="rose"
-        emptyLabel="Aucun produit expiré ou proche de l’être. Renseignez la date de péremption sur la fiche produit pour alimenter cet écran."
-        note="La date de péremption se saisit sur la fiche produit (Produits › modifier). Les articles sans date ne sont pas listés : aucune conclusion ne peut en être tirée."
+        emptyLabel="sk_exp_empty"
+        note="sk_exp_note"
         filter={(p, c) => {
           const d = daysToExpiry(p.expiryDate, c.now)
           return d !== null && d <= 30 && availableStock(p) > 0
