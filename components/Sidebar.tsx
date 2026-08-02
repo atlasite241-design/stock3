@@ -24,6 +24,7 @@ import {
   Truck,
   UserCog,
   Users,
+  UsersRound,
   Wallet,
   X,
 } from 'lucide-react'
@@ -413,6 +414,98 @@ const NAV_ALL: NavItem[] = [
     ],
   },
   {
+    labelKey: 'nav_hr',
+    icon: UsersRound,
+    children: [
+      {
+        sectionKey: 'nav_hr_sec_employees',
+        items: [
+          { href: '/rh/employes', labelKey: 'nav_hr_list' },
+          { href: '/rh/employes/nouveau', labelKey: 'nav_hr_new' },
+          { href: '/rh/employes/dossier', labelKey: 'nav_hr_file' },
+          { href: '/rh/employes/documents', labelKey: 'nav_hr_documents' },
+          { href: '/rh/employes/historique', labelKey: 'nav_hr_history' },
+        ],
+      },
+      {
+        sectionKey: 'nav_hr_sec_attendance',
+        items: [
+          { href: '/rh/presence/pointage', labelKey: 'nav_hr_clock' },
+          { href: '/rh/presence/presences', labelKey: 'nav_hr_present' },
+          { href: '/rh/presence/absences', labelKey: 'nav_hr_absent' },
+          { href: '/rh/presence/retards', labelKey: 'nav_hr_late' },
+          { href: '/rh/presence/conges', labelKey: 'nav_hr_leaves' },
+        ],
+      },
+      {
+        sectionKey: 'nav_hr_sec_planning',
+        items: [
+          { href: '/rh/planning/horaires', labelKey: 'nav_hr_shifts' },
+          { href: '/rh/planning/equipes', labelKey: 'nav_hr_teams' },
+          { href: '/rh/planning/calendrier', labelKey: 'nav_hr_calendar' },
+          { href: '/rh/planning/feries', labelKey: 'nav_hr_holidays' },
+        ],
+      },
+      {
+        sectionKey: 'nav_hr_sec_payroll',
+        items: [
+          { href: '/rh/paie/salaires', labelKey: 'nav_hr_salaries' },
+          { href: '/rh/paie/primes', labelKey: 'nav_hr_bonuses' },
+          { href: '/rh/paie/avances', labelKey: 'nav_hr_advances' },
+          { href: '/rh/paie/deductions', labelKey: 'nav_hr_deductions' },
+          { href: '/rh/paie/bulletins', labelKey: 'nav_hr_payslips' },
+        ],
+      },
+      {
+        sectionKey: 'nav_hr_sec_performance',
+        items: [
+          { href: '/rh/performance/evaluations', labelKey: 'nav_hr_evaluations' },
+          { href: '/rh/performance/objectifs', labelKey: 'nav_hr_objectives' },
+          { href: '/rh/performance/recompenses', labelKey: 'nav_hr_rewards' },
+          { href: '/rh/performance/sanctions', labelKey: 'nav_hr_sanctions' },
+        ],
+      },
+      {
+        sectionKey: 'nav_hr_sec_training',
+        items: [
+          { href: '/rh/formation/formations', labelKey: 'nav_hr_trainings' },
+          { href: '/rh/formation/competences', labelKey: 'nav_hr_skills' },
+          { href: '/rh/formation/certifications', labelKey: 'nav_hr_certifications' },
+        ],
+      },
+      {
+        sectionKey: 'nav_hr_sec_recruitment',
+        items: [
+          { href: '/rh/recrutement/offres', labelKey: 'nav_hr_jobs' },
+          { href: '/rh/recrutement/candidatures', labelKey: 'nav_hr_applications' },
+          { href: '/rh/recrutement/entretiens', labelKey: 'nav_hr_interviews' },
+          { href: '/rh/recrutement/embauches', labelKey: 'nav_hr_hires' },
+        ],
+      },
+      {
+        sectionKey: 'nav_hr_sec_security',
+        items: [
+          // Rôles, permissions et connexions existent déjà sous Utilisateurs :
+          // ce sont les mêmes écrans, pas des copies.
+          { href: '/utilisateurs/roles', labelKey: 'nav_hr_roles' },
+          { href: '/utilisateurs/permissions', labelKey: 'nav_hr_permissions' },
+          { href: '/rh/securite/badges', labelKey: 'nav_hr_badges' },
+          { href: '/utilisateurs/connexions', labelKey: 'nav_hr_logins' },
+        ],
+      },
+      {
+        sectionKey: 'nav_hr_sec_reports',
+        items: [
+          { href: '/rh/rapports/effectif', labelKey: 'nav_hr_headcount' },
+          { href: '/rh/rapports/presence', labelKey: 'nav_hr_rep_presence' },
+          { href: '/rh/rapports/heures', labelKey: 'nav_hr_rep_hours' },
+          { href: '/rh/rapports/masse-salariale', labelKey: 'nav_hr_payroll_mass' },
+          { href: '/rh/rapports/export', labelKey: 'nav_hr_export' },
+        ],
+      },
+    ],
+  },
+  {
     labelKey: 'nav_settings',
     icon: Settings,
     children: [
@@ -446,7 +539,7 @@ const NAV_FAMILIES: NavFamily[] = [
   fam('nav_fam_ops', ['nav_pos', 'nav_caisse', 'nav_products', 'nav_stock', 'nav_stores']),
   fam('nav_fam_commerce', ['nav_purchases', 'nav_sales', 'nav_clients', 'nav_suppliers']),
   fam('nav_fam_analysis', ['nav_reports', 'nav_accounting', 'nav_alerts']),
-  fam('nav_fam_admin', ['nav_users', 'nav_settings']),
+  fam('nav_fam_admin', ['nav_hr', 'nav_users', 'nav_settings']),
   fam('nav_fam_help', ['nav_setup', 'nav_guide', 'nav_guide_exercise']),
 ]
 

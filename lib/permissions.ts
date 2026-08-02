@@ -141,6 +141,25 @@ export const PERMISSION_CATALOG: PermCategory[] = [
     ],
   },
   {
+    key: 'hr', fr: 'Ressources humaines', ar: 'الموارد البشرية', icon: 'UsersRound',
+    perms: [
+      { key: 'hr.view', fr: 'Voir les employés', ar: 'عرض الموظفين' },
+      { key: 'hr.edit', fr: 'Gérer les employés', ar: 'إدارة الموظفين' },
+      { key: 'hr.documents', fr: 'Documents du personnel', ar: 'وثائق الموظفين' },
+      // Pointer soi-même ≠ consulter les présences de tout le monde.
+      { key: 'hr.clock', fr: 'Pointer son arrivée / son départ', ar: 'تسجيل الحضور والانصراف' },
+      { key: 'hr.attendance', fr: 'Consulter les présences de tous', ar: 'الاطلاع على حضور الجميع' },
+      { key: 'hr.leaves', fr: 'Congés et absences', ar: 'العطل والغيابات' },
+      { key: 'hr.planning', fr: 'Planning et horaires', ar: 'التخطيط والتوقيت' },
+      { key: 'hr.payroll', fr: 'Paie et salaires', ar: 'الأجور والرواتب' },
+      { key: 'hr.performance', fr: 'Évaluations et sanctions', ar: 'التقييمات والعقوبات' },
+      { key: 'hr.training', fr: 'Formations et compétences', ar: 'التكوين والكفاءات' },
+      { key: 'hr.recruitment', fr: 'Recrutement', ar: 'التوظيف' },
+      { key: 'hr.badges', fr: 'Badges', ar: 'الشارات' },
+      { key: 'hr.reports', fr: 'Rapports RH', ar: 'تقارير الموارد البشرية' },
+    ],
+  },
+  {
     key: 'set', fr: 'Paramètres', ar: 'الإعدادات', icon: 'Settings',
     perms: [
       { key: 'set.company', fr: 'Paramètres société', ar: 'إعدادات الشركة' },
@@ -187,6 +206,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<RoleName, string[]> = {
     ...cat('loc'),
     'supp.view', 'supp.balances', 'supp.payments',
     'report.stock', 'report.purchases',
+    'hr.clock',
   ],
 
   // Caissier : vente, encaissement, caisse, tickets, produits (lecture), stock (lecture), ajout clients.
@@ -196,6 +216,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<RoleName, string[]> = {
     'cash.open', 'cash.close', 'cash.in', 'cash.refund', 'cash.journal', 'cash.balance',
     'stock.view', 'stock.critical',
     'client.view', 'client.add', 'client.credit_view', 'client.loyalty_view',
+    'hr.clock',
   ],
 
   // Vendeur : produits (lecture), devis, préparation de ventes, clients (lecture), stock (lecture).
@@ -204,6 +225,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<RoleName, string[]> = {
     'sale.create', 'sale.quote_create', 'sale.history',
     'client.view',
     'stock.view',
+    'hr.clock',
   ],
 }
 

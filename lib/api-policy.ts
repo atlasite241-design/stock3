@@ -9,8 +9,12 @@ import 'server-only'
  * enregistrements au périmètre magasin de l'utilisateur.
  */
 
-/** Permission requise pour LIRE une collection. `null` = lisible par toute session. */
-const READ_PERM: Record<string, string | null> = {
+/**
+ * Permission requise pour LIRE une collection. `null` = lisible par toute
+ * session. Un tableau = l'une quelconque suffit (le pointage doit être ouvert
+ * à qui pointe comme à qui supervise).
+ */
+const READ_PERM: Record<string, string | string[] | null> = {
   products: 'prod.view',
   categories: null, subcategories: null, brands: null, units: null,
   sales: 'sale.history',
@@ -33,10 +37,31 @@ const READ_PERM: Record<string, string | null> = {
   zones: 'loc.view', allees: 'loc.view', rayons: 'loc.view', etageres: 'loc.view',
   niveaux: 'loc.view', positions: 'loc.view', emplacements: 'loc.view',
   settings: null,       // réglages d'affichage, indispensables au démarrage
+  // RH — jamais lisible sans permission. La paie et les données personnelles
+  // (CIN, CNSS, RIB) ne doivent PAS suivre la règle de `users`, ouverte à
+  // toute session parce que l'écran de connexion en dépend.
+  hrEmployees: 'hr.view',
+  hrDocuments: 'hr.documents',
+  hrAttendance: ['hr.clock', 'hr.attendance'],
+  hrLeaves: 'hr.leaves',
+  hrShifts: 'hr.planning',
+  hrTeams: 'hr.planning',
+  hrHolidays: 'hr.planning',
+  hrAdjustments: 'hr.payroll',
+  hrPayslips: 'hr.payroll',
+  hrEvaluations: 'hr.performance',
+  hrObjectives: 'hr.performance',
+  hrActions: 'hr.performance',
+  hrTrainings: 'hr.training',
+  hrSkills: 'hr.training',
+  hrCertifications: 'hr.training',
+  hrJobs: 'hr.recruitment',
+  hrApplications: 'hr.recruitment',
+  hrBadges: 'hr.badges',
 }
 
 /** Permission requise pour ÉCRIRE. Une collection absente n'est PAS écrivable. */
-const WRITE_PERM: Record<string, string> = {
+const WRITE_PERM: Record<string, string | string[]> = {
   products: 'prod.edit',
   categories: 'prod.edit', subcategories: 'prod.edit', brands: 'prod.edit', units: 'prod.edit',
   sales: 'sale.create',
@@ -59,6 +84,24 @@ const WRITE_PERM: Record<string, string> = {
   zones: 'loc.create', allees: 'loc.create', rayons: 'loc.create', etageres: 'loc.create',
   niveaux: 'loc.create', positions: 'loc.create', emplacements: 'loc.create',
   settings: 'set.company',
+  hrEmployees: 'hr.edit',
+  hrDocuments: 'hr.documents',
+  hrAttendance: ['hr.clock', 'hr.attendance'],
+  hrLeaves: 'hr.leaves',
+  hrShifts: 'hr.planning',
+  hrTeams: 'hr.planning',
+  hrHolidays: 'hr.planning',
+  hrAdjustments: 'hr.payroll',
+  hrPayslips: 'hr.payroll',
+  hrEvaluations: 'hr.performance',
+  hrObjectives: 'hr.performance',
+  hrActions: 'hr.performance',
+  hrTrainings: 'hr.training',
+  hrSkills: 'hr.training',
+  hrCertifications: 'hr.training',
+  hrJobs: 'hr.recruitment',
+  hrApplications: 'hr.recruitment',
+  hrBadges: 'hr.badges',
 }
 
 /**
@@ -66,7 +109,12 @@ const WRITE_PERM: Record<string, string> = {
  * périmètre. Filtrer `stores` par magasin empêcherait par exemple de changer
  * de magasin actif.
  */
-const SHARED = new Set(['settings', 'users', 'stores', 'categories', 'subcategories', 'brands', 'units', 'activity'])
+const SHARED = new Set([
+  'settings', 'users', 'stores', 'categories', 'subcategories', 'brands', 'units', 'activity',
+  // Référentiels RH communs à l'enseigne : horaires et jours fériés ne sont pas
+  // propres à un magasin.
+  'hrShifts', 'hrHolidays',
+])
 
 export interface Scope {
   /** Permissions effectives, embarquées dans la session signée. */
@@ -75,15 +123,18 @@ export interface Scope {
   storeIds: string[]
 }
 
+const holds = (need: string | string[], s: Scope): boolean =>
+  Array.isArray(need) ? need.some((p) => s.perms.has(p)) : s.perms.has(need)
+
 export const canRead = (collection: string, s: Scope): boolean => {
   if (!(collection in READ_PERM)) return false // collection inconnue : refus par défaut
   const need = READ_PERM[collection]
-  return need === null || s.perms.has(need)
+  return need === null || holds(need, s)
 }
 
 export const canWrite = (collection: string, s: Scope): boolean => {
   const need = WRITE_PERM[collection]
-  return !!need && s.perms.has(need)
+  return !!need && holds(need, s)
 }
 
 /**

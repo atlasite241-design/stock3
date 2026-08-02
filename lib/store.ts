@@ -1012,6 +1012,15 @@ function save(key: string, value: unknown) {
   syncOnSave(key)
 }
 
+/**
+ * Accès générique aux collections, pour les modules qui vivent hors de ce
+ * fichier (RH). Même chemin que le reste : localStorage + write-through Turso.
+ * Sans cela, chaque module réimplémenterait la persistance et sortirait du
+ * moteur de synchronisation.
+ */
+export const loadCollection = <T,>(key: string, fallback: T): T => load<T>(key, fallback)
+export const saveCollection = (key: string, value: unknown) => save(key, value)
+
 // ------------------------------------------------------------------
 // Seed data
 // ------------------------------------------------------------------
