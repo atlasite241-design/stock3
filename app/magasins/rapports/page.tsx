@@ -1,22 +1,26 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { Suspense, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { AlertTriangle, BarChart3, Download, FileSpreadsheet, MapPinOff, Package, Printer, Rotate3d } from 'lucide-react'
+import { AlertTriangle, BarChart3, Download, FileSpreadsheet, Gauge, MapPinOff, Package, PackageOpen, Printer, Rotate3d } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import { availableStock, fmtDH, useDroguerie, type Product } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
-type ReportKey = 'by_zone' | 'by_allee' | 'by_rayon' | 'by_etagere' | 'by_niveau' | 'by_position' | 'no_location' | 'mislocated' | 'critical_by_zone' | 'occupancy' | 'top_by_zone'
+type ReportKey = 'by_zone' | 'by_allee' | 'by_rayon' | 'by_etagere' | 'by_niveau' | 'by_position' | 'no_location' | 'mislocated' | 'critical_by_zone' | 'occupancy' | 'empty_locations' | 'fill_rate' | 'top_by_zone'
 type AggRow = { code: string; name: string; qty: number; value: number; count: number; critical: number }
 
 function Content() {
   const d = useDroguerie()
   const { ready, products, positions, activeStore, activeStoreId, resolveLocation } = d
   const { t } = useLanguage()
-  const [report, setReport] = useState<ReportKey>('by_zone')
+  // Le menu pointe directement sur un rapport : on respecte le paramètre.
+  const params = useSearchParams()
+  const asked = params.get('report') as ReportKey | null
+  const [report, setReport] = useState<ReportKey>(asked ?? 'by_zone')
 
   const storeProducts = useMemo(
     () => products.filter((p) => !activeStoreId || !p.storeId || p.storeId === activeStoreId),
@@ -90,6 +94,32 @@ function Content() {
     return { totalDefined, used, free: Math.max(0, totalDefined - used), rate: totalDefined ? Math.round((used / totalDefined) * 100) : 0 }
   }, [storeProducts, positions, activeStoreId])
 
+  // Emplacements sans produit : le complément exact de l'occupation.
+  const emptySlots = useMemo(() => {
+    const taken = new Set(storeProducts.filter((p) => p.positionId).map((p) => p.positionId as string))
+    return positions
+      .filter((po) => po.storeId === activeStoreId && !taken.has(po.id))
+      .sort((a, b) => a.code.localeCompare(b.code, 'fr'))
+  }, [positions, storeProducts, activeStoreId])
+
+  // Taux de remplissage par zone : occupation ramenée au périmètre de chaque zone.
+  const fillByZone = useMemo(() => {
+    const taken = new Set(storeProducts.filter((p) => p.positionId).map((p) => p.positionId as string))
+    const per = new Map<string, { code: string; name: string; total: number; used: number }>()
+    for (const po of positions) {
+      if (po.storeId !== activeStoreId) continue
+      const z = d.resolveLocation({ positionId: po.id } as Product)?.zone
+      const key = z?.id ?? '—'
+      const e = per.get(key) ?? { code: z?.code ?? '—', name: z?.name ?? t('wr_no_zone'), total: 0, used: 0 }
+      e.total++
+      if (taken.has(po.id)) e.used++
+      per.set(key, e)
+    }
+    return [...per.values()]
+      .map((x) => ({ ...x, rate: x.total ? Math.round((x.used / x.total) * 100) : 0 }))
+      .sort((a, b) => b.rate - a.rate)
+  }, [positions, storeProducts, activeStoreId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!ready) return <Loader />
 
   const REPORTS: { key: ReportKey; label: string; icon: typeof Package }[] = [
@@ -103,6 +133,8 @@ function Content() {
     { key: 'mislocated', label: t('wr_mislocated'), icon: AlertTriangle },
     { key: 'critical_by_zone', label: t('wr_critical'), icon: AlertTriangle },
     { key: 'occupancy', label: t('wr_occupancy'), icon: Package },
+    { key: 'empty_locations', label: t('wr_empty_loc'), icon: PackageOpen },
+    { key: 'fill_rate', label: t('wr_fill_rate'), icon: Gauge },
     { key: 'top_by_zone', label: t('wr_value_zone'), icon: BarChart3 },
   ]
   const groupedHeader = report === 'by_allee' ? t('wms_allee') : report === 'by_rayon' ? t('wms_rayon')
@@ -120,6 +152,12 @@ function Content() {
     if (report === 'occupancy')
       return { name: 'occupation', headers: ['Indicateur', 'Valeur'],
         rows: [['Positions définies', occupancy.totalDefined], ['Occupées', occupancy.used], ['Libres', occupancy.free], ['Taux %', occupancy.rate]] }
+    if (report === 'empty_locations')
+      return { name: 'emplacements-vides', headers: ['Code', 'Nom'],
+        rows: emptySlots.map((po) => [po.code, po.name ?? '']) }
+    if (report === 'fill_rate')
+      return { name: 'taux-de-remplissage', headers: ['Zone', 'Nom', 'Total', 'Occupés', 'Taux %'],
+        rows: fillByZone.map((z) => [z.code, z.name, z.total, z.used, z.rate]) }
     if (report === 'mislocated')
       return { name: 'produits-mal-localises', headers: ['Code-barres', 'Produit', 'Emplacement (invalide)', 'Stock'],
         rows: misLocated.map((p) => [p.barcode, p.name, p.emplacementComplet || '—', availableStock(p)]) }
@@ -279,6 +317,55 @@ function Content() {
           </table>
         )}
 
+        {/* EMPLACEMENTS VIDES */}
+        {report === 'empty_locations' && (
+          <table className="w-full min-w-[520px] text-sm">
+            <thead><tr className="border-b border-gray-100 dark:border-white/10 text-left text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500">
+              <th className="px-5 py-3">{t('wms_code')}</th><th className="px-5 py-3">{t('wms_zone_name')}</th>
+            </tr></thead>
+            <tbody>
+              {emptySlots.slice(0, 500).map((po) => (
+                <tr key={po.id} className="border-b border-gray-50 last:border-0 dark:border-white/5">
+                  <td className="px-5 py-2.5 font-mono text-xs text-gray-600 dark:text-zinc-300">{po.code}</td>
+                  <td className="px-5 py-2.5 text-gray-500 dark:text-zinc-400">{po.name || '—'}</td>
+                </tr>
+              ))}
+              {emptySlots.length === 0 && <tr><td colSpan={2} className="px-5 py-10 text-center text-sm text-emerald-600 dark:text-emerald-400">🎉 {t('wr_no_empty')}</td></tr>}
+            </tbody>
+          </table>
+        )}
+
+        {/* TAUX DE REMPLISSAGE */}
+        {report === 'fill_rate' && (
+          <table className="w-full min-w-[560px] text-sm">
+            <thead><tr className="border-b border-gray-100 dark:border-white/10 text-left text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500">
+              <th className="px-5 py-3">{t('wms_zone')}</th><th className="px-5 py-3">{t('wms_zone_name')}</th>
+              <th className="px-5 py-3 text-center">{t('wr_positions_defined')}</th>
+              <th className="px-5 py-3 text-center">{t('wr_positions_used')}</th>
+              <th className="px-5 py-3">{t('wr_fill_rate')}</th>
+            </tr></thead>
+            <tbody>
+              {fillByZone.map((z, i) => (
+                <tr key={i} className="border-b border-gray-50 last:border-0 dark:border-white/5">
+                  <td className="px-5 py-2.5 font-mono text-xs font-bold text-amber-600 dark:text-amber-400">{z.code}</td>
+                  <td className="px-5 py-2.5 text-gray-700 dark:text-zinc-300">{z.name}</td>
+                  <td className="px-5 py-2.5 text-center tabular-nums text-gray-500">{z.total}</td>
+                  <td className="px-5 py-2.5 text-center tabular-nums text-gray-700 dark:text-zinc-200">{z.used}</td>
+                  <td className="px-5 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
+                        <div className={`h-full rounded-full ${z.rate >= 80 ? 'bg-rose-500' : z.rate >= 50 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${z.rate}%` }} />
+                      </div>
+                      <span className="w-10 text-right text-xs font-bold tabular-nums text-gray-700 dark:text-zinc-200">{z.rate}%</span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {fillByZone.length === 0 && <tr><td colSpan={5} className="px-5 py-10 text-center text-sm text-gray-400">{t('wr_empty')}</td></tr>}
+            </tbody>
+          </table>
+        )}
+
         {/* OCCUPATION */}
         {report === 'occupancy' && (
           <div className="grid gap-4 p-5 sm:grid-cols-4">
@@ -304,7 +391,10 @@ function Content() {
 export default function WmsReportsPage() {
   return (
     <AppShell>
-      <Content />
+      {/* useSearchParams impose une frontière Suspense (App Router). */}
+      <Suspense fallback={<Loader />}>
+        <Content />
+      </Suspense>
     </AppShell>
   )
 }
