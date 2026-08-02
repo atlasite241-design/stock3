@@ -56,7 +56,13 @@ interface NavItem {
 const leavesOf = (item: NavItem): NavChild[] =>
   (item.children ?? []).flatMap((e) => (isSection(e) ? e.items : [e]))
 
-const NAV: NavItem[] = [
+/** Famille de premier niveau : un intertitre au-dessus d'un groupe d'entrées. */
+interface NavFamily {
+  familyKey: TKey
+  items: NavItem[]
+}
+
+const NAV_ALL: NavItem[] = [
   { labelKey: 'nav_dashboard', icon: LayoutDashboard, href: '/' },
   { labelKey: 'nav_setup', icon: Sparkles, href: '/setup' },
   { labelKey: 'nav_guide', icon: Rocket, href: '/guide-demarrage' },
@@ -423,6 +429,30 @@ const NAV: NavItem[] = [
   },
 ]
 
+/**
+ * Ordre RÉEL du menu. Les entrées ci-dessus ne sont que des définitions : c'est
+ * cette liste qui fixe l'ordre d'affichage et les familles. Le regroupement
+ * suit l'usage — ce qu'on ouvre tous les jours d'abord, l'aide en dernier.
+ */
+const byKey = (k: TKey): NavItem => {
+  const item = NAV_ALL.find((n) => n.labelKey === k)
+  if (!item) throw new Error(`Sidebar: entrée de menu introuvable — ${k}`)
+  return item
+}
+const fam = (familyKey: TKey, keys: TKey[]): NavFamily => ({ familyKey, items: keys.map(byKey) })
+
+const NAV_FAMILIES: NavFamily[] = [
+  fam('nav_fam_pilot', ['nav_dashboard']),
+  fam('nav_fam_ops', ['nav_pos', 'nav_caisse', 'nav_products', 'nav_stock', 'nav_stores']),
+  fam('nav_fam_commerce', ['nav_purchases', 'nav_sales', 'nav_clients', 'nav_suppliers']),
+  fam('nav_fam_analysis', ['nav_reports', 'nav_accounting', 'nav_alerts']),
+  fam('nav_fam_admin', ['nav_users', 'nav_settings']),
+  fam('nav_fam_help', ['nav_setup', 'nav_guide', 'nav_guide_exercise']),
+]
+
+/** Vue à plat, pour les recherches « quel groupe contient la page courante ? ». */
+const NAV: NavItem[] = NAV_FAMILIES.flatMap((f) => f.items)
+
 const basePath = (href: string) => href.split('?')[0]
 
 export default function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -437,13 +467,20 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
 
   // Masquage des entrées selon les permissions de l'utilisateur connecté.
   const allowed = (c: NavChild) => can(ROUTE_PERM[basePath(c.href)])
-  const visibleNav = NAV.map((item) => {
-    if (!item.children) return item
-    const children = item.children
-      .map((e) => (isSection(e) ? { ...e, items: e.items.filter(allowed) } : e))
-      .filter((e) => (isSection(e) ? e.items.length > 0 : allowed(e)))
-    return { ...item, children }
-  }).filter((item) => (item.children ? item.children.length > 0 : can(ROUTE_PERM[basePath(item.href ?? '/')])))
+  const visibleItems = (items: NavItem[]) =>
+    items.map((item) => {
+      if (!item.children) return item
+      const children = item.children
+        .map((e) => (isSection(e) ? { ...e, items: e.items.filter(allowed) } : e))
+        .filter((e) => (isSection(e) ? e.items.length > 0 : allowed(e)))
+      return { ...item, children }
+    }).filter((item) => (item.children ? item.children.length > 0 : can(ROUTE_PERM[basePath(item.href ?? '/')])))
+
+  // Une famille dont toutes les entrées sont masquées disparaît avec son
+  // intertitre — sinon un caissier verrait « Administration » suivi de rien.
+  const visibleFamilies = NAV_FAMILIES
+    .map((f) => ({ ...f, items: visibleItems(f.items) }))
+    .filter((f) => f.items.length > 0)
 
   useEffect(() => {
     const read = () => {
@@ -594,8 +631,12 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
 
         {/* Navigation */}
         <nav ref={navRef} className="flex-1 overflow-y-auto px-3 py-4">
-          <div className="space-y-1">
-            {visibleNav.map((item) => {
+          {visibleFamilies.map((family, fi) => (
+          <div key={family.familyKey} className={`space-y-1 ${fi > 0 ? 'mt-5' : ''}`}>
+            <p className="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-300 dark:text-zinc-600">
+              {t(family.familyKey)}
+            </p>
+            {family.items.map((item) => {
               if (!item.children) {
                 const active = pathname === item.href
                 return (
@@ -678,6 +719,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
               )
             })}
           </div>
+          ))}
         </nav>
 
         {/* Footer card */}

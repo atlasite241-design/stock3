@@ -1474,6 +1474,14 @@ const DICT = {
   fret_none: { fr: 'Aucune commande retournée', ar: 'لا توجد طلبات مرتجعة' },
   nav_suppliers_payments: { fr: 'Paiements', ar: 'المدفوعات' },
   nav_suppliers_balances: { fr: 'Soldes', ar: 'الأرصدة' },
+  // Familles du menu principal (intertitres de la barre latérale)
+  nav_fam_pilot: { fr: 'Pilotage', ar: 'القيادة' },
+  nav_fam_ops: { fr: 'Exploitation', ar: 'التشغيل' },
+  nav_fam_commerce: { fr: 'Commercial', ar: 'التجاري' },
+  nav_fam_analysis: { fr: 'Analyse', ar: 'التحليل' },
+  nav_fam_admin: { fr: 'Administration', ar: 'الإدارة' },
+  nav_fam_help: { fr: 'Aide', ar: 'المساعدة' },
+
   nav_reports: { fr: 'Rapports', ar: 'التقارير' },
   nav_reports_overview: { fr: "Vue d'ensemble", ar: 'نظرة عامة' },
   nav_reports_sales: { fr: 'Rapport des ventes', ar: 'تقرير المبيعات' },
