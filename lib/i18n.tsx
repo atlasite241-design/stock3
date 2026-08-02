@@ -975,7 +975,7 @@ const DICT = {
   cp_tva_note: { fr: "Taux appliqué, issu de Paramètres › TVA :", ar: "النسبة المطبَّقة، من الإعدادات › الضريبة:" },
   nav_st_sec_manage: { fr: "Gestion", ar: "الإدارة" },
   nav_st_sec_arch: { fr: "Architecture", ar: "البنية" },
-  nav_st_sec_ai: { fr: "Outils IA", ar: "أدوات الذكاء الاصطناعي" },
+  nav_st_sec_ai: { fr: 'Conception du magasin', ar: 'تصميم المتجر' },
   nav_st_sec_ops: { fr: "Exploitation", ar: "التشغيل" },
   nav_st_sec_print: { fr: "Impression", ar: "الطباعة" },
   nav_st_sec_reports: { fr: "Rapports", ar: "التقارير" },
