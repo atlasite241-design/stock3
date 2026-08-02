@@ -73,7 +73,7 @@ function Content() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((p) => {
+              {rows.slice(0, 300).map((p) => {
                 const s = availableStock(p)
                 return (
                   <tr key={p.id} className="border-b border-gray-50 last:border-0 dark:border-white/5 hover:bg-amber-50/40 dark:hover:bg-white/5">
@@ -99,6 +99,13 @@ function Content() {
             </tbody>
           </table>
         </div>
+        {/* Le tableau est plafonné pour ne pas figer le navigateur ; le dire
+            évite de prendre une liste tronquée pour la liste complète. */}
+        {rows.length > 300 && (
+          <p className="border-t border-gray-100 px-4 py-2 text-center text-[11px] text-gray-400 dark:border-white/10 dark:text-zinc-500">
+            300 / {rows.length.toLocaleString('fr-FR')} — {t('rpst_capped')}
+          </p>
+        )}
       </motion.div>
     </>
   )

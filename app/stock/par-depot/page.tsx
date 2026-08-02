@@ -118,7 +118,7 @@ function Content() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map(({ p, qty }) => (
+                  {rows.slice(0, 300).map(({ p, qty }) => (
                     <tr key={p.id} className="border-b border-gray-50 last:border-0 dark:border-white/5 hover:bg-amber-50/40 dark:hover:bg-white/5">
                       <td className="px-4 py-2.5 font-mono text-xs text-gray-500 dark:text-zinc-400">{p.barcode || '—'}</td>
                       <td className="px-4 py-2.5 font-semibold text-gray-900 dark:text-white">{p.name}</td>
@@ -131,6 +131,11 @@ function Content() {
                 </tbody>
               </table>
             </div>
+            {rows.length > 300 && (
+              <p className="border-t border-gray-100 px-4 py-2 text-center text-[11px] text-gray-400 dark:border-white/10 dark:text-zinc-500">
+                300 / {rows.length.toLocaleString('fr-FR')} — {t('rpst_capped')}
+              </p>
+            )}
           </motion.div>
           <p className="text-xs text-gray-400 dark:text-zinc-500">{t('sd_note')}</p>
         </>

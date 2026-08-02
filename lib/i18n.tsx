@@ -1474,6 +1474,13 @@ const DICT = {
   fret_none: { fr: 'Aucune commande retournée', ar: 'لا توجد طلبات مرتجعة' },
   nav_suppliers_payments: { fr: 'Paiements', ar: 'المدفوعات' },
   nav_suppliers_balances: { fr: 'Soldes', ar: 'الأرصدة' },
+  rpst_more: { fr: 'Afficher plus', ar: 'عرض المزيد' },
+  rpst_empty: { fr: 'Aucun produit ne correspond.', ar: 'لا يوجد منتج مطابق.' },
+  rpst_capped: {
+    fr: 'affichage limité ; affinez la recherche pour voir le reste',
+    ar: 'العرض محدود؛ نقّحوا البحث لرؤية الباقي',
+  },
+
   /* ───────────────────────  Ressources humaines  ─────────────────────── */
   nav_hr: { fr: 'Ressources humaines', ar: 'الموارد البشرية' },
   nav_hr_sec_employees: { fr: 'Employés', ar: 'الموظفون' },

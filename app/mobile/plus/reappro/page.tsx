@@ -35,7 +35,7 @@ export default function MobileReapproPage() {
             <p className="mt-1 text-xl font-bold text-slate-900 dark:text-white tabular-nums">{fmtDH(totalCost)}</p>
           </div>
           <div className="space-y-3">
-            {rows.map(({ p, suggest, cost }) => (
+            {rows.slice(0, 300).map(({ p, suggest, cost }) => (
               <div key={p.id} className="flex items-center gap-3 rounded-2xl m-card p-4 backdrop-blur-xl">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-300"><PackagePlus className="h-5 w-5" /></span>
                 <div className="min-w-0 flex-1">
@@ -48,6 +48,11 @@ export default function MobileReapproPage() {
                 </div>
               </div>
             ))}
+            {rows.length > 300 && (
+              <p className="py-2 text-center text-[11px] text-slate-500 dark:text-slate-400">
+                300 / {rows.length.toLocaleString('fr-FR')} — {t('rpst_capped')}
+              </p>
+            )}
           </div>
         </>
       )}

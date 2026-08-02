@@ -1,30 +1,59 @@
 'use client'
 
+// Comme le rapport du stock, cet écran rendait une ligne par produit sans
+// limite — impraticable au-delà de quelques milliers de références. Recherche +
+// pagination ; les indicateurs, eux, portent toujours sur tout le catalogue.
+
+import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import Loader from '@/components/Loader'
-import { Percent, TrendingUp } from 'lucide-react'
+import { Percent, Search, TrendingUp } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import { fmtDH, useDroguerie } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
+const PAGE = 100
+
 function Content() {
   const { ready, products } = useDroguerie()
   const { t } = useLanguage()
+  const [query, setQuery] = useState('')
+  const [shown, setShown] = useState(PAGE)
+
+  // On ne clone plus chaque produit (`...p`) : 86 000 copies d'objet par rendu
+  // pour deux champs calculés. Seuls les champs utiles sont retenus.
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const out = []
+    for (const p of products) {
+      if (q && !p.name.toLowerCase().includes(q) && !p.barcode.includes(q)) continue
+      const marginDh = p.price - p.cost
+      out.push({
+        id: p.id, name: p.name, cost: p.cost, price: p.price, stock: p.stock,
+        marginDh,
+        marginPct: p.price > 0 ? (marginDh / p.price) * 100 : 0,
+      })
+    }
+    return out.sort((a, b) => b.marginPct - a.marginPct)
+  }, [products, query])
+
+  const totals = useMemo(() => {
+    let sumPct = 0, value = 0, n = 0
+    for (const p of products) {
+      const marginDh = p.price - p.cost
+      sumPct += p.price > 0 ? (marginDh / p.price) * 100 : 0
+      value += marginDh * p.stock
+      n++
+    }
+    return { avg: n ? sumPct / n : 0, value }
+  }, [products])
 
   if (!ready) {
     return <Loader />
   }
 
-  const rows = products
-    .map((p) => {
-      const marginDh = p.price - p.cost
-      const marginPct = p.price > 0 ? (marginDh / p.price) * 100 : 0
-      return { ...p, marginDh, marginPct }
-    })
-    .sort((a, b) => b.marginPct - a.marginPct)
-
-  const avgMargin = rows.length > 0 ? rows.reduce((a, r) => a + r.marginPct, 0) / rows.length : 0
-  const totalMarginValue = rows.reduce((a, r) => a + r.marginDh * r.stock, 0)
+  const avgMargin = totals.avg
+  const totalMarginValue = totals.value
 
   const cards = [
     { label: t('rpm_kpi_avg_margin'), value: `${avgMargin.toFixed(1)}%`, icon: Percent, cls: 'bg-amber-50 dark:bg-amber-500/10 text-amber-500' },
@@ -50,6 +79,21 @@ function Content() {
         ))}
       </div>
 
+      <div className="glass-card flex flex-wrap items-center gap-3 p-3">
+        <div className="relative min-w-[200px] flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 rtl:left-auto rtl:right-3" />
+          <input
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setShown(PAGE) }}
+            placeholder={t('prod_search_placeholder')}
+            className="input-field pl-9 rtl:pl-3 rtl:pr-9"
+          />
+        </div>
+        <span className="text-xs font-semibold tabular-nums text-gray-500 dark:text-zinc-400">
+          {rows.length.toLocaleString('fr-FR')}
+        </span>
+      </div>
+
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.4 }} className="glass-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[680px]">
@@ -63,7 +107,7 @@ function Content() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((p) => (
+              {rows.slice(0, shown).map((p) => (
                 <tr key={p.id} className="border-b border-gray-50 dark:border-white/5 transition-colors hover:bg-amber-50/40 dark:hover:bg-white/5">
                   <td className="px-5 py-3.5 text-sm font-semibold text-gray-900 dark:text-white">{p.name}</td>
                   <td className="px-5 py-3.5 text-sm text-gray-600 dark:text-zinc-400 tabular-nums">{fmtDH(p.cost)}</td>
@@ -87,6 +131,15 @@ function Content() {
             </tbody>
           </table>
         </div>
+
+        {rows.length > shown && (
+          <div className="flex flex-wrap items-center justify-center gap-3 border-t border-gray-100 p-4 dark:border-white/10">
+            <span className="text-xs tabular-nums text-gray-500 dark:text-zinc-400">
+              {shown.toLocaleString('fr-FR')} / {rows.length.toLocaleString('fr-FR')}
+            </span>
+            <button onClick={() => setShown((n) => n + PAGE * 5)} className="btn-secondary">{t('rpst_more')}</button>
+          </div>
+        )}
       </motion.div>
     </>
   )
