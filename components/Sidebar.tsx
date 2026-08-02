@@ -235,16 +235,76 @@ const NAV: NavItem[] = [
     labelKey: 'nav_reports',
     icon: BarChart3,
     children: [
-      { href: '/rapports', labelKey: 'nav_reports_overview' },
-      { href: '/rapports/ventes', labelKey: 'nav_reports_sales' },
-      { href: '/rapports/achats', labelKey: 'nav_reports_purchases' },
-      { href: '/rapports/stock', labelKey: 'nav_reports_stock' },
-      { href: '/rapports/produits-plus-vendus', labelKey: 'nav_reports_top_products' },
-      { href: '/rapports/produits-moins-vendus', labelKey: 'nav_reports_worst_products' },
-      { href: '/rapports/marge', labelKey: 'nav_reports_margin' },
-      { href: '/rapports/fournisseurs', labelKey: 'nav_reports_suppliers' },
-      { href: '/rapports/clients', labelKey: 'nav_reports_clients' },
-      { href: '/rapports/caisse', labelKey: 'nav_reports_cash' },
+      {
+        sectionKey: 'nav_rp_sec_stock',
+        items: [
+          { href: '/stock/rapports/valorisation', labelKey: 'nav_rp_valuation' },
+          { href: '/stock/rapports/rotation', labelKey: 'nav_rp_rotation' },
+          { href: '/stock/controle/ruptures', labelKey: 'nav_rp_out' },
+          { href: '/stock/critique', labelKey: 'nav_rp_critical' },
+        ],
+      },
+      {
+        sectionKey: 'nav_rp_sec_purchases',
+        items: [
+          { href: '/rapports/achats', labelKey: 'nav_rp_purch_period' },
+          { href: '/rapports/fournisseurs', labelKey: 'nav_rp_purch_supplier' },
+          { href: '/rapports/produits-achetes', labelKey: 'nav_rp_purch_products' },
+        ],
+      },
+      {
+        sectionKey: 'nav_rp_sec_sales',
+        items: [
+          { href: '/rapports', labelKey: 'nav_rp_revenue' },
+          { href: '/rapports/ventes', labelKey: 'nav_rp_sales_period' },
+          { href: '/rapports/vendeurs', labelKey: 'nav_rp_sales_seller' },
+          { href: '/rapports/produits-plus-vendus', labelKey: 'nav_rp_best_sellers' },
+        ],
+      },
+      {
+        sectionKey: 'nav_rp_sec_clients',
+        items: [
+          { href: '/rapports/clients', labelKey: 'nav_rp_cli_balances' },
+          { href: '/clients/credits', labelKey: 'nav_rp_cli_credits' },
+          { href: '/clients/fidelite', labelKey: 'nav_rp_cli_loyalty' },
+        ],
+      },
+      {
+        sectionKey: 'nav_rp_sec_suppliers',
+        items: [
+          { href: '/fournisseurs/soldes', labelKey: 'nav_rp_sup_balances' },
+          { href: '/fournisseurs/historique', labelKey: 'nav_rp_sup_history' },
+        ],
+      },
+      {
+        sectionKey: 'nav_rp_sec_cash',
+        items: [
+          { href: '/rapports/caisse', labelKey: 'nav_rp_cash_journal' },
+          { href: '/recettes', labelKey: 'nav_rp_cash_in' },
+          { href: '/depenses', labelKey: 'nav_rp_cash_out' },
+        ],
+      },
+      {
+        sectionKey: 'nav_rp_sec_inventory',
+        items: [
+          { href: '/stock/ecarts', labelKey: 'nav_rp_inv_gaps' },
+          { href: '/stock/ajustement', labelKey: 'nav_rp_inv_adjust' },
+        ],
+      },
+      {
+        sectionKey: 'nav_rp_sec_stores',
+        items: [
+          { href: '/stock/par-magasin', labelKey: 'nav_rp_store_stock' },
+          { href: '/rapports/magasins', labelKey: 'nav_rp_store_perf' },
+        ],
+      },
+      {
+        sectionKey: 'nav_rp_sec_users',
+        items: [
+          { href: '/utilisateurs/connexions', labelKey: 'nav_rp_usr_logins' },
+          { href: '/utilisateurs/journal', labelKey: 'nav_rp_usr_activity' },
+        ],
+      },
     ],
   },
   {

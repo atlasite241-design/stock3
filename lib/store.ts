@@ -381,6 +381,9 @@ export interface Sale {
   clientId?: string
   clientName?: string
   storeId?: string
+  /** Vendeur ayant encaissé — renseigné depuis la session au moment de la vente. */
+  userId?: string
+  userName?: string
 }
 
 export interface Client {
@@ -671,12 +674,20 @@ export interface ActivityLog {
   /** Ancienne / nouvelle valeur (audit détaillé). */
   oldValue?: string
   newValue?: string
+  /**
+   * Nature de l'événement, indépendante de la langue du libellé. Sans cela, le
+   * rapport « Connexions » devrait filtrer sur du texte français — il casserait
+   * en arabe et à la moindre reformulation.
+   */
+  kind?: ActivityKind
 }
+export type ActivityKind = 'login' | 'logout'
 export interface AuditMeta {
   target?: string
   oldValue?: string
   newValue?: string
   base?: ActivityLog[]
+  kind?: ActivityKind
 }
 
 export interface Attribute {
@@ -1835,6 +1846,7 @@ export function useDroguerieState() {
       target: meta.target,
       oldValue: meta.oldValue,
       newValue: meta.newValue,
+      kind: meta.kind,
     }
     persistActivity([entry, ...(meta.base ?? activity)].slice(0, 300))
   }
@@ -2125,6 +2137,9 @@ export function useDroguerieState() {
       const p = products.find((x) => x.id === i.productId)
       return s + (i.price - (p?.cost ?? 0)) * i.qty
     }, 0)
+    // Le vendeur est repris de la session : sans lui, aucun rapport par
+    // vendeur n'est possible — et on ne peut pas le reconstituer après coup.
+    const who = (() => { try { return getSession() } catch { return null } })()
     const sale: Sale = {
       id: uid(),
       date: new Date().toISOString(),
@@ -2134,6 +2149,8 @@ export function useDroguerieState() {
       payment,
       clientId: client?.id,
       clientName: client?.name,
+      userId: who?.userId,
+      userName: who?.name,
     }
     persistSales([...sales, sale])
     persistProducts(

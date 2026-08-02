@@ -41,6 +41,7 @@ export const ROUTE_PERM: Record<string, string> = {
   '/stock/critique': 'stock.critical',
   '/stock/suggestions': 'stock.view',
   '/stock/previsions': 'stock.view',
+  '/stock/controle/ruptures': 'stock.view',
   '/stock/controle/expires': 'stock.view',
   '/stock/controle/negatif': 'stock.view',
   '/stock/controle/sans-emplacement': 'stock.view',
@@ -93,6 +94,9 @@ export const ROUTE_PERM: Record<string, string> = {
   '/rapports/fournisseurs': 'report.suppliers',
   '/rapports/clients': 'report.clients',
   '/rapports/caisse': 'report.sales',
+  '/rapports/produits-achetes': 'report.purchases',
+  '/rapports/vendeurs': 'report.sales',
+  '/rapports/magasins': 'report.sales',
   // Comptabilité
   '/comptabilite/journaux': 'report.margins',
   '/comptabilite/plan-comptable': 'report.margins',
@@ -129,6 +133,7 @@ export const ROUTE_PERM: Record<string, string> = {
   '/utilisateurs/roles': 'set.roles',
   '/utilisateurs/permissions': 'set.permissions',
   '/utilisateurs/journal': 'set.users',
+  '/utilisateurs/connexions': 'set.users',
   // Paramètres
   '/parametres/societe': 'set.company',
   '/parametres/impression': 'set.print',

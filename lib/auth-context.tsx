@@ -33,7 +33,7 @@ const AuthContext = createContext<AuthValue>({
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { ready: dataReady, users } = useDroguerie()
+  const { ready: dataReady, users, logActivity } = useDroguerie()
   const [session, setSessionState] = useState<Session | null>(null)
   const [checked, setChecked] = useState(false)
 
@@ -60,6 +60,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const s = makeSession(u)
     setSession(s)
     setSessionState(s)
+    // Journalise la connexion APRÈS setSession : logActivity lit le nom dans la
+    // session courante. C'est la seule source du rapport « Connexions ».
+    try { logActivity('Connexion', { kind: 'login', target: u.name }) } catch {}
     // Ouvre AUSSI la session serveur : c'est elle qui autorise la synchro
     // (le navigateur n'a plus d'accès direct à la base). En cas d'échec réseau,
     // l'application reste utilisable hors-ligne et la synchro reprendra ensuite.
@@ -110,6 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const s = makeSession(u)
     setSession(s)
     setSessionState(s)
+    try { logActivity('Connexion', { kind: 'login', target: u.name }) } catch {}
     return { ok: true }
   }
 
@@ -123,12 +127,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const s = makeSession(u)
     setSession(s)
     setSessionState(s)
+    try { logActivity('Connexion', { kind: 'login', target: u.name }) } catch {}
     // Marque une connexion ACTIVE (par ce clic) → le splash ne s'affiche qu'ici,
     // pas à chaque rechargement où la session est déjà valide.
     try { sessionStorage.setItem('dp_just_logged_in', '1') } catch {}
   }
 
   const logout = () => {
+    // Avant clearSession : sinon l'événement serait attribué à « Système ».
+    try { logActivity('Déconnexion', { kind: 'logout', target: session?.name }) } catch {}
     clearSession()
     setSessionState(null)
     void serverLogout()

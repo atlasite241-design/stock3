@@ -24,7 +24,9 @@ function Content() {
 
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05, duration: 0.4 }} className="glass-card p-6">
         <div className="space-y-1">
-          {activity.slice(0, 100).map((a) => (
+          {/* Les connexions ont leur propre rapport : les laisser ici noierait
+              les actions métier sous le va-et-vient des ouvertures de session. */}
+          {activity.filter((a) => a.kind !== 'login' && a.kind !== 'logout').slice(0, 100).map((a) => (
             <div key={a.id} className="flex items-start gap-3 rounded-xl p-2.5 transition-colors hover:bg-amber-50/50 dark:hover:bg-white/5">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-zinc-400">
                 <UserCog className="h-4 w-4" />

@@ -1485,6 +1485,108 @@ const DICT = {
   nav_reports_suppliers: { fr: 'Rapport fournisseurs', ar: 'تقرير الموردين' },
   nav_reports_clients: { fr: 'Rapport clients', ar: 'تقرير العملاء' },
   nav_reports_cash: { fr: 'Rapport caisse', ar: 'تقرير الصندوق' },
+
+  // Rapports — sections du menu
+  nav_rp_sec_stock: { fr: 'Stock', ar: 'المخزون' },
+  nav_rp_sec_purchases: { fr: 'Achats', ar: 'المشتريات' },
+  nav_rp_sec_sales: { fr: 'Ventes', ar: 'المبيعات' },
+  nav_rp_sec_clients: { fr: 'Clients', ar: 'العملاء' },
+  nav_rp_sec_suppliers: { fr: 'Fournisseurs', ar: 'الموردون' },
+  nav_rp_sec_cash: { fr: 'Caisse', ar: 'الصندوق' },
+  nav_rp_sec_inventory: { fr: 'Inventaires', ar: 'الجرد' },
+  nav_rp_sec_stores: { fr: 'Magasins', ar: 'المتاجر' },
+  nav_rp_sec_users: { fr: 'Utilisateurs', ar: 'المستخدمون' },
+  // Rapports — entrées
+  nav_rp_valuation: { fr: 'Valorisation', ar: 'تقييم المخزون' },
+  nav_rp_rotation: { fr: 'Rotation', ar: 'دوران المخزون' },
+  nav_rp_out: { fr: 'Ruptures', ar: 'نفاد المخزون' },
+  nav_rp_critical: { fr: 'Stock critique', ar: 'مخزون حرج' },
+  nav_rp_purch_period: { fr: 'Achats par période', ar: 'المشتريات حسب الفترة' },
+  nav_rp_purch_supplier: { fr: 'Achats par fournisseur', ar: 'المشتريات حسب المورد' },
+  nav_rp_purch_products: { fr: 'Produits achetés', ar: 'المنتجات المشتراة' },
+  nav_rp_revenue: { fr: "Chiffre d'affaires", ar: 'رقم المعاملات' },
+  nav_rp_sales_period: { fr: 'Ventes par période', ar: 'المبيعات حسب الفترة' },
+  nav_rp_sales_seller: { fr: 'Ventes par vendeur', ar: 'المبيعات حسب البائع' },
+  nav_rp_best_sellers: { fr: 'Produits les plus vendus', ar: 'المنتجات الأكثر مبيعاً' },
+  nav_rp_cli_balances: { fr: 'Soldes', ar: 'الأرصدة' },
+  nav_rp_cli_credits: { fr: 'Crédits', ar: 'الديون' },
+  nav_rp_cli_loyalty: { fr: 'Fidélité', ar: 'الوفاء' },
+  nav_rp_sup_balances: { fr: 'Soldes', ar: 'الأرصدة' },
+  nav_rp_sup_history: { fr: 'Historique', ar: 'السجل' },
+  nav_rp_cash_journal: { fr: 'Journal', ar: 'اليومية' },
+  nav_rp_cash_in: { fr: 'Recettes', ar: 'المداخيل' },
+  nav_rp_cash_out: { fr: 'Dépenses', ar: 'المصاريف' },
+  nav_rp_inv_gaps: { fr: 'Écarts', ar: 'الفروقات' },
+  nav_rp_inv_adjust: { fr: 'Ajustements', ar: 'التسويات' },
+  nav_rp_store_stock: { fr: 'Stock par magasin', ar: 'المخزون حسب المتجر' },
+  nav_rp_store_perf: { fr: 'Performances', ar: 'الأداء' },
+  nav_rp_usr_logins: { fr: 'Connexions', ar: 'تسجيلات الدخول' },
+  nav_rp_usr_activity: { fr: 'Activités', ar: 'الأنشطة' },
+
+  // Rapport — Ruptures de stock
+  sk_out_title: { fr: 'Ruptures de stock', ar: 'نفاد المخزون' },
+  sk_out_sub: {
+    fr: "Articles dont la quantité disponible est nulle ou négative : plus rien à vendre.",
+    ar: 'الأصناف التي كميتها المتاحة صفر أو سالبة: لم يعد هناك ما يُباع.',
+  },
+  sk_out_empty: { fr: 'Aucune rupture — tout le catalogue est disponible.', ar: 'لا يوجد نفاد — كل الكتالوج متوفر.' },
+
+  // Rapport — Produits achetés
+  rp_pa_title: { fr: 'Produits achetés', ar: 'المنتجات المشتراة' },
+  rp_pa_sub: {
+    fr: 'Ce que vous commandez réellement, agrégé par article (commandes réceptionnées).',
+    ar: 'ما تطلبونه فعلياً، مجمّعاً حسب الصنف (الطلبات المستلمة).',
+  },
+  rp_pa_orders: { fr: 'Commandes', ar: 'الطلبات' },
+  rp_pa_empty: { fr: 'Aucun achat réceptionné sur la période.', ar: 'لا توجد مشتريات مستلمة خلال الفترة.' },
+
+  // Rapport — Ventes par vendeur
+  rp_vd_title: { fr: 'Ventes par vendeur', ar: 'المبيعات حسب البائع' },
+  rp_vd_sub: { fr: 'Répartition du chiffre d’affaires par personne', ar: 'توزيع رقم المعاملات حسب الشخص' },
+  rp_vd_seller: { fr: 'Vendeur', ar: 'البائع' },
+  rp_vd_count: { fr: 'Ventes', ar: 'المبيعات' },
+  rp_vd_avg: { fr: 'Panier moyen', ar: 'متوسط السلة' },
+  rp_vd_profit: { fr: 'Marge', ar: 'الهامش' },
+  rp_vd_share: { fr: 'Part', ar: 'الحصة' },
+  rp_vd_p7: { fr: '7 jours', ar: '7 أيام' },
+  rp_vd_unattributed: {
+    fr: 'vente(s) sans vendeur : elles datent d’avant l’enregistrement du vendeur et ne peuvent pas être réattribuées.',
+    ar: 'عملية/عمليات بيع بدون بائع: تعود إلى ما قبل تسجيل البائع ولا يمكن إعادة إسنادها.',
+  },
+  rp_vd_empty: {
+    fr: 'Aucune vente avec vendeur sur la période. Le vendeur est enregistré depuis cette mise à jour : le rapport se remplira au fur et à mesure des encaissements.',
+    ar: 'لا توجد مبيعات مسجَّلة ببائع خلال الفترة. يُسجَّل البائع منذ هذا التحديث: سيمتلئ التقرير تدريجياً مع عمليات القبض.',
+  },
+
+  // Rapport — Performances des magasins
+  rp_mg_title: { fr: 'Performances des magasins', ar: 'أداء المتاجر' },
+  rp_mg_sub: {
+    fr: 'Comparaison de tous les points de vente sur une même période — cet écran ignore volontairement le magasin actif.',
+    ar: 'مقارنة جميع نقاط البيع خلال نفس الفترة — تتجاهل هذه الشاشة عمداً المتجر النشط.',
+  },
+  rp_mg_sales: { fr: 'Ventes', ar: 'المبيعات' },
+  rp_mg_revenue: { fr: 'CA', ar: 'رقم المعاملات' },
+  rp_mg_profit: { fr: 'Marge', ar: 'الهامش' },
+  rp_mg_margin: { fr: 'Taux', ar: 'النسبة' },
+  rp_mg_basket: { fr: 'Panier moyen', ar: 'متوسط السلة' },
+  rp_mg_stock: { fr: 'Valeur stock', ar: 'قيمة المخزون' },
+
+  // Rapport — Connexions
+  cx_title: { fr: 'Connexions', ar: 'تسجيلات الدخول' },
+  cx_sub: {
+    fr: 'Qui s’est connecté, quand et depuis quel magasin. Enregistré depuis cette mise à jour : les connexions antérieures n’y figurent pas.',
+    ar: 'من سجّل الدخول، متى ومن أي متجر. يُسجَّل منذ هذا التحديث: لا تظهر عمليات الدخول السابقة.',
+  },
+  cx_col_when: { fr: 'Date et heure', ar: 'التاريخ والساعة' },
+  cx_col_user: { fr: 'Utilisateur', ar: 'المستخدم' },
+  cx_col_event: { fr: 'Événement', ar: 'الحدث' },
+  cx_login: { fr: 'Connexion', ar: 'دخول' },
+  cx_logout: { fr: 'Déconnexion', ar: 'خروج' },
+  cx_last: { fr: 'Dernière :', ar: 'آخر مرة:' },
+  cx_empty: {
+    fr: 'Aucune connexion enregistrée sur la période — le journal démarre à cette mise à jour.',
+    ar: 'لا توجد عمليات دخول مسجَّلة خلال الفترة — يبدأ السجل من هذا التحديث.',
+  },
   nav_alerts: { fr: 'Alertes', ar: 'التنبيهات' },
   nav_users: { fr: 'Utilisateurs', ar: 'المستخدمون' },
   nav_settings: { fr: 'Paramètres', ar: 'الإعدادات' },
