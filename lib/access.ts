@@ -93,6 +93,13 @@ export const ROUTE_PERM: Record<string, string> = {
   '/rapports/fournisseurs': 'report.suppliers',
   '/rapports/clients': 'report.clients',
   '/rapports/caisse': 'report.sales',
+  // Comptabilité
+  '/comptabilite/journaux': 'report.margins',
+  '/comptabilite/plan-comptable': 'report.margins',
+  '/comptabilite/tva': 'report.margins',
+  '/comptabilite/ecritures': 'report.margins',
+  '/comptabilite/reglements': 'report.margins',
+  '/comptabilite/banque': 'report.margins',
   // Alertes
   '/alertes': 'stock.critical',
   // Magasins

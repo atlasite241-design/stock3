@@ -7,6 +7,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   BarChart3,
   Bell,
+  Calculator,
   Boxes,
   Building2,
   ChevronDown,
@@ -244,6 +245,18 @@ const NAV: NavItem[] = [
       { href: '/rapports/fournisseurs', labelKey: 'nav_reports_suppliers' },
       { href: '/rapports/clients', labelKey: 'nav_reports_clients' },
       { href: '/rapports/caisse', labelKey: 'nav_reports_cash' },
+    ],
+  },
+  {
+    labelKey: 'nav_accounting',
+    icon: Calculator,
+    children: [
+      { href: '/comptabilite/journaux', labelKey: 'nav_acc_journals' },
+      { href: '/comptabilite/plan-comptable', labelKey: 'nav_acc_chart' },
+      { href: '/comptabilite/tva', labelKey: 'nav_acc_vat' },
+      { href: '/comptabilite/ecritures', labelKey: 'nav_acc_entries' },
+      { href: '/comptabilite/reglements', labelKey: 'nav_acc_payments' },
+      { href: '/comptabilite/banque', labelKey: 'nav_acc_bank' },
     ],
   },
   {
