@@ -259,6 +259,8 @@ const NAV: NavItem[] = [
           { href: '/rapports/ventes', labelKey: 'nav_rp_sales_period' },
           { href: '/rapports/vendeurs', labelKey: 'nav_rp_sales_seller' },
           { href: '/rapports/produits-plus-vendus', labelKey: 'nav_rp_best_sellers' },
+          { href: '/rapports/produits-moins-vendus', labelKey: 'nav_reports_worst_products' },
+          { href: '/rapports/marge', labelKey: 'nav_reports_margin' },
         ],
       },
       {
