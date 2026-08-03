@@ -65,7 +65,7 @@ function Content() {
   const familles = res
     ? res.familles.filter((f) => {
         const q = query.trim().toLowerCase()
-        return !q || f.modele.includes(q) || f.categorie.toLowerCase().includes(q)
+        return !q || f.modele.includes(q) || f.categories.some((c) => c.toLowerCase().includes(q))
       })
     : []
 
@@ -74,7 +74,7 @@ function Content() {
     const lines = [[t('dv_col_model'), t('sa_col_category'), t('dv_col_count'), t('dv_col_variants'), t('dv_col_conf')].join(';')]
     for (const f of res.familles) {
       lines.push([
-        `"${f.modele}"`, `"${f.categorie}"`, f.membres.length,
+        `"${f.modele}"`, `"${f.categories.join(' / ')}"`, f.membres.length,
         `"${f.membres.map((m) => m.declinaison).join(' | ')}"`,
         confLabel(f.confiance),
       ].join(';'))
@@ -155,6 +155,19 @@ function Content() {
               <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-amber-500" />{t('dv_kpi_grouped')}</span>
               <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-gray-300 dark:bg-white/20" />{t('dv_isolated')}</span>
             </p>
+
+            {/* Pourquoi une fiche reste isolée : la réponse dit s'il faut
+                améliorer la détection ou accepter le résultat. */}
+            <div className="mt-3 grid gap-2 border-t border-gray-100 pt-3 sm:grid-cols-2 dark:border-white/10">
+              <p className="text-xs text-gray-500 dark:text-zinc-400">
+                <b className="tabular-nums text-gray-900 dark:text-white">{res.isoleesSansDimension.toLocaleString('fr-FR')}</b>{' '}
+                {t('dv_iso_nodim')}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-zinc-400">
+                <b className="tabular-nums text-gray-900 dark:text-white">{res.isoleesModeleUnique.toLocaleString('fr-FR')}</b>{' '}
+                {t('dv_iso_alone')}
+              </p>
+            </div>
           </div>
 
           {res.parKind.length > 0 && (
@@ -210,7 +223,11 @@ function Content() {
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-gray-900 dark:text-white">{f.modele}</p>
                     <p className="text-[11px] text-gray-400 dark:text-zinc-500">
-                      {f.categorie || '—'}{f.marque ? ` · ${f.marque}` : ''}
+                      {f.categories.join(' / ') || '—'}
+                      {f.marques.length ? ` · ${f.marques.join(' / ')}` : ''}
+                      {(f.categories.length > 1 || f.marques.length > 1) && (
+                        <span className="ml-1 text-amber-600 dark:text-amber-400">{t('dv_diverge')}</span>
+                      )}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">

@@ -1523,6 +1523,12 @@ const DICT = {
   ec_f_categorie: { fr: 'Catégories', ar: 'الفئات' },
   ec_f_seuil: { fr: 'Stock critique', ar: 'المخزون الحرج' },
   ec_f_stock_sain: { fr: 'Stock négatif', ar: 'المخزون السالب' },
+  ec_split_sold: { fr: 'vendues au moins une fois (180 j)', ar: 'بيعت مرة على الأقل (180 يوماً)' },
+  ec_split_stock: { fr: 'stock renseigné, mais jamais vendues', ar: 'لها مخزون، لكن لم تُبَع قط' },
+  ec_warn_import: {
+    fr: "La très grande majorité des fiches « actives » n'ont jamais été vendues : elles ne comptent que parce qu'un stock leur est attribué. Si ce stock vient d'un import et non d'un comptage réel, le chiffre des fiches actives est surévalué — et votre chantier est bien plus petit qu'il n'y paraît. Fiez-vous d'abord à la colonne des fiches vendues.",
+    ar: 'الغالبية العظمى من البطاقات «النشطة» لم تُبَع قط: تُحتسب فقط لأن لها مخزوناً مسنداً. إذا كان هذا المخزون آتياً من استيراد لا من جرد فعلي، فرقم البطاقات النشطة مبالغ فيه — وورشكم أصغر بكثير مما يبدو. اعتمدوا أولاً على عمود البطاقات المبيعة.',
+  },
   ec_worklist: { fr: 'Liste de travail', ar: 'قائمة العمل' },
   ec_worklist_sub: { fr: '— les plus vendus d’abord', ar: '— الأكثر مبيعاً أولاً' },
   ec_worklist_empty: { fr: 'Aucune fiche active à corriger. Le catalogue est prêt.', ar: 'لا توجد بطاقة نشطة تحتاج تصحيحاً. الكتالوج جاهز.' },
@@ -1578,6 +1584,15 @@ const DICT = {
   dv_k_mesure: { fr: 'Mesure (5 L, 16 A, 500 g)', ar: 'القياس (5 لتر، 16 أمبير، 500 غ)' },
   dv_k_degre: { fr: 'Degré ou pourcentage', ar: 'الدرجة أو النسبة' },
   dv_k_taille: { fr: 'Taille (T9)', ar: 'المقاس (T9)' },
+  dv_diverge: { fr: '⚠ classement divergent', ar: '⚠ تصنيف متباين' },
+  dv_iso_nodim: {
+    fr: 'fiches sans dimension reconnaissable dans la désignation — soit de vrais produits uniques, soit une nomenclature que le détecteur ne sait pas lire.',
+    ar: 'بطاقة بلا مقاس يمكن التعرف عليه في التسمية — إما منتجات فريدة فعلاً، أو تسمية لا يعرف الكاشف قراءتها.',
+  },
+  dv_iso_alone: {
+    fr: 'fiches dont le modèle n’apparaît qu’une fois : article réellement unique, ou fratrie nommée différemment.',
+    ar: 'بطاقة نموذجها لا يظهر إلا مرة واحدة: صنف فريد فعلاً، أو إخوة سُمّوا بشكل مختلف.',
+  },
   dv_disclaimer: {
     fr: "Ceci est une heuristique sur du texte libre : elle propose des regroupements, elle ne les décide pas. Les familles marquées « à vérifier » contiennent deux fiches portant la même déclinaison — c'est un doublon, pas une taille. Validez famille par famille avant toute fusion : un regroupement erroné est plus coûteux à défaire qu'à ne jamais faire.",
     ar: 'هذا أسلوب تقديري على نص حر: يقترح التجميعات ولا يقررها. العائلات المعلَّمة «للتحقق» تضم بطاقتين بالمتغير نفسه — وهذا تكرار لا مقاس. تحققوا عائلة بعائلة قبل أي دمج: التجميع الخاطئ أكلف في التراجع عنه من عدم القيام به أصلاً.',

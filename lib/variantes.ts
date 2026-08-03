@@ -107,10 +107,18 @@ export type Confiance = 'haute' | 'moyenne' | 'a_verifier'
 
 export interface Famille {
   id: string
-  /** Clé de regroupement : modèle + catégorie + marque. */
+  /**
+   * Clé de regroupement : le MODÈLE seul.
+   *
+   * La première version exigeait aussi la même catégorie et la même marque.
+   * Trop strict : une seule fiche de la fratrie sans marque renseignée suffisait
+   * à la détacher, et le détecteur ne couvrait que la moitié du catalogue. La
+   * divergence de catégorie ou de marque abaisse désormais la confiance au lieu
+   * de casser la famille.
+   */
   modele: string
-  categorie: string
-  marque: string
+  categories: string[]
+  marques: string[]
   membres: { id: string; name: string; declinaison: string; stock: number }[]
   kinds: string[]
   confiance: Confiance
@@ -128,6 +136,13 @@ export interface Analyse {
   /** Taille du catalogue après repli : familles + fiches isolées. */
   catalogueReplie: number
   parKind: { kind: string; familles: number; fiches: number }[]
+  /**
+   * Pourquoi une fiche reste isolée. Distinguer les deux causes indique où
+   * porter l'effort : améliorer l'extraction, ou accepter que ce soient de
+   * vrais produits uniques.
+   */
+  isoleesSansDimension: number
+  isoleesModeleUnique: number
 }
 
 /**
@@ -136,7 +151,8 @@ export interface Analyse {
  */
 export function analyserDeclinaisons(products: Product[], minMembres = 2): Analyse {
   const groups = new Map<string, Famille>()
-  let isolees = 0
+  let isoleesSansDimension = 0
+  let isoleesModeleUnique = 0
 
   for (const p of products) {
     const s = splitDesignation(p.name)
@@ -145,25 +161,26 @@ export function analyserDeclinaisons(products: Product[], minMembres = 2): Analy
     // produit (« vis », « x »), on ne regroupe pas : le risque de faux
     // rapprochement dépasse le gain.
     if (!s.declinaison || s.modele.length < 4) {
-      isolees++
+      isoleesSansDimension++
       continue
     }
 
     const cat = (p.category ?? '').trim()
     const marque = (p.brand ?? '').trim()
-    const key = `${s.modele}|${cat}|${marque}`
-    const g = groups.get(key)
+    const g = groups.get(s.modele)
     const membre = { id: p.id, name: p.name, declinaison: s.declinaison, stock: p.stock ?? 0 }
 
     if (g) {
       g.membres.push(membre)
       for (const k of s.kinds) if (!g.kinds.includes(k)) g.kinds.push(k)
+      if (cat && !g.categories.includes(cat)) g.categories.push(cat)
+      if (marque && !g.marques.includes(marque)) g.marques.push(marque)
     } else {
-      groups.set(key, {
-        id: key,
+      groups.set(s.modele, {
+        id: s.modele,
         modele: s.modele,
-        categorie: cat,
-        marque,
+        categories: cat ? [cat] : [],
+        marques: marque ? [marque] : [],
         membres: [membre],
         kinds: [...s.kinds],
         confiance: 'haute',
@@ -175,7 +192,7 @@ export function analyserDeclinaisons(products: Product[], minMembres = 2): Analy
   const familles: Famille[] = []
   for (const g of groups.values()) {
     if (g.membres.length < minMembres) {
-      isolees += g.membres.length
+      isoleesModeleUnique += g.membres.length
       continue
     }
     // Deux membres avec la même déclinaison ne sont pas deux tailles : c'est un
@@ -185,12 +202,17 @@ export function analyserDeclinaisons(products: Product[], minMembres = 2): Analy
       if (vues.has(m.declinaison)) g.collisions++
       vues.add(m.declinaison)
     }
+    // Une famille dont les membres se répartissent sur plusieurs catégories ou
+    // plusieurs marques est probablement juste : c'est le classement qui est
+    // incohérent. On la garde, en le signalant.
     g.confiance =
       g.collisions > 0 ? 'a_verifier'
-      : !g.categorie || !g.marque ? 'moyenne'
+      : g.categories.length > 1 || g.marques.length > 1 ? 'moyenne'
       : 'haute'
     familles.push(g)
   }
+
+  const isolees = isoleesSansDimension + isoleesModeleUnique
 
   familles.sort((a, b) => b.membres.length - a.membres.length)
 
@@ -214,5 +236,7 @@ export function analyserDeclinaisons(products: Product[], minMembres = 2): Analy
     parKind: [...byKind.entries()]
       .map(([kind, v]) => ({ kind, ...v }))
       .sort((a, b) => b.fiches - a.fiches),
+    isoleesSansDimension,
+    isoleesModeleUnique,
   }
 }

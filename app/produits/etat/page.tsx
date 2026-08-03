@@ -142,6 +142,27 @@ function Content() {
               <b className="text-indigo-600 dark:text-indigo-400">{res.actifs.toLocaleString('fr-FR')}</b> {t('ec_read_c')}{' '}
               <b className="text-rose-600 dark:text-rose-400">{res.chantier.length.toLocaleString('fr-FR')}</b> {t('ec_read_d')}
             </p>
+
+            {/* La ventilation qui rend le chiffre « actives » interprétable. */}
+            <div className="mt-3 grid gap-3 border-t border-gray-100 pt-3 sm:grid-cols-2 dark:border-white/10">
+              <div>
+                <p className="text-xl font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">
+                  {res.vendues.toLocaleString('fr-FR')}
+                </p>
+                <p className="text-[11px] text-gray-500 dark:text-zinc-400">{t('ec_split_sold')}</p>
+              </div>
+              <div>
+                <p className="text-xl font-extrabold tabular-nums text-gray-500 dark:text-zinc-400">
+                  {res.stockSeul.toLocaleString('fr-FR')}
+                </p>
+                <p className="text-[11px] text-gray-500 dark:text-zinc-400">{t('ec_split_stock')}</p>
+              </div>
+            </div>
+            {res.stockSeul > res.vendues * 5 && res.vendues > 0 && (
+              <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+                {t('ec_warn_import')}
+              </p>
+            )}
           </div>
 
           <div className="glass-card overflow-x-auto">

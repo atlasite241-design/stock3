@@ -57,6 +57,13 @@ export interface EtatCatalogue {
   total: number
   /** Fiches avec du stock ou au moins une vente sur la période observée. */
   actifs: number
+  /**
+   * Ventilation de `actifs`. Un catalogue importé pose souvent une quantité par
+   * défaut sur tout : « stock > 0 » cesse alors de signifier « article réel ».
+   * Seul le nombre de fiches VENDUES est à l'abri de cet artefact.
+   */
+  vendues: number
+  stockSeul: number
   dormants: number
   mesures: Mesure[]
   /** Part des fiches ACTIVES sans aucun défaut bloquant. */
@@ -93,6 +100,8 @@ export function etatCatalogue(products: Product[], sales: Sale[], jours = 180): 
   for (const c of CRITERES) compteurs.set(c.id, { total: 0, actif: 0, valeur: 0 })
 
   let actifs = 0
+  let vendues = 0
+  let stockSeul = 0
   let sansDefautBloquant = 0
   let sansAucunDefaut = 0
   const chantier: EtatCatalogue['chantier'] = []
@@ -102,7 +111,11 @@ export function etatCatalogue(products: Product[], sales: Sale[], jours = 180): 
     // « Compte » = il y a du stock dessus, ou il s'est vendu. Le reste est
     // du catalogue mort : le corriger ne rapporte rien aujourd'hui.
     const compte = p.stock > 0 || ventes > 0
-    if (compte) actifs++
+    if (compte) {
+      actifs++
+      if (ventes > 0) vendues++
+      else stockSeul++
+    }
 
     const manques: CritereId[] = []
     for (const c of CRITERES) {
@@ -138,6 +151,8 @@ export function etatCatalogue(products: Product[], sales: Sale[], jours = 180): 
   return {
     total: products.length,
     actifs,
+    vendues,
+    stockSeul,
     dormants: products.length - actifs,
     mesures: CRITERES.map((c) => {
       const e = compteurs.get(c.id)!
