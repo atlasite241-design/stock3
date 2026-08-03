@@ -11,6 +11,7 @@ import {
   Boxes,
   Building2,
   ChevronDown,
+  ClipboardCheck,
   Coins,
   LayoutDashboard,
   Monitor,
@@ -68,6 +69,7 @@ const NAV_ALL: NavItem[] = [
   { labelKey: 'nav_setup', icon: Sparkles, href: '/setup' },
   { labelKey: 'nav_guide', icon: Rocket, href: '/guide-demarrage' },
   { labelKey: 'nav_guide_exercise', icon: RefreshCw, href: '/guide-exercice' },
+  { labelKey: 'nav_guide_ops', icon: ClipboardCheck, href: '/guide-exploitation' },
   {
     labelKey: 'nav_pos',
     icon: Monitor,
@@ -542,7 +544,7 @@ const NAV_FAMILIES: NavFamily[] = [
   fam('nav_fam_commerce', ['nav_purchases', 'nav_sales', 'nav_clients', 'nav_suppliers']),
   fam('nav_fam_analysis', ['nav_reports', 'nav_accounting', 'nav_alerts']),
   fam('nav_fam_admin', ['nav_hr', 'nav_users', 'nav_settings']),
-  fam('nav_fam_help', ['nav_setup', 'nav_guide', 'nav_guide_exercise']),
+  fam('nav_fam_help', ['nav_setup', 'nav_guide', 'nav_guide_exercise', 'nav_guide_ops']),
 ]
 
 /** Vue à plat, pour les recherches « quel groupe contient la page courante ? ». */

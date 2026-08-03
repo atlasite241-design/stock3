@@ -1484,6 +1484,25 @@ const DICT = {
   fret_none: { fr: 'Aucune commande retournée', ar: 'لا توجد طلبات مرتجعة' },
   nav_suppliers_payments: { fr: 'Paiements', ar: 'المدفوعات' },
   nav_suppliers_balances: { fr: 'Soldes', ar: 'الأرصدة' },
+  // Guide d'exploitation
+  nav_guide_ops: { fr: "Guide d'exploitation", ar: 'دليل التشغيل' },
+  gex_title: { fr: "Guide d'exploitation", ar: 'دليل التشغيل' },
+  gex_sub: {
+    fr: 'Le rythme une fois la boutique en service : ce qu’on ouvre le matin, pendant la journée, le soir, chaque semaine et chaque mois.',
+    ar: 'الإيقاع بعد تشغيل المتجر: ما يُفتح صباحاً، وخلال النهار، ومساءً، وكل أسبوع وكل شهر.',
+  },
+  gex_today: { fr: 'étapes du jour', ar: 'خطوات اليوم' },
+  gex_reset_hint: {
+    fr: 'Les cases se vident automatiquement au changement de jour.',
+    ar: 'تُفرَّغ الخانات تلقائياً عند تغيّر اليوم.',
+  },
+  gex_noloc: {
+    fr: 'articles en stock n’ont pas d’emplacement. Tant que c’est le cas, « chercher par emplacement » ne fonctionnera pas au comptoir.',
+    ar: 'صنفاً في المخزون بلا موقع. ما دام الأمر كذلك، لن يعمل «البحث بالموقع» عند المنضدة.',
+  },
+  gex_noloc_fix: { fr: 'Affecter le catalogue', ar: 'إسناد الكتالوج' },
+  gex_traps: { fr: 'Les cinq erreurs qui coûtent cher', ar: 'الأخطاء الخمسة المكلفة' },
+
   // État du catalogue
   nav_products_health: { fr: 'État du catalogue', ar: 'حالة الكتالوج' },
   ec_title: { fr: 'État du catalogue', ar: 'حالة الكتالوج' },
