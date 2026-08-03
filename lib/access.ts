@@ -27,6 +27,7 @@ export const ROUTE_PERM: Record<string, string> = {
   '/produits/analyse': 'prod.delete',
   // Lecture seule : l'analyse ne modifie rien, elle propose des regroupements.
   '/produits/declinaisons': 'prod.view',
+  '/produits/etat': 'prod.view',
   // Stock
   '/stock': 'stock.view',
   '/stock/stock-initial': 'stock.init',

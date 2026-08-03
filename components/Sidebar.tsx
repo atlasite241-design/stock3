@@ -104,6 +104,7 @@ const NAV_ALL: NavItem[] = [
       { href: '/produits/codes-barres', labelKey: 'nav_products_barcodes' },
       { href: '/produits/analyse', labelKey: 'nav_products_analysis' },
       { href: '/produits/declinaisons', labelKey: 'nav_products_variants' },
+      { href: '/produits/etat', labelKey: 'nav_products_health' },
     ],
   },
   {
