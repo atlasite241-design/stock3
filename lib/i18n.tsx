@@ -1502,6 +1502,12 @@ const DICT = {
     ar: 'يبقى المخزون محسوباً بالوحدة الأساسية: بيع علبة من 100 يُخرج 100. يُدخَل ثمن الوحدة بحرية — فهو تخفيضكم على الكمية لا عملية ضرب. رمز شريطي خاص يسمح بمسح الكرتون مباشرة.',
   },
   pos_unit_piece: { fr: 'Pièce', ar: 'وحدة' },
+  prod_decimal_qty: { fr: 'Vendu en quantité fractionnée', ar: 'يُباع بكميات جزئية' },
+  prod_decimal_hint: {
+    fr: 'Câble au mètre, peinture au litre, sable au kilo : la caisse acceptera 7,5. À laisser décoché pour tout ce qui se compte à l’unité — une caisse qui accepte « 2,5 vis » fabrique un inventaire faux.',
+    ar: 'الكابل بالمتر، الصباغة باللتر، الرمل بالكيلو: سيقبل الصندوق 7,5. اتركوه غير مؤشَّر لكل ما يُعدّ بالوحدة — صندوق يقبل «2,5 برغي» يُنتج جرداً خاطئاً.',
+  },
+  prod_decimal_suggest: { fr: 'Activer — unité divisible', ar: 'تفعيل — وحدة قابلة للتجزئة' },
 
   // Guide d'exploitation
   nav_guide_ops: { fr: "Guide d'exploitation", ar: 'دليل التشغيل' },

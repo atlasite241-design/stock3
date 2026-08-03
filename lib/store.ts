@@ -364,7 +364,23 @@ export interface Product {
    * carton et de vendre à la pièce, au sachet ou à la boîte.
    */
   saleUnits?: SaleUnit[]
+  /**
+   * Article vendu en quantité fractionnée : câble au mètre, peinture au litre,
+   * sable au kilo. Sans ce drapeau la caisse n'accepte que des entiers — ce qui
+   * est LA bonne règle pour une vis : une caisse qui accepte « 2,5 vis »
+   * produit un inventaire faux.
+   */
+  decimalQty?: boolean
 }
+
+/** Unités qui appellent naturellement des quantités fractionnées. */
+const UNITES_DIVISIBLES = /^(m|m2|m²|m3|m³|ml|cm|metre|mètre|kg|g|gr|gramme|l|litre|kilo)$/i
+
+/** Proposition par défaut à la saisie : le vendeur reste libre de la changer. */
+export const uniteDivisible = (unit: string): boolean => UNITES_DIVISIBLES.test((unit || '').trim())
+
+/** Arrondi des quantités à trois décimales : coupe le bruit du binaire (0,1 + 0,2). */
+export const roundQty = (n: number): number => Math.round(n * 1000) / 1000
 
 /** Physical stock minus quantities reserved by pending transfers. */
 export const availableStock = (p: Product) => Math.max(0, p.stock - (p.reserved ?? 0))
@@ -401,7 +417,8 @@ export interface SaleItem {
 }
 
 /** Quantité en unités de STOCK que représente une ligne de vente. */
-export const baseQty = (i: Pick<SaleItem, 'qty' | 'unitFactor'>) => i.qty * (i.unitFactor && i.unitFactor > 0 ? i.unitFactor : 1)
+export const baseQty = (i: Pick<SaleItem, 'qty' | 'unitFactor'>) =>
+  Math.round(i.qty * (i.unitFactor && i.unitFactor > 0 ? i.unitFactor : 1) * 1000) / 1000
 
 export interface Sale {
   id: string

@@ -14,7 +14,7 @@ import { generateEan13 } from '@/components/EAN13'
 import Select from '@/components/Select'
 import LocationPicker, { type ProductLocation } from '@/components/LocationPicker'
 import { useToast } from '@/components/Toast'
-import { exportProductsCSVAsync, fmtDH, useDroguerie, type Product, type SaleUnit } from '@/lib/store'
+import { exportProductsCSVAsync, fmtDH, roundQty, uniteDivisible, useDroguerie, type Product, type SaleUnit } from '@/lib/store'
 import { removeWhiteBackground } from '@/lib/image'
 import { useLanguage } from '@/lib/i18n'
 import SaleUnitsEditor from '@/components/SaleUnitsEditor'
@@ -44,6 +44,7 @@ function ProduitsContent() {
   const [category, setCategory] = useState('Tous')
   const [modalOpen, setModalOpen] = useState(false)
   const [saleUnits, setSaleUnits] = useState<SaleUnit[]>([])
+  const [decimalQty, setDecimalQty] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [loc, setLoc] = useState<ProductLocation>({})
@@ -133,6 +134,7 @@ function ProduitsContent() {
     setForm(EMPTY_FORM)
     setLoc({})
     setSaleUnits([])
+    setDecimalQty(false)
     setModalOpen(true)
   }
 
@@ -157,6 +159,7 @@ function ProduitsContent() {
       niveauId: p.niveauId, positionId: p.positionId, emplacementComplet: p.emplacementComplet,
     })
     setSaleUnits(p.saleUnits ?? [])
+    setDecimalQty(!!p.decimalQty)
     setModalOpen(true)
   }
 
@@ -196,8 +199,8 @@ function ProduitsContent() {
       unit: form.unit.trim() || 'Pièce',
       price: num(form.price),
       cost: num(form.cost),
-      stock: Math.max(0, Math.round(num(form.stock))),
-      minStock: Math.max(0, Math.round(num(form.minStock))),
+      stock: Math.max(0, decimalQty ? roundQty(num(form.stock)) : Math.round(num(form.stock))),
+      minStock: Math.max(0, decimalQty ? roundQty(num(form.minStock)) : Math.round(num(form.minStock))),
       expiryDate: form.expiryDate || undefined,
       image: form.image || undefined,
       // Localisation (WMS)
@@ -206,6 +209,7 @@ function ProduitsContent() {
       // Un conditionnement sans nom, sans facteur ou sans prix serait invendable :
       // on ne l'enregistre pas plutot que de le laisser casser la caisse.
       saleUnits: saleUnits.filter((u) => u.name.trim() && u.factor > 0 && u.price > 0),
+      decimalQty: decimalQty || undefined,
     }
     if (editingId) {
       updateProduct(editingId, data)
@@ -620,6 +624,26 @@ function ProduitsContent() {
             </p>
             <LocationPicker storeId={activeStoreId} value={loc} onChange={setLoc} />
           </div>
+
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-gray-200 p-3 dark:border-white/10">
+            <input
+              type="checkbox" checked={decimalQty}
+              onChange={(e) => setDecimalQty(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-amber-500"
+            />
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-gray-900 dark:text-white">{t('prod_decimal_qty')}</span>
+              <span className="block text-[11px] leading-relaxed text-gray-500 dark:text-zinc-400">{t('prod_decimal_hint')}</span>
+              {!decimalQty && uniteDivisible(form.unit) && (
+                <button
+                  type="button" onClick={() => setDecimalQty(true)}
+                  className="mt-1 text-[11px] font-semibold text-amber-600 hover:underline dark:text-amber-400"
+                >
+                  {t('prod_decimal_suggest')} « {form.unit} »
+                </button>
+              )}
+            </span>
+          </label>
 
           <SaleUnitsEditor
             baseUnit={form.unit}

@@ -41,6 +41,7 @@ import {
   useDroguerie,
   uid,
   baseQty,
+  roundQty,
   type HeldSale,
   type Product,
   type Client,
@@ -283,6 +284,31 @@ function CaisseContent() {
     )
   }
 
+  /**
+   * Saisie directe — indispensable dès qu'on vend au mètre ou au kilo : atteindre
+   * 7,5 m avec un bouton « +1 » n'a pas de sens.
+   */
+  const setQty = (key: string, raw: number) => {
+    setCart((c) =>
+      c.flatMap((i) => {
+        if (lineKey(i.productId, i.unitName) !== key) return [i]
+        const q = roundQty(Math.max(0, raw))
+        if (q <= 0) return [i] // la suppression passe par la corbeille, pas par un zéro accidentel
+        const p = prodById.get(i.productId)
+        if (p) {
+          const autres = c
+            .filter((x) => x.productId === i.productId && lineKey(x.productId, x.unitName) !== key)
+            .reduce((s, x) => s + baseQty(x), 0)
+          if (autres + baseQty({ qty: q, unitFactor: i.unitFactor }) > availableStock(p)) {
+            toast(`${t('pos_toast_insufficient_stock')} — ${i.name}`, 'error')
+            return [i]
+          }
+        }
+        return [{ ...i, qty: q }]
+      })
+    )
+  }
+
   const removeItem = (key: string) => setCart((c) => c.filter((i) => lineKey(i.productId, i.unitName) !== key))
 
   const total = cart.reduce((a, i) => a + i.price * i.qty, 0)
@@ -455,9 +481,21 @@ function CaisseContent() {
                   >
                     <Minus className="h-3.5 w-3.5" />
                   </button>
-                  <span className="w-8 text-center text-sm font-bold text-gray-900 dark:text-white tabular-nums">
-                    {i.qty}
-                  </span>
+                  {prod?.decimalQty ? (
+                    <input
+                      type="number" min={0} step="0.01" value={i.qty}
+                      onChange={(e) => setQty(key, Number(e.target.value))}
+                      onFocus={(e) => e.target.select()}
+                      className="h-9 w-20 rounded-lg border border-gray-200 bg-white px-2 text-center text-sm font-bold tabular-nums text-gray-900 dark:border-white/10 dark:bg-[#12121a] dark:text-white lg:h-7"
+                    />
+                  ) : (
+                    <span className="w-8 text-center text-sm font-bold text-gray-900 dark:text-white tabular-nums">
+                      {i.qty}
+                    </span>
+                  )}
+                  {prod?.decimalQty && (
+                    <span className="text-[11px] text-gray-400 dark:text-zinc-500">{prod.unit}</span>
+                  )}
                   <button
                     onClick={() => changeQty(key, 1)}
                     className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#12121a] text-gray-600 dark:text-zinc-400 transition hover:border-amber-300 hover:bg-amber-50 lg:h-7 lg:w-7"
