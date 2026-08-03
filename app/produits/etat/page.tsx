@@ -9,7 +9,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowRight, ClipboardList, Download, Play, Stethoscope } from 'lucide-react'
+import { ArrowRight, ClipboardList, Download, Play, Scale, Stethoscope } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Loader from '@/components/Loader'
 import { etatCatalogue, type CritereId, type EtatCatalogue } from '@/lib/catalogue-sante'
@@ -211,6 +211,64 @@ function Content() {
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* Contrôle de vraisemblance : un total de valorisation absurde doit
+              être attribué avant d'être corrigé. */}
+          <div className="glass-card p-5">
+            <p className="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-white">
+              <Scale className="h-4 w-4 text-amber-500" />{t('ec_val_title')}
+            </p>
+
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { l: t('ec_val_total'), v: fmtDH(res.valeur.total) },
+                { l: t('ec_val_mean'), v: fmtDH(res.valeur.moyenne) },
+                { l: t('ec_val_median'), v: fmtDH(res.valeur.medianeValeur), tone: 'text-emerald-600 dark:text-emerald-400' },
+                { l: t('ec_val_top_share'), v: `${res.valeur.partTop.toFixed(1)} %` },
+              ].map((c, i) => (
+                <div key={i}>
+                  <p className={`text-lg font-extrabold tabular-nums ${c.tone ?? 'text-gray-900 dark:text-white'}`}>{c.v}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-zinc-500">{c.l}</p>
+                </div>
+              ))}
+            </div>
+
+            <p className="mt-3 text-xs text-gray-500 dark:text-zinc-400">
+              {t('ec_val_median_stock')} <b className="tabular-nums text-gray-900 dark:text-white">{res.valeur.medianeStock.toLocaleString('fr-FR')}</b>
+              {' · '}{t('ec_val_median_cost')} <b className="tabular-nums text-gray-900 dark:text-white">{fmtDH(res.valeur.medianeCout)}</b>
+            </p>
+
+            <p className="mt-3 rounded-xl bg-gray-50 p-3 text-[11px] leading-relaxed text-gray-600 dark:bg-white/5 dark:text-zinc-300">
+              {res.valeur.moyenne > res.valeur.medianeValeur * 20
+                ? t('ec_val_outliers')
+                : t('ec_val_systemic')}
+            </p>
+
+            {res.valeur.top.length > 0 && (
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[520px] text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-left text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:border-white/10 dark:text-zinc-500">
+                      <th className="px-2 py-2">{t('sa_col_product')}</th>
+                      <th className="px-2 py-2 text-right">{t('sk_val_qty')}</th>
+                      <th className="px-2 py-2 text-right">{t('ec_val_cost')}</th>
+                      <th className="px-2 py-2 text-right">{t('ec_col_value')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {res.valeur.top.map((x) => (
+                      <tr key={x.id} className="border-b border-gray-50 last:border-0 dark:border-white/5">
+                        <td className="px-2 py-1.5 text-gray-900 dark:text-white">{x.name}</td>
+                        <td className="px-2 py-1.5 text-right tabular-nums text-gray-600 dark:text-zinc-300">{x.stock.toLocaleString('fr-FR')}</td>
+                        <td className="px-2 py-1.5 text-right tabular-nums text-gray-600 dark:text-zinc-300">{fmtDH(x.cout)}</td>
+                        <td className="px-2 py-1.5 text-right font-bold tabular-nums text-amber-600 dark:text-amber-400">{fmtDH(x.valeur)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

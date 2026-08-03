@@ -78,6 +78,31 @@ export interface EtatCatalogue {
     valeur: number
     manques: CritereId[]
   }[]
+  /**
+   * Contrôle de vraisemblance de la valorisation.
+   *
+   * La moyenne se laisse emporter par quelques valeurs folles ; la MÉDIANE non.
+   * Comparer les deux répond à la seule question qui compte quand un total
+   * paraît absurde : est-ce quelques fiches aberrantes, ou toute l'échelle ?
+   */
+  valeur: {
+    total: number
+    moyenne: number
+    medianeStock: number
+    medianeCout: number
+    medianeValeur: number
+    /** Les quinze fiches qui pèsent le plus — c'est là que se voient les anomalies. */
+    top: { id: string; name: string; stock: number; cout: number; valeur: number }[]
+    /** Part du total portée par ces quinze fiches. */
+    partTop: number
+  }
+}
+
+const mediane = (xs: number[]): number => {
+  if (!xs.length) return 0
+  const s = [...xs].sort((a, b) => a - b)
+  const m = s.length >> 1
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
 }
 
 /**
@@ -148,6 +173,15 @@ export function etatCatalogue(products: Product[], sales: Sale[], jours = 180): 
   // Priorité : ce qui se vend le plus, puis ce qui immobilise le plus.
   chantier.sort((a, b) => b.ventes - a.ventes || b.valeur - a.valeur)
 
+  // Vraisemblance de la valorisation, sur les fiches réellement en stock.
+  const enStock = products.filter((p) => p.stock > 0)
+  const valeurs = enStock.map((p) => p.stock * p.cost)
+  const totalValeur = valeurs.reduce((a, v) => a + v, 0)
+  const top = enStock
+    .map((p) => ({ id: p.id, name: p.name, stock: p.stock, cout: p.cost, valeur: p.stock * p.cost }))
+    .sort((a, b) => b.valeur - a.valeur)
+    .slice(0, 15)
+
   return {
     total: products.length,
     actifs,
@@ -167,5 +201,14 @@ export function etatCatalogue(products: Product[], sales: Sale[], jours = 180): 
     scoreComptoir: actifs ? Math.round((sansDefautBloquant / actifs) * 100) : 100,
     scoreComplet: actifs ? Math.round((sansAucunDefaut / actifs) * 100) : 100,
     chantier,
+    valeur: {
+      total: totalValeur,
+      moyenne: enStock.length ? totalValeur / enStock.length : 0,
+      medianeStock: mediane(enStock.map((p) => p.stock)),
+      medianeCout: mediane(enStock.map((p) => p.cost)),
+      medianeValeur: mediane(valeurs),
+      top,
+      partTop: totalValeur ? (top.reduce((a, x) => a + x.valeur, 0) / totalValeur) * 100 : 0,
+    },
   }
 }
