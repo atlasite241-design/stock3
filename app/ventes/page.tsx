@@ -191,11 +191,18 @@ function VentesContent() {
             <div className="mt-3 space-y-2">
               {detail.items.map((i) => (
                 <div
-                  key={i.productId}
+                  key={`${i.productId}|${i.unitName ?? ''}`}
                   className="flex items-center justify-between gap-3 rounded-xl bg-gray-50 dark:bg-white/5 px-3 py-2.5"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{i.name}</p>
+                    <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
+                      {i.name}
+                      {i.unitFactor && i.unitFactor > 1 && (
+                        <span className="ml-1 text-xs font-normal text-amber-600 dark:text-amber-400">
+                          {i.unitName} ×{i.unitFactor}
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-gray-500 dark:text-zinc-400 tabular-nums">
                       {i.qty} × {fmtDH(i.price)}
                     </p>

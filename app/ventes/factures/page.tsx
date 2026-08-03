@@ -132,7 +132,9 @@ function Content() {
                 partyLabel={t('fdoc_client')}
                 partyName={invoice.clientName ?? t('bl_walk_in_client')}
                 lines={invoice.items.map((i) => ({
-                  label: i.name,
+                  // Le conditionnement fait partie du libelle : une facture qui
+                  // indique « 3 » sans « boite de 100 » est invérifiable.
+                  label: i.unitFactor && i.unitFactor > 1 ? `${i.name} — ${i.unitName} ×${i.unitFactor}` : i.name,
                   qty: i.qty,
                   puHT: i.price / (1 + settings.tva / 100),
                   tvaPct: settings.tva,

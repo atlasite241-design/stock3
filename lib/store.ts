@@ -2283,7 +2283,7 @@ export function useDroguerieState() {
       products.map((p) => {
         // Décrément en unités de STOCK : vendre 3 boîtes de 100 sort 300 pièces.
         const qty = items.filter((i) => i.productId === p.id).reduce((s, i) => s + baseQty(i), 0)
-        return qty ? { ...p, stock: Math.max(0, p.stock - qty) } : p
+        return qty ? { ...p, stock: roundQty(Math.max(0, p.stock - qty)) } : p
       })
     )
     persistMovements([
@@ -2441,8 +2441,10 @@ export function useDroguerieState() {
     persistReturns([ret, ...returns])
     persistProducts(
       products.map((p) => {
-        const qty = items.filter((i) => i.productId === p.id).reduce((s, i) => s + i.qty, 0)
-        return qty ? { ...p, stock: p.stock + qty } : p
+        // Remise en stock en unités de BASE : rendre une boîte de 100 doit
+        // remettre 100 pièces, pas une. Le symétrique exact de la vente.
+        const qty = items.filter((i) => i.productId === p.id).reduce((s, i) => s + baseQty(i), 0)
+        return qty ? { ...p, stock: roundQty(p.stock + qty) } : p
       })
     )
     persistMovements([
@@ -2452,7 +2454,7 @@ export function useDroguerieState() {
         productId: i.productId,
         productName: i.name,
         type: 'retour' as const,
-        qty: i.qty,
+        qty: baseQty(i),
         note: `Retour vente ${sale.id.slice(-5)}`,
       })),
       ...movements,

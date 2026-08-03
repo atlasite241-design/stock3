@@ -997,10 +997,18 @@ function CaisseContent() {
                 <span className="w-14 text-right">{t('posr_col_pu')}</span>
                 <span className="w-14 text-right">{t('posr_col_pt')}</span>
               </div>
-              {receipt.items.map((i) => (
-                <div key={i.productId} className="mt-1 flex justify-between gap-1 text-gray-700">
+              {receipt.items.map((i, n) => (
+                // Le conditionnement figure sur le ticket : « 3 » sans « boîtes
+                // de 100 » ne permet ni au client ni au commerçant de retrouver
+                // ce qui a été vendu.
+                <div key={`${i.productId}|${i.unitName ?? ''}|${n}`} className="mt-1 flex justify-between gap-1 text-gray-700">
                   <span className="w-8 shrink-0 tabular-nums">{i.qty.toFixed(2)}</span>
-                  <span className="min-w-0 flex-1 truncate px-1">{i.name}</span>
+                  <span className="min-w-0 flex-1 px-1">
+                    <span className="block truncate">{i.name}</span>
+                    {i.unitFactor && i.unitFactor > 1 && (
+                      <span className="block truncate text-[9px] opacity-70">{i.unitName} × {i.unitFactor}</span>
+                    )}
+                  </span>
                   <span className="w-14 shrink-0 text-right tabular-nums">{i.price.toFixed(2)}</span>
                   <span className="w-14 shrink-0 text-right tabular-nums">{(i.price * i.qty).toFixed(2)}</span>
                 </div>
