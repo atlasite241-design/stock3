@@ -103,6 +103,7 @@ const NAV_ALL: NavItem[] = [
       { href: '/produits/unites', labelKey: 'nav_products_units' },
       { href: '/produits/codes-barres', labelKey: 'nav_products_barcodes' },
       { href: '/produits/analyse', labelKey: 'nav_products_analysis' },
+      { href: '/produits/declinaisons', labelKey: 'nav_products_variants' },
     ],
   },
   {
