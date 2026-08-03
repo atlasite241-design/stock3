@@ -359,17 +359,49 @@ export interface Product {
   niveauId?: string
   positionId?: string
   emplacementComplet?: string
+  /**
+   * Conditionnements de vente en plus de l'unité de stock. Permet d'acheter au
+   * carton et de vendre à la pièce, au sachet ou à la boîte.
+   */
+  saleUnits?: SaleUnit[]
 }
 
 /** Physical stock minus quantities reserved by pending transfers. */
 export const availableStock = (p: Product) => Math.max(0, p.stock - (p.reserved ?? 0))
 
+/**
+ * Conditionnement de vente d'un produit — « Sachet de 10 », « Boîte », « Carton ».
+ *
+ * Le stock reste tenu dans UNE seule unité, la plus petite vendable (`unit`).
+ * Chaque conditionnement porte son facteur vers cette unité de base, et son
+ * PROPRE prix : un carton de 2 000 vis ne se vend pas 2 000 × le prix pièce,
+ * la dégressivité est une décision commerciale, pas une multiplication.
+ */
+export interface SaleUnit {
+  id: string
+  name: string
+  /** Nombre d'unités de stock contenues. « Boîte de 100 » → 100. */
+  factor: number
+  /** Prix de vente de ce conditionnement entier. */
+  price: number
+  /** Code-barres du carton ou de la boîte, distinct de celui de la pièce. */
+  barcode?: string
+}
+
 export interface SaleItem {
   productId: string
   name: string
   price: number
+  /** Quantité DANS l'unité choisie (3 boîtes, pas 300 vis). */
   qty: number
+  /** Conditionnement vendu. Absent = unité de stock. */
+  unitName?: string
+  /** Facteur du conditionnement. Absent ou 1 = unité de stock. */
+  unitFactor?: number
 }
+
+/** Quantité en unités de STOCK que représente une ligne de vente. */
+export const baseQty = (i: Pick<SaleItem, 'qty' | 'unitFactor'>) => i.qty * (i.unitFactor && i.unitFactor > 0 ? i.unitFactor : 1)
 
 export interface Sale {
   id: string
@@ -2207,9 +2239,12 @@ export function useDroguerieState() {
   // ---- Sales ----
   const recordSale = (items: SaleItem[], payment: Sale['payment'], client?: Client | null, depotId?: string): Sale => {
     const total = items.reduce((s, i) => s + i.price * i.qty, 0)
+    // La marge se calcule sur la quantité de BASE : le coût est celui de l'unité
+    // de stock, alors que le prix est celui du conditionnement vendu. Multiplier
+    // le coût par le nombre de cartons donnerait une marge grossièrement fausse.
     const profit = items.reduce((s, i) => {
       const p = products.find((x) => x.id === i.productId)
-      return s + (i.price - (p?.cost ?? 0)) * i.qty
+      return s + i.price * i.qty - (p?.cost ?? 0) * baseQty(i)
     }, 0)
     // Le vendeur est repris de la session : sans lui, aucun rapport par
     // vendeur n'est possible — et on ne peut pas le reconstituer après coup.
@@ -2229,7 +2264,8 @@ export function useDroguerieState() {
     persistSales([...sales, sale])
     persistProducts(
       products.map((p) => {
-        const qty = items.filter((i) => i.productId === p.id).reduce((s, i) => s + i.qty, 0)
+        // Décrément en unités de STOCK : vendre 3 boîtes de 100 sort 300 pièces.
+        const qty = items.filter((i) => i.productId === p.id).reduce((s, i) => s + baseQty(i), 0)
         return qty ? { ...p, stock: Math.max(0, p.stock - qty) } : p
       })
     )
@@ -2240,7 +2276,9 @@ export function useDroguerieState() {
         productId: i.productId,
         productName: i.name,
         type: 'vente' as const,
-        qty: -i.qty,
+        // Le mouvement est toujours exprimé en unités de stock, sinon
+        // l'inventaire et la valorisation deviennent incomparables.
+        qty: -baseQty(i),
         note: `Vente ${sale.id.slice(-5)}`,
         storeId: activeStoreRef.current,
         depotId: depotId || undefined,

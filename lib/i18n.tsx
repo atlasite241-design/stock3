@@ -1484,6 +1484,25 @@ const DICT = {
   fret_none: { fr: 'Aucune commande retournée', ar: 'لا توجد طلبات مرتجعة' },
   nav_suppliers_payments: { fr: 'Paiements', ar: 'المدفوعات' },
   nav_suppliers_balances: { fr: 'Soldes', ar: 'الأرصدة' },
+  // Conditionnements de vente
+  su_title: { fr: 'Conditionnements de vente', ar: 'وحدات البيع' },
+  su_base: { fr: 'Unité de stock :', ar: 'وحدة المخزون:' },
+  su_add: { fr: 'Ajouter', ar: 'إضافة' },
+  su_name: { fr: 'Nom', ar: 'الاسم' },
+  su_factor: { fr: 'Contient', ar: 'يحتوي' },
+  su_price: { fr: 'Prix', ar: 'الثمن' },
+  su_barcode: { fr: 'Code-barres', ar: 'الرمز الشريطي' },
+  su_equiv: { fr: 'au prix unitaire :', ar: 'بسعر الوحدة:' },
+  su_empty: {
+    fr: 'Aucun conditionnement : cet article ne se vend qu’à l’unité de stock. Ajoutez-en pour le vendre aussi au sachet, à la boîte ou au carton.',
+    ar: 'لا توجد وحدات بيع: يُباع هذا الصنف بوحدة المخزون فقط. أضيفوا وحدات لبيعه كذلك بالكيس أو العلبة أو الكرتون.',
+  },
+  su_hint: {
+    fr: 'Le stock reste tenu à l’unité de base : vendre une boîte de 100 en sort 100. Le prix du conditionnement se saisit librement — c’est votre remise de volume, pas une multiplication. Un code-barres propre permet de scanner directement le carton.',
+    ar: 'يبقى المخزون محسوباً بالوحدة الأساسية: بيع علبة من 100 يُخرج 100. يُدخَل ثمن الوحدة بحرية — فهو تخفيضكم على الكمية لا عملية ضرب. رمز شريطي خاص يسمح بمسح الكرتون مباشرة.',
+  },
+  pos_unit_piece: { fr: 'Pièce', ar: 'وحدة' },
+
   // Guide d'exploitation
   nav_guide_ops: { fr: "Guide d'exploitation", ar: 'دليل التشغيل' },
   gex_title: { fr: "Guide d'exploitation", ar: 'دليل التشغيل' },

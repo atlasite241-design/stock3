@@ -40,11 +40,13 @@ import {
   saveHeldSales,
   useDroguerie,
   uid,
+  baseQty,
   type HeldSale,
   type Product,
   type Client,
   type Sale,
   type SaleItem,
+  type SaleUnit,
 } from '@/lib/store'
 import { playSound } from '@/lib/sound'
 import { useLanguage } from '@/lib/i18n'
@@ -107,31 +109,58 @@ function CaisseContent() {
     }
   }, [cart])
 
-  const inCart = (id: string) => cart.find((i) => i.productId === id)?.qty ?? 0
+  /**
+   * Un même article peut figurer plusieurs fois dans le panier, une ligne par
+   * conditionnement : 5 pièces ET 1 boîte. L'identité d'une ligne est donc le
+   * couple produit + conditionnement, pas le produit seul.
+   */
+  const lineKey = (productId: string, unitName?: string) => `${productId}|${unitName ?? ''}`
 
-  const addToCart = (p: Product) => {
+  /** Quantité déjà au panier pour ce produit, exprimée en unités de STOCK. */
+  const inCartBase = (id: string) =>
+    cart.filter((i) => i.productId === id).reduce((s, i) => s + baseQty(i), 0)
+
+  const addToCart = (p: Product, unit?: SaleUnit) => {
     // Sellable stock excludes quantities reserved by pending transfers.
     const avail = availableStock(p)
+    const pas = unit ? unit.factor : 1
     if (avail <= 0) {
       toast(`${p.name} — ${t('pos_toast_out_of_stock')}`, 'error')
       return
     }
-    if (inCart(p.id) >= avail) {
+    // Le contrôle porte sur l'unité de stock : ajouter une boîte de 100 exige
+    // 100 pièces disponibles, pas une.
+    if (inCartBase(p.id) + pas > avail) {
       toast(`${t('pos_toast_insufficient_stock')} — ${p.name} (${avail} ${t('pos_toast_available')})`, 'error')
       return
     }
+    const key = lineKey(p.id, unit?.name)
     setCart((c) => {
-      const ex = c.find((i) => i.productId === p.id)
+      const ex = c.find((i) => lineKey(i.productId, i.unitName) === key)
       return ex
-        ? c.map((i) => (i.productId === p.id ? { ...i, qty: i.qty + 1 } : i))
-        : [...c, { productId: p.id, name: p.name, price: p.price, qty: 1 }]
+        ? c.map((i) => (lineKey(i.productId, i.unitName) === key ? { ...i, qty: i.qty + 1 } : i))
+        : [...c, {
+            productId: p.id,
+            name: p.name,
+            price: unit ? unit.price : p.price,
+            qty: 1,
+            unitName: unit?.name,
+            unitFactor: unit?.factor,
+          }]
     })
-    toast(`✓ ${p.name} ${t('pos_toast_added')}`)
+    toast(`✓ ${p.name}${unit ? ` — ${unit.name}` : ''} ${t('pos_toast_added')}`)
   }
 
   const handleScan = (code: string) => {
     const c = code.trim()
     if (!c) return
+    // Le code identifie l'UNITÉ, pas seulement l'article : scanner le carton
+    // doit ajouter un carton, pas une pièce.
+    const byUnit = unitByBarcode.get(c)
+    if (byUnit) {
+      addToCart(byUnit.p, byUnit.u)
+      return
+    }
     const p = prodByBarcode.get(c)
     if (!p) {
       toast(`${t('pos_toast_product_not_found')} ${c}`, 'error')
@@ -198,6 +227,17 @@ function CaisseContent() {
     return m
   }, [products])
 
+  /** Codes-barres des conditionnements (carton, boîte), distincts de celui de la pièce. */
+  const unitByBarcode = useMemo(() => {
+    const m = new Map<string, { p: Product; u: SaleUnit }>()
+    for (const p of products) {
+      for (const u of p.saleUnits ?? []) {
+        if (u.barcode) m.set(u.barcode.trim(), { p, u })
+      }
+    }
+    return m
+  }, [products])
+
   // Clé de recherche pré-calculée + recherche différée : la frappe reste fluide
   // (avant : un toLowerCase() sur tout le catalogue à chaque caractère).
   const searchIndex = useMemo(
@@ -223,20 +263,27 @@ function CaisseContent() {
     return { filtered: out, totalMatches: total }
   }, [searchIndex, deferredQuery, category])
 
-  const changeQty = (id: string, delta: number) => {
-    const p = prodById.get(id)
+  const changeQty = (key: string, delta: number) => {
     setCart((c) =>
       c.flatMap((i) => {
-        if (i.productId !== id) return [i]
+        if (lineKey(i.productId, i.unitName) !== key) return [i]
         const q = i.qty + delta
         if (q <= 0) return []
-        if (p && q > availableStock(p)) return [i]
+        const p = prodById.get(i.productId)
+        // Le plafond s'évalue en unités de stock, toutes lignes du même produit
+        // confondues : 5 pièces + 1 boîte de 100 pèsent 105 sur le stock.
+        if (p) {
+          const autres = c
+            .filter((x) => x.productId === i.productId && lineKey(x.productId, x.unitName) !== key)
+            .reduce((s, x) => s + baseQty(x), 0)
+          if (autres + baseQty({ qty: q, unitFactor: i.unitFactor }) > availableStock(p)) return [i]
+        }
         return [{ ...i, qty: q }]
       })
     )
   }
 
-  const removeItem = (id: string) => setCart((c) => c.filter((i) => i.productId !== id))
+  const removeItem = (key: string) => setCart((c) => c.filter((i) => lineKey(i.productId, i.unitName) !== key))
 
   const total = cart.reduce((a, i) => a + i.price * i.qty, 0)
 
@@ -350,24 +397,60 @@ function CaisseContent() {
         ) : (
           cart.map((i) => {
             const prod = prodById.get(i.productId)
+            const key = lineKey(i.productId, i.unitName)
+            const units = prod?.saleUnits ?? []
             return (
-            <div key={i.productId} className="rounded-xl border border-gray-100 dark:border-white/10 bg-gray-50/60 dark:bg-white/5 p-3">
+            <div key={key} className="rounded-xl border border-gray-100 dark:border-white/10 bg-gray-50/60 dark:bg-white/5 p-3">
               <div className="flex items-start gap-2.5">
                 <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-black">
                   <ProductImage image={prod?.image} category={prod?.category ?? ''} alt={i.name} iconSize="h-5 w-5" />
                 </div>
-                <p className="min-w-0 flex-1 text-sm font-medium text-gray-900 dark:text-white">{i.name}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{i.name}</p>
+                  {i.unitFactor && i.unitFactor > 1 && (
+                    <p className="text-[11px] tabular-nums text-amber-600 dark:text-amber-400">
+                      {i.unitName} — {i.unitFactor} {prod?.unit ?? ''} · {fmtDH(i.price)}
+                    </p>
+                  )}
+                </div>
                 <button
-                  onClick={() => removeItem(i.productId)}
+                  onClick={() => removeItem(key)}
                   className="shrink-0 rounded-lg p-2 -m-1 text-gray-400 dark:text-zinc-500 transition hover:bg-rose-50 hover:text-rose-500"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
+              {/* Changer de conditionnement sans ressortir du panier : le vendeur
+                  passe de la pièce à la boîte d'un geste, devant le client. */}
+              {units.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {[{ id: '', name: prod?.unit || t('pos_unit_piece'), factor: 1, price: prod?.price ?? i.price } as SaleUnit, ...units].map((u) => {
+                    const actif = (i.unitName ?? '') === (u.factor === 1 && !u.id ? '' : u.name)
+                    return (
+                      <button
+                        key={u.id || 'base'}
+                        onClick={() => {
+                          if (actif || !prod) return
+                          removeItem(key)
+                          addToCart(prod, u.factor === 1 && !u.id ? undefined : u)
+                        }}
+                        className={`rounded-lg px-2 py-1 text-[11px] font-semibold tabular-nums transition ${
+                          actif
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-white text-gray-600 hover:bg-amber-50 dark:bg-white/10 dark:text-zinc-300'
+                        }`}
+                      >
+                        {u.name}{u.factor > 1 ? ` ×${u.factor}` : ''} · {fmtDH(u.price)}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
               <div className="mt-2 flex items-center justify-between">
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => changeQty(i.productId, -1)}
+                    onClick={() => changeQty(key, -1)}
                     className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#12121a] text-gray-600 dark:text-zinc-400 transition hover:border-amber-300 hover:bg-amber-50 lg:h-7 lg:w-7"
                   >
                     <Minus className="h-3.5 w-3.5" />
@@ -376,7 +459,7 @@ function CaisseContent() {
                     {i.qty}
                   </span>
                   <button
-                    onClick={() => changeQty(i.productId, 1)}
+                    onClick={() => changeQty(key, 1)}
                     className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#12121a] text-gray-600 dark:text-zinc-400 transition hover:border-amber-300 hover:bg-amber-50 lg:h-7 lg:w-7"
                   >
                     <Plus className="h-3.5 w-3.5" />

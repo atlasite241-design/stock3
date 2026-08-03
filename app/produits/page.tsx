@@ -14,9 +14,10 @@ import { generateEan13 } from '@/components/EAN13'
 import Select from '@/components/Select'
 import LocationPicker, { type ProductLocation } from '@/components/LocationPicker'
 import { useToast } from '@/components/Toast'
-import { exportProductsCSVAsync, fmtDH, useDroguerie, type Product } from '@/lib/store'
+import { exportProductsCSVAsync, fmtDH, useDroguerie, type Product, type SaleUnit } from '@/lib/store'
 import { removeWhiteBackground } from '@/lib/image'
 import { useLanguage } from '@/lib/i18n'
+import SaleUnitsEditor from '@/components/SaleUnitsEditor'
 
 const EMPTY_FORM = {
   name: '',
@@ -42,6 +43,7 @@ function ProduitsContent() {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('Tous')
   const [modalOpen, setModalOpen] = useState(false)
+  const [saleUnits, setSaleUnits] = useState<SaleUnit[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [loc, setLoc] = useState<ProductLocation>({})
@@ -130,6 +132,7 @@ function ProduitsContent() {
     setEditingId(null)
     setForm(EMPTY_FORM)
     setLoc({})
+    setSaleUnits([])
     setModalOpen(true)
   }
 
@@ -153,6 +156,7 @@ function ProduitsContent() {
       zoneId: p.zoneId, alleeId: p.alleeId, rayonId: p.rayonId, etagereId: p.etagereId,
       niveauId: p.niveauId, positionId: p.positionId, emplacementComplet: p.emplacementComplet,
     })
+    setSaleUnits(p.saleUnits ?? [])
     setModalOpen(true)
   }
 
@@ -199,6 +203,9 @@ function ProduitsContent() {
       // Localisation (WMS)
       zoneId: loc.zoneId, alleeId: loc.alleeId, rayonId: loc.rayonId, etagereId: loc.etagereId,
       niveauId: loc.niveauId, positionId: loc.positionId, emplacementComplet: loc.emplacementComplet,
+      // Un conditionnement sans nom, sans facteur ou sans prix serait invendable :
+      // on ne l'enregistre pas plutot que de le laisser casser la caisse.
+      saleUnits: saleUnits.filter((u) => u.name.trim() && u.factor > 0 && u.price > 0),
     }
     if (editingId) {
       updateProduct(editingId, data)
@@ -613,6 +620,13 @@ function ProduitsContent() {
             </p>
             <LocationPicker storeId={activeStoreId} value={loc} onChange={setLoc} />
           </div>
+
+          <SaleUnitsEditor
+            baseUnit={form.unit}
+            basePrice={Number(form.price) || 0}
+            value={saleUnits}
+            onChange={setSaleUnits}
+          />
 
           <div className="grid grid-cols-2 gap-3 pt-2">
             <button onClick={() => setModalOpen(false)} className="btn-secondary">
