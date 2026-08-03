@@ -8,12 +8,12 @@
 
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Barcode, Download, Layers, Store, Trash2, TriangleAlert } from 'lucide-react'
+import { Barcode, Download, Layers, Merge, Store, TriangleAlert } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import DangerConfirm from '@/components/DangerConfirm'
 import Loader from '@/components/Loader'
 import { useToast } from '@/components/Toast'
-import { availableStock, useDroguerie, type Product } from '@/lib/store'
+import { availableStock, createBackup, useDroguerie, type Product } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 /** Normalise un nom pour comparer : sans accents, casse ni ponctuation. */
@@ -31,10 +31,11 @@ const score = (p: Product) =>
 const bestOf = (list: Product[]) => list.reduce((a, b) => (score(b) > score(a) ? b : a))
 
 function Content() {
-  const { ready, products, stores, bulkDeleteProducts } = useDroguerie()
+  const { ready, products, stores, mergeDuplicateProducts } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
   const [confirm, setConfirm] = useState(false)
+  const [merged, setMerged] = useState<{ groupes: number; supprimees: number; stockAvant: number; stockApres: number } | null>(null)
 
   const a = useMemo(() => {
     const byBarcode = new Map<string, Product[]>()
@@ -96,9 +97,13 @@ function Content() {
   }
 
   const clean = () => {
-    const n = bulkDeleteProducts(a.removable)
+    // Sauvegarde AVANT : l'opération touche des dizaines de milliers de fiches
+    // et n'est pas annulable depuis l'écran.
+    try { createBackup(`Avant fusion des doublons — ${new Date().toLocaleString('fr-FR')}`) } catch {}
+    const r = mergeDuplicateProducts(a.dupBarcode.map(([, list]) => list.map((p) => p.id)))
     setConfirm(false)
-    toast(n > 0 ? `✓ ${n.toLocaleString('fr-FR')} ${t('pa_deleted')}` : t('pa_nothing'))
+    setMerged(r)
+    toast(r.groupes > 0 ? `✓ ${r.supprimees.toLocaleString('fr-FR')} ${t('pa_absorbed')}` : t('pa_nothing'))
   }
 
   const kpis = [
@@ -169,13 +174,27 @@ function Content() {
               </p>
             )}
             <div className="space-y-2 border-t border-gray-100 p-4 dark:border-white/10">
-              <p className="text-xs text-gray-500 dark:text-zinc-400">{t('pa_keep_rule')}</p>
+              <p className="text-xs text-gray-500 dark:text-zinc-400">{t('pa_merge_rule')}</p>
               <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[11px] text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
                 <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />{t('pa_warn')}
               </p>
               <button onClick={() => setConfirm(true)} disabled={a.removable.length === 0} className="btn-primary w-full disabled:opacity-40">
-                <Trash2 className="h-4 w-4" />{t('pa_clean')} · {a.removable.length.toLocaleString('fr-FR')}
+                <Merge className="h-4 w-4" />{t('pa_merge')} · {a.removable.length.toLocaleString('fr-FR')}
               </button>
+              {merged && (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-[11px] text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+                  <p className="font-bold">
+                    {merged.groupes.toLocaleString('fr-FR')} {t('pa_groups')} · {merged.supprimees.toLocaleString('fr-FR')} {t('pa_absorbed')}
+                  </p>
+                  {/* Le contrôle qui prouve que rien n'a été perdu. */}
+                  <p className="mt-1 tabular-nums">
+                    {t('pa_stock_before')} {merged.stockAvant.toLocaleString('fr-FR')} → {t('pa_stock_after')} {merged.stockApres.toLocaleString('fr-FR')}
+                    {merged.stockAvant === merged.stockApres
+                      ? <span className="ml-1 font-bold">✓ {t('pa_stock_ok')}</span>
+                      : <span className="ml-1 font-bold text-rose-600 dark:text-rose-400">✗ {t('pa_stock_ko')}</span>}
+                  </p>
+                </div>
+              )}
             </div>
           </>
         )}
@@ -223,7 +242,7 @@ function Content() {
         onConfirm={clean}
         title={t('pa_confirm_title')}
         description={<>{a.removable.length.toLocaleString('fr-FR')} {t('pa_confirm_desc')}</>}
-        actionLabel={t('pa_clean')}
+        actionLabel={t('pa_merge')}
       />
     </>
   )

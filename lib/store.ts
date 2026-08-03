@@ -1949,6 +1949,71 @@ export function useDroguerieState() {
    * soit le nombre de fiches : supprimer 70 000 produits un par un générerait
    * autant d'écritures de synchro.
    */
+  /**
+   * FUSIONNE des groupes de doublons au lieu de les supprimer.
+   *
+   * Supprimer était destructeur : deux fiches en double portent chacune une
+   * partie du stock physique (une entrée sur l'une, une entrée sur l'autre).
+   * En effacer une faisait disparaître sa quantité pour toujours. Ici les
+   * stocks s'additionnent — c'est le même article rangé au même endroit — et
+   * les champs vides de la fiche conservée sont complétés par ses jumelles.
+   *
+   * Une seule écriture pour tout le catalogue : 16 000 groupes traités un par
+   * un satureraient le quota de la base.
+   */
+  const mergeDuplicateProducts = (groups: string[][]): { groupes: number; supprimees: number; stockAvant: number; stockApres: number } => {
+    const byId = new Map(products.map((p) => [p.id, p]))
+    const aSupprimer = new Set<string>()
+    const fusionnees = new Map<string, Product>()
+    let groupes = 0
+
+    for (const ids of groups) {
+      const list = ids.map((id) => byId.get(id)).filter((p): p is Product => !!p)
+      if (list.length < 2) continue
+      groupes++
+
+      // On garde la fiche la plus riche, puis on lui verse ce que les autres
+      // détiennent : quantités additionnées, champs vides comblés.
+      const keep = list.reduce((a, b) =>
+        (b.stock * 1000 + (b.emplacementComplet ? 500 : 0) + (b.price > 0 ? 50 : 0)) >
+        (a.stock * 1000 + (a.emplacementComplet ? 500 : 0) + (a.price > 0 ? 50 : 0)) ? b : a
+      )
+      const merged: Product = { ...keep }
+      merged.stock = list.reduce((s, p) => s + (Number(p.stock) || 0), 0)
+      merged.reserved = list.reduce((s, p) => s + (Number(p.reserved) || 0), 0) || undefined
+      merged.minStock = Math.max(...list.map((p) => Number(p.minStock) || 0))
+      for (const p of list) {
+        if (p.id === keep.id) continue
+        if (!merged.barcode && p.barcode) merged.barcode = p.barcode
+        if (!merged.category && p.category) merged.category = p.category
+        if (!merged.subcategory && p.subcategory) merged.subcategory = p.subcategory
+        if (!merged.brand && p.brand) merged.brand = p.brand
+        if (!merged.emplacementComplet && p.emplacementComplet) {
+          merged.emplacementComplet = p.emplacementComplet
+          merged.zoneId = p.zoneId; merged.alleeId = p.alleeId; merged.rayonId = p.rayonId
+          merged.etagereId = p.etagereId; merged.niveauId = p.niveauId; merged.positionId = p.positionId
+        }
+        if (!(merged.price > 0) && p.price > 0) merged.price = p.price
+        if (!(merged.cost > 0) && p.cost > 0) merged.cost = p.cost
+        if (!merged.image && p.image) merged.image = p.image
+        aSupprimer.add(p.id)
+      }
+      fusionnees.set(keep.id, merged)
+    }
+
+    if (groupes === 0) return { groupes: 0, supprimees: 0, stockAvant: 0, stockApres: 0 }
+
+    const stockAvant = products.reduce((s, p) => s + (Number(p.stock) || 0), 0)
+    const next = products
+      .filter((p) => !aSupprimer.has(p.id))
+      .map((p) => fusionnees.get(p.id) ?? p)
+    const stockApres = next.reduce((s, p) => s + (Number(p.stock) || 0), 0)
+
+    persistProducts(next)
+    logActivity(`Fusion des doublons : ${groupes} groupes, ${aSupprimer.size} fiches absorbées`)
+    return { groupes, supprimees: aSupprimer.size, stockAvant, stockApres }
+  }
+
   const bulkDeleteProducts = (ids: string[]): number => {
     if (ids.length === 0) return 0
     const set = new Set(ids)
@@ -3447,6 +3512,7 @@ export function useDroguerieState() {
     moveProductLocation,
     deleteProduct,
     bulkDeleteProducts,
+    mergeDuplicateProducts,
     importProducts,
     addMovement,
     initializeStock,
