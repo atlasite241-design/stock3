@@ -1347,7 +1347,8 @@ const DICT = {
   sbs_total_value: { fr: 'Valeur totale du stock', ar: 'إجمالي قيمة المخزون' },
   sbs_references: { fr: 'Références', ar: 'المرجع' },
   sbs_out_of_stock: { fr: 'En rupture', ar: 'نفاد المخزون' },
-  nav_products: { fr: 'Produits', ar: 'المنتجات' },
+  // Le groupe s'appelle « Catalogue » ; son entrée « Produits » reste la liste.
+  nav_products: { fr: 'Catalogue', ar: 'الكتالوج' },
   nav_products_list: { fr: 'Produits', ar: 'المنتجات' },
   nav_products_categories: { fr: 'Catégories', ar: 'الفئات' },
   nav_products_subcategories: { fr: 'Sous-catégories', ar: 'الفئات الفرعية' },
