@@ -55,11 +55,17 @@ export async function syncStatus(): Promise<{ configured: boolean; dbId: string 
 }
 
 /** Changements postérieurs au curseur (une page). */
-export function apiPull(since: number) {
+export function apiPull(since: number, sinceId = '') {
   // `scanned` = lignes examinees, `rows` = lignes AUTORISEES. La pagination doit
   // suivre `scanned`, sinon un utilisateur restreint arreterait de synchroniser
   // des qu'une page contiendrait des donnees hors de son perimetre.
-  return call<{ rows: PullRow[]; page: number; scanned: number; maxTs: number }>({ op: 'pull', since })
+  //
+  // `sinceId` departage les lignes de MEME horodatage : un import en masse les
+  // ecrit toutes dans la meme milliseconde, et sans lui la pagination en perdait
+  // tout ce qui depassait la premiere page.
+  return call<{ rows: PullRow[]; page: number; scanned: number; maxTs: number; maxId?: string }>({
+    op: 'pull', since, sinceId,
+  })
 }
 
 /** Téléchargement complet, page par page (curseur `after` = rowid). */

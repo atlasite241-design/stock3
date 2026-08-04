@@ -304,11 +304,25 @@ export function syncOnSave(key: string) {
 // ---------------------------------------------------------------------------
 
 const CURSOR_KEY = 'dp_sync_cursor'
-function getCursor(): number {
-  return Number(localStorage.getItem(CURSOR_KEY) || '0')
+
+/**
+ * Curseur de lecture : couple (horodatage, identifiant).
+ *
+ * L'identifiant departage les lignes ecrites dans la MEME milliseconde — le cas
+ * de tout import en masse. Sans lui, la pagination sautait a l'horodatage et
+ * perdait definitivement tout ce qui depassait la premiere page.
+ *
+ * Format « ts|id ». Les appareils qui n'ont qu'un nombre reprennent au debut de
+ * leur horodatage : quelques lignes relues, et le retard se comble seul.
+ */
+function getCursor(): { ts: number; id: string } {
+  const raw = localStorage.getItem(CURSOR_KEY) || '0'
+  const sep = raw.indexOf('|')
+  if (sep < 0) return { ts: Number(raw) || 0, id: '' }
+  return { ts: Number(raw.slice(0, sep)) || 0, id: raw.slice(sep + 1) }
 }
-function setCursor(v: number) {
-  localStorage.setItem(CURSOR_KEY, String(v))
+function setCursor(ts: number, id = '') {
+  localStorage.setItem(CURSOR_KEY, `${ts}|${id}`)
 }
 
 interface RemoteRow {
@@ -336,9 +350,11 @@ export async function pull(): Promise<void> {
 }
 
 async function pullInner(): Promise<void> {
-  const since0 = getCursor()
-  let since = since0
-  let maxTs = since0
+  const c0 = getCursor()
+  let since = c0.ts
+  let sinceId = c0.id
+  let maxTs = c0.ts
+  let maxId = c0.id
   const byCol = new Map<string, RemoteRow[]>()
 
   // Rattrapage en mémoire AVANT toute écriture locale. Auparavant, un seul lot de
@@ -346,7 +362,7 @@ async function pullInner(): Promise<void> {
   // produits (~15 Mo : JSON.parse + JSON.stringify) une fois par lot, ce qui
   // figeait l'onglet plusieurs secondes (« Page ne répondant pas »).
   for (let batch = 0; batch < 200; batch++) {
-    const res = await apiPull(since)
+    const res = await apiPull(since, sinceId)
     if (res.scanned === 0) break
     for (const r of res.rows as unknown as RemoteRow[]) {
       const list = byCol.get(r.collection) ?? []
@@ -355,9 +371,11 @@ async function pullInner(): Promise<void> {
     }
     // Le curseur suit la page examinee par le serveur, pas les lignes recues :
     // certaines ont pu etre masquees par le perimetre de l'utilisateur.
-    maxTs = Math.max(maxTs, Number(res.maxTs ?? 0))
+    maxTs = Number(res.maxTs ?? maxTs)
+    maxId = String(res.maxId ?? '')
     if (res.scanned < res.page) break
     since = maxTs
+    sinceId = maxId
   }
   if (byCol.size === 0) return
 
@@ -408,7 +426,7 @@ async function pullInner(): Promise<void> {
     saveSnapshot(colName)
   }
 
-  setCursor(maxTs)
+  setCursor(maxTs, maxId)
   if (changedCols.length) {
     pushLog(`⇣ reçu: ${changedCols.join(', ')}`)
     // On transmet les collections réellement modifiées : le store ne recharge
@@ -527,6 +545,37 @@ export async function bootstrapFromRemote(): Promise<boolean> {
 
 /** Active la synchro (après le chargement initial) : write-through + pull périodique. */
 /** Vrai si la liste de produits locale est vide (appareil non hydraté). */
+/**
+ * Contrôle d'intégrité du catalogue, UNE fois par session.
+ *
+ * L'auto-réparation ne se déclenchait que sur un local entièrement vide. Un
+ * catalogue PARTIEL — le symptôme laissé par l'ancienne pagination, qui perdait
+ * tout ce qui dépassait la première page d'un même horodatage — passait donc
+ * inaperçu : l'appareil affichait 520 produits sur 14 601 sans jamais le
+ * signaler. On compare désormais au serveur, et on retélécharge si l'écart est
+ * réel. Une seule fois par session : un COUNT distant n'est pas gratuit.
+ */
+const INTEGRITE_KEY = 'dp_integrity_checked'
+
+async function verifierIntegrite(): Promise<void> {
+  try {
+    if (sessionStorage.getItem(INTEGRITE_KEY)) return
+    sessionStorage.setItem(INTEGRITE_KEY, '1')
+    const distant = await countRemote()
+    const nD = distant.find((c) => c.collection === 'products')?.n ?? 0
+    const nL = localCounts().find((c) => c.collection === 'products')?.n ?? 0
+    if (nD === 0) return
+    // Tolérance : un écart de quelques fiches est normal entre deux pulls.
+    const ecart = nD - nL
+    if (ecart <= 20 || ecart / nD < 0.01) return
+    pushLog(`⚠ catalogue incomplet : ${nL} local / ${nD} distant — retéléchargement`)
+    await resyncFromStart()
+    pushLog('✓ catalogue rétabli')
+  } catch {
+    /* hors-ligne ou permission absente : on réessaiera à la prochaine session */
+  }
+}
+
 function localProductsEmpty(): boolean {
   try {
     const raw = storageGet('dp_products')
@@ -573,7 +622,7 @@ export function startSync() {
   // enchaîne les pulls incrémentaux normaux.
   const first = localProductsEmpty()
     ? resyncFromStart().then(() => undefined)
-    : pull()
+    : pull().then(() => verifierIntegrite())
   void first.catch((e) => pushLog(`✗ pull initial: ${e instanceof Error ? e.message : String(e)}`))
   // Le pull tournait toutes les 4 s, même onglet en arrière-plan : c'est ce qui a
   // consommé des centaines de millions de « rows read » chez Turso. On espace, et

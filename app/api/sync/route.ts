@@ -86,9 +86,30 @@ export async function POST(req: NextRequest) {
   // --- pull : changements depuis un curseur horodaté ---
   if (op === 'pull') {
     const since = Number(body.since ?? 0) || 0
+    const sinceId = typeof body.sinceId === 'string' ? body.sinceId : ''
+    /**
+     * Pagination par clé COMPOSÉE (updated_at, id).
+     *
+     * Avec `updated_at > ?` seul, un import qui écrit des milliers de lignes
+     * dans la même milliseconde était tronqué à la première page : le curseur
+     * sautait à cet horodatage et toutes les lignes suivantes portant la MÊME
+     * valeur devenaient inatteignables. Un appareil pouvait ainsi ne recevoir
+     * que 500 produits sur 14 000, définitivement.
+     *
+     * L'identifiant sert de départage. Un appareil dont le curseur n'a pas
+     * encore d'identifiant repart du début de son horodatage : quelques lignes
+     * relues, et l'écart se répare tout seul.
+     */
     const r = await tursoExec([{
-      sql: 'SELECT collection, id, data, updated_at, deleted FROM records WHERE updated_at > ? ORDER BY updated_at ASC LIMIT ?',
-      args: [{ type: 'integer', value: String(since) }, { type: 'integer', value: String(PAGE) }],
+      sql: `SELECT collection, id, data, updated_at, deleted FROM records
+            WHERE updated_at > ? OR (updated_at = ? AND id > ?)
+            ORDER BY updated_at ASC, id ASC LIMIT ?`,
+      args: [
+        { type: 'integer', value: String(since) },
+        { type: 'integer', value: String(since) },
+        { type: 'text', value: sinceId },
+        { type: 'integer', value: String(PAGE) },
+      ],
     }])
     if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 502 })
     // Le curseur avance sur la page ENTIÈRE, mais on ne renvoie que ce que la
@@ -96,11 +117,14 @@ export async function POST(req: NextRequest) {
     const all = rowsOf(r.results?.[0]).map((c) => ({
       collection: txt(c[0]), id: txt(c[1]), data: txt(c[2]), updated_at: num(c[3]), deleted: num(c[4]),
     }))
-    // maxTs porte sur la page ENTIERE : sans lui, une page entierement filtree
-    // laisserait le curseur immobile et la synchro tournerait en rond.
+    // Le curseur suivant est la DERNIÈRE ligne examinée, dans l'ordre du tri —
+    // pas le maximum : avec des horodatages égaux, seul le couple ordonné
+    // permet de reprendre exactement où l'on s'est arrêté.
+    const last = all[all.length - 1]
     return NextResponse.json({
       ok: true, page: PAGE, scanned: all.length,
-      maxTs: all.reduce((m, x) => Math.max(m, x.updated_at), since),
+      maxTs: last ? last.updated_at : since,
+      maxId: last ? last.id : sinceId,
       rows: all.filter((x) => canRead(x.collection, scope) && inScope(x.collection, storeOf(x.data), scope)),
     })
   }
