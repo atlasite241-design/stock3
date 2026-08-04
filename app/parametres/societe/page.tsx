@@ -13,7 +13,7 @@ import { fmtDH, useDroguerie, type Settings } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 function Content() {
-  const { ready, settings, saveSettings } = useDroguerie()
+  const { ready, settings, saveSettings, products, sales, clients, suppliers } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
   const [form, setForm] = useState(settings)
@@ -538,6 +538,33 @@ function Content() {
           </motion.div>
         </div>
       </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.4 }}
+        className="glass-card p-6"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-zinc-400">
+            <Info className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">{t('set_app_name_version')}</h2>
+            <p className="text-xs tabular-nums text-gray-500 dark:text-zinc-400">
+              {products.length.toLocaleString('fr-FR')} {t('set_products_count')} · {sales.length.toLocaleString('fr-FR')} {t('set_sales_count')} ·{' '}
+              {clients.length.toLocaleString('fr-FR')} {t('set_clients_count')} · {suppliers.length.toLocaleString('fr-FR')} {t('set_suppliers_count')}
+            </p>
+          </div>
+        </div>
+        <p className="mt-4 text-sm leading-relaxed text-gray-500 dark:text-zinc-400">
+          {t('set_about_text')}{' '}
+          <span className="font-semibold text-gray-900 dark:text-white">
+            {fmtDH(sales.reduce((a, s) => a + s.total, 0))}
+          </span>
+          . {t('set_about_footer')}
+        </p>
+      </motion.div>
     </>
   )
 }
