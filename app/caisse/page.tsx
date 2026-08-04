@@ -29,6 +29,7 @@ import EAN13 from '@/components/EAN13'
 import ProductImage from '@/components/ProductImage'
 import Modal from '@/components/Modal'
 import CameraScanner from '@/components/CameraScanner'
+import DecimalInput from '@/components/DecimalInput'
 import PaymentModal from '@/components/PaymentModal'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
@@ -508,10 +509,10 @@ function CaisseContent() {
                     <Minus className="h-3.5 w-3.5" />
                   </button>
                   {prod?.decimalQty ? (
-                    <input
-                      type="number" min={0} step="0.01" value={i.qty}
-                      onChange={(e) => setQty(key, Number(e.target.value))}
-                      onFocus={(e) => e.target.select()}
+                    <DecimalInput
+                      value={i.qty}
+                      onChange={(n) => setQty(key, n)}
+                      autoSelect
                       className="h-9 w-20 rounded-lg border border-gray-200 bg-white px-2 text-center text-sm font-bold tabular-nums text-gray-900 dark:border-white/10 dark:bg-[#12121a] dark:text-white lg:h-7"
                     />
                   ) : (

@@ -10,6 +10,7 @@ import {
   Keyboard, PackageCheck, Plus, RotateCcw, Save, ScanLine, Search, ShieldAlert, Store, Trash2, Upload, Warehouse, X,
 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
+import DecimalInput from '@/components/DecimalInput'
 import Modal from '@/components/Modal'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
@@ -258,7 +259,9 @@ function Content() {
                   <td className="px-4 py-2 font-semibold text-gray-900 dark:text-white">{p.name}</td>
                   <td className="px-4 py-2 text-right text-gray-500 dark:text-zinc-400 tabular-nums">{fmtDH(p.cost)}</td>
                   <td className="px-4 py-2 text-center">
-                    <input type="number" min="0" step={fractionne(id) ? '0.01' : '1'} value={v || ''} onChange={(e) => setQ(id, Number(e.target.value))} className="input-field !h-9 w-24 text-center" />
+                    {fractionne(id)
+                      ? <DecimalInput value={v} onChange={(n) => setQ(id, n)} className="input-field !h-9 w-24 text-center" />
+                      : <input type="number" min="0" value={v || ''} onChange={(e) => setQ(id, Number(e.target.value))} className="input-field !h-9 w-24 text-center" />}
                   </td>
                   <td className="px-4 py-2 text-right font-bold text-gray-900 dark:text-white tabular-nums">{fmtDH(v * p.cost)}</td>
                   <td className="px-4 py-2 text-right">
@@ -377,7 +380,9 @@ function Content() {
                         <td className="px-4 py-2.5"><span className="rounded-md bg-gray-100 dark:bg-white/10 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:text-zinc-400">{p.category}</span></td>
                         <td className="px-4 py-2.5 text-right text-gray-600 dark:text-zinc-400 tabular-nums">{fmtDH(p.cost)}</td>
                         <td className="px-4 py-2.5 text-center">
-                          <input type="number" min="0" step={p.decimalQty ? '0.01' : '1'} value={q || ''} onChange={(e) => setQ(p.id, Number(e.target.value))} placeholder="0" className="input-field !h-9 w-24 text-center" />
+                          {p.decimalQty
+                            ? <DecimalInput value={q} onChange={(n) => setQ(p.id, n)} placeholder="0" className="input-field !h-9 w-24 text-center" />
+                            : <input type="number" min="0" value={q || ''} onChange={(e) => setQ(p.id, Number(e.target.value))} placeholder="0" className="input-field !h-9 w-24 text-center" />}
                         </td>
                         <td className="px-4 py-2.5 text-right font-bold text-gray-900 dark:text-white tabular-nums">{q > 0 ? fmtDH(q * p.cost) : '—'}</td>
                       </tr>

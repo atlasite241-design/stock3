@@ -8,6 +8,7 @@
 // de 2 000 vis ne se vend pas 2 000 fois le prix pièce.
 
 import { Plus, Trash2 } from 'lucide-react'
+import DecimalInput from '@/components/DecimalInput'
 import { uid, fmtDH, type SaleUnit } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
@@ -92,9 +93,9 @@ export default function SaleUnitsEditor({
                   placeholder={t('su_factor')}
                   className="input-field !h-9 text-sm tabular-nums sm:col-span-2"
                 />
-                <input
-                  type="number" min={0} step={0.01} value={u.price || ''}
-                  onChange={(e) => patch(u.id, { price: Math.max(0, Number(e.target.value)) })}
+                <DecimalInput
+                  value={u.price}
+                  onChange={(n) => patch(u.id, { price: Math.max(0, n) })}
                   placeholder={t('su_price')}
                   className="input-field !h-9 text-sm tabular-nums sm:col-span-2"
                 />
