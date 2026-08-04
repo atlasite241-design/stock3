@@ -225,7 +225,11 @@ function Content() {
                 { l: t('ec_val_total'), v: fmtDH(res.valeur.total) },
                 { l: t('ec_val_mean'), v: fmtDH(res.valeur.moyenne) },
                 { l: t('ec_val_median'), v: fmtDH(res.valeur.medianeValeur), tone: 'text-emerald-600 dark:text-emerald-400' },
-                { l: t('ec_val_top_share'), v: `${res.valeur.partTop.toFixed(1)} %` },
+                // « 100 % » sur un catalogue de deux articles n'apprend rien :
+                // la part des quinze premiers n'a de sens qu'au-delà de quinze.
+                ...(res.valeur.top.length >= 15
+                  ? [{ l: t('ec_val_top_share'), v: `${res.valeur.partTop.toFixed(1)} %` }]
+                  : [{ l: t('ec_val_count'), v: res.valeur.top.length.toLocaleString('fr-FR') }]),
               ].map((c, i) => (
                 <div key={i}>
                   <p className={`text-lg font-extrabold tabular-nums ${c.tone ?? 'text-gray-900 dark:text-white'}`}>{c.v}</p>
@@ -239,10 +243,16 @@ function Content() {
               {' · '}{t('ec_val_median_cost')} <b className="tabular-nums text-gray-900 dark:text-white">{fmtDH(res.valeur.medianeCout)}</b>
             </p>
 
+            {/* Ce bloc ne décide pas si le total est bon — seul le commerçant le
+                sait. Il donne la clé de lecture, et se tait quand l'échantillon
+                est trop petit pour qu'une médiane veuille dire quelque chose. */}
             <p className="mt-3 rounded-xl bg-gray-50 p-3 text-[11px] leading-relaxed text-gray-600 dark:bg-white/5 dark:text-zinc-300">
-              {res.valeur.moyenne > res.valeur.medianeValeur * 20
-                ? t('ec_val_outliers')
-                : t('ec_val_systemic')}
+              <b>{t('ec_val_key')}</b>{' '}
+              {res.valeur.top.length < 10
+                ? t('ec_val_too_few')
+                : res.valeur.moyenne > res.valeur.medianeValeur * 20
+                  ? t('ec_val_outliers')
+                  : t('ec_val_systemic')}
             </p>
 
             {res.valeur.top.length > 0 && (

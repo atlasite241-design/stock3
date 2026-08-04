@@ -1591,13 +1591,22 @@ const DICT = {
   ec_val_median_stock: { fr: 'Quantité médiane :', ar: 'الكمية الوسيطة:' },
   ec_val_median_cost: { fr: 'coût médian :', ar: 'التكلفة الوسيطة:' },
   ec_val_cost: { fr: 'Coût unitaire', ar: 'تكلفة الوحدة' },
+  ec_val_count: { fr: 'Articles en stock', ar: 'أصناف في المخزون' },
+  ec_val_key: {
+    fr: 'Clé de lecture — ce bloc ne dit pas si le total est juste, vous seul le savez.',
+    ar: 'مفتاح القراءة — لا يقول هذا القسم إن كان المجموع صحيحاً، أنتم وحدكم تعرفون.',
+  },
+  ec_val_too_few: {
+    fr: "Trop peu d'articles en stock pour qu'une médiane ait un sens : lisez directement le tableau ci-dessous, il les contient tous.",
+    ar: 'عدد الأصناف في المخزون أقل من أن يكون للوسيط معنى: اقرأوا الجدول أدناه مباشرة، فهو يضمها كلها.',
+  },
   ec_val_outliers: {
-    fr: "La moyenne dépasse très largement la médiane : le total est tiré par une poignée de fiches aberrantes, pas par tout le catalogue. Corrigez les lignes ci-dessous et le total redeviendra juste — inutile de reprendre l'ensemble.",
-    ar: 'المعدل يفوق الوسيط بكثير: المجموع مشدود بحفنة بطاقات شاذة لا بالكتالوج كله. صحّحوا السطور أدناه ويعود المجموع صحيحاً — لا داعي لمراجعة الكل.',
+    fr: "Si ce total vous paraît trop élevé : la moyenne dépasse très largement la médiane, il est donc tiré par une poignée de fiches, pas par tout le catalogue. Corrigez les lignes ci-dessous — inutile de reprendre l'ensemble.",
+    ar: 'إن بدا لكم هذا المجموع مرتفعاً: المعدل يفوق الوسيط بكثير، فهو مشدود بحفنة بطاقات لا بالكتالوج كله. صحّحوا السطور أدناه — لا داعي لمراجعة الكل.',
   },
   ec_val_systemic: {
-    fr: "La moyenne et la médiane sont du même ordre : l'écart ne vient pas de quelques fiches mais de l'échelle elle-même. Vérifiez l'unité des quantités et des coûts à l'import — un coût saisi en centimes, ou une quantité par carton prise pour une quantité à la pièce, multiplie tout le catalogue.",
-    ar: 'المعدل والوسيط من المرتبة نفسها: الفارق لا يأتي من بضع بطاقات بل من المقياس ذاته. تحققوا من وحدة الكميات والتكاليف عند الاستيراد — تكلفة مُدخلة بالسنتيم، أو كمية بالكرتون تُؤخذ ككمية بالوحدة، تضاعف الكتالوج كله.',
+    fr: "Si ce total vous paraît trop élevé : la moyenne et la médiane sont du même ordre, l'écart viendrait donc de l'échelle et non de quelques fiches. Vérifiez alors l'unité des quantités et des coûts — un prix par boîte associé à une quantité en pièces multiplie tout le catalogue.",
+    ar: 'إن بدا لكم هذا المجموع مرتفعاً: المعدل والوسيط من المرتبة نفسها، فالفارق يأتي من المقياس لا من بضع بطاقات. تحققوا حينها من وحدة الكميات والتكاليف — ثمن بالعلبة مع كمية بالوحدة يضاعف الكتالوج كله.',
   },
   ec_worklist: { fr: 'Liste de travail', ar: 'قائمة العمل' },
   ec_worklist_sub: { fr: '— les plus vendus d’abord', ar: '— الأكثر مبيعاً أولاً' },
