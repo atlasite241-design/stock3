@@ -35,6 +35,7 @@ function Content() {
   const { t } = useLanguage()
   const toast = useToast()
   const [confirm, setConfirm] = useState(false)
+  const [confirmName, setConfirmName] = useState(false)
   const [merged, setMerged] = useState<{ groupes: number; supprimees: number; stockAvant: number; stockApres: number } | null>(null)
 
   const a = useMemo(() => {
@@ -102,6 +103,17 @@ function Content() {
     try { createBackup(`Avant fusion des doublons — ${new Date().toLocaleString('fr-FR')}`) } catch {}
     const r = mergeDuplicateProducts(a.dupBarcode.map(([, list]) => list.map((p) => p.id)))
     setConfirm(false)
+    setMerged(r)
+    toast(r.groupes > 0 ? `✓ ${r.supprimees.toLocaleString('fr-FR')} ${t('pa_absorbed')}` : t('pa_nothing'))
+  }
+
+  /** Fiches absorbées si l'on fusionne les groupes de même nom. */
+  const removableByName = a.dupName.reduce((n, [, l]) => n + l.length - 1, 0)
+
+  const mergeByName = () => {
+    try { createBackup(`Avant fusion des doublons par nom — ${new Date().toLocaleString('fr-FR')}`) } catch {}
+    const r = mergeDuplicateProducts(a.dupName.map(([, list]) => list.map((p) => p.id)))
+    setConfirmName(false)
     setMerged(r)
     toast(r.groupes > 0 ? `✓ ${r.supprimees.toLocaleString('fr-FR')} ${t('pa_absorbed')}` : t('pa_nothing'))
   }
@@ -232,6 +244,14 @@ function Content() {
               ))}
               {s.rows.length === 0 && <p className="p-5 text-center text-xs text-emerald-600 dark:text-emerald-400">{t('pa_clean_ok')}</p>}
             </div>
+            {i === 0 && a.dupName.length > 0 && (
+              <div className="space-y-2 border-t border-gray-100 p-4 dark:border-white/10">
+                <p className="text-xs leading-relaxed text-gray-500 dark:text-zinc-400">{t('pa_name_rule')}</p>
+                <button onClick={() => setConfirmName(true)} className="btn-primary w-full">
+                  <Merge className="h-4 w-4" />{t('pa_merge_name')} · {removableByName.toLocaleString('fr-FR')}
+                </button>
+              </div>
+            )}
           </section>
         ))}
       </div>
@@ -243,6 +263,15 @@ function Content() {
         title={t('pa_confirm_title')}
         description={<>{a.removable.length.toLocaleString('fr-FR')} {t('pa_confirm_desc')}</>}
         actionLabel={t('pa_merge')}
+      />
+
+      <DangerConfirm
+        open={confirmName}
+        onClose={() => setConfirmName(false)}
+        onConfirm={mergeByName}
+        title={t('pa_confirm_name_title')}
+        description={<>{removableByName.toLocaleString('fr-FR')} {t('pa_confirm_name_desc')}</>}
+        actionLabel={t('pa_merge_name')}
       />
     </>
   )

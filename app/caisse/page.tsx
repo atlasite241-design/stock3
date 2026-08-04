@@ -245,7 +245,12 @@ function CaisseContent() {
 
   const prodByBarcode = useMemo(() => {
     const m = new Map<string, (typeof products)[number]>()
-    for (const p of products) if (p.barcode) m.set(p.barcode, p)
+    for (const p of products) {
+      if (p.barcode) m.set(p.barcode, p)
+      // Codes-barres absorbés lors d'une fusion de doublons : les étiquettes
+      // déjà collées en rayon doivent continuer à fonctionner.
+      for (const b of p.altBarcodes ?? []) if (b && !m.has(b)) m.set(b, p)
+    }
     return m
   }, [products])
 

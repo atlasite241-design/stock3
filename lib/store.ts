@@ -360,6 +360,15 @@ export interface Product {
   positionId?: string
   emplacementComplet?: string
   /**
+   * Codes-barres absorbés lors d'une fusion de doublons.
+   *
+   * Une fiche fusionnée n'en garde qu'un ; les autres restent pourtant imprimés
+   * sur des étiquettes de rayon et connus des fournisseurs. Les conserver ici
+   * permet à la caisse de continuer à les reconnaître — sans quoi la fusion
+   * rendrait des étiquettes illisibles au scanner.
+   */
+  altBarcodes?: string[]
+  /**
    * Conditionnements de vente en plus de l'unité de stock. Permet d'acheter au
    * carton et de vendre à la pièce, au sachet ou à la boîte.
    */
@@ -2031,8 +2040,12 @@ export function useDroguerieState() {
       merged.stock = list.reduce((s, p) => s + (Number(p.stock) || 0), 0)
       merged.reserved = list.reduce((s, p) => s + (Number(p.reserved) || 0), 0) || undefined
       merged.minStock = Math.max(...list.map((p) => Number(p.minStock) || 0))
+      const repris = new Set(merged.altBarcodes ?? [])
       for (const p of list) {
         if (p.id === keep.id) continue
+        // Le code-barres de la fiche absorbée reste reconnu en caisse.
+        if (p.barcode && p.barcode !== merged.barcode) repris.add(p.barcode)
+        for (const b of p.altBarcodes ?? []) if (b !== merged.barcode) repris.add(b)
         if (!merged.barcode && p.barcode) merged.barcode = p.barcode
         if (!merged.category && p.category) merged.category = p.category
         if (!merged.subcategory && p.subcategory) merged.subcategory = p.subcategory
@@ -2047,6 +2060,8 @@ export function useDroguerieState() {
         if (!merged.image && p.image) merged.image = p.image
         aSupprimer.add(p.id)
       }
+      repris.delete(merged.barcode)
+      if (repris.size) merged.altBarcodes = [...repris]
       fusionnees.set(keep.id, merged)
     }
 

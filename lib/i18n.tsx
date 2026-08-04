@@ -897,6 +897,16 @@ const DICT = {
     ar: "تُجمع مخزونات البطاقات المكررة — فهو الصنف نفسه في المكان نفسه. البطاقة المحتفظ بها هي التي لها مخزون، ثم موقع، ثم الأكثر اكتمالاً؛ وتُستكمل حقولها الفارغة من نظيراتها.",
   },
   pa_absorbed: { fr: "fiches absorbées", ar: "بطاقة مدمجة" },
+  pa_merge_name: { fr: 'Fusionner les doublons de nom', ar: 'دمج تكرارات الاسم' },
+  pa_name_rule: {
+    fr: "Vérifiez d'abord la liste : un même nom peut cacher deux conditionnements différents. Si les tailles figurent déjà dans le nom et qu'elles sont identiques, ce sont de vrais doublons. Les codes-barres des fiches absorbées restent reconnus en caisse — aucune étiquette déjà collée ne cesse de fonctionner.",
+    ar: 'تحققوا من القائمة أولاً: الاسم نفسه قد يخفي وحدتَي تعبئة مختلفتين. إذا كانت المقاسات مذكورة في الاسم ومتطابقة، فهي تكرارات حقيقية. تبقى الرموز الشريطية للبطاقات المدمجة معروفة في الصندوق — ولا يتوقف أي ملصق ملصوق عن العمل.',
+  },
+  pa_confirm_name_title: { fr: 'Fusionner les doublons de nom ?', ar: 'دمج تكرارات الاسم؟' },
+  pa_confirm_name_desc: {
+    fr: "fiches seront absorbées dans leur jumelle de même nom. Leurs stocks s'additionnent, leurs champs vides se complètent, et leurs codes-barres restent scannables. Une sauvegarde est créée juste avant.",
+    ar: 'بطاقة ستُدمج في نظيرتها التي تحمل الاسم نفسه. تُجمع مخزوناتها، وتُستكمل حقولها الفارغة، وتبقى رموزها الشريطية قابلة للمسح. تُنشأ نسخة احتياطية قبل ذلك مباشرة.',
+  },
   pa_stock_before: { fr: "Stock total avant :", ar: "إجمالي المخزون قبل:" },
   pa_stock_after: { fr: "après :", ar: "بعد:" },
   pa_stock_ok: { fr: "aucune quantité perdue", ar: "لم تُفقد أي كمية" },
