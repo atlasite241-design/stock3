@@ -13,7 +13,7 @@ import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
-import { fmtDH, useDroguerie, type Product } from '@/lib/store'
+import { fmtDH, useDroguerie, type Product, roundQty } from '@/lib/store'
 import { useAuth } from '@/lib/auth-context'
 import { useLanguage } from '@/lib/i18n'
 
@@ -101,7 +101,15 @@ function Content() {
   if (!ready) return <Loader />
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
-  const setQ = (id: string, v: number) => setQty((m) => ({ ...m, [id]: Math.max(0, Math.round(v || 0)) }))
+  /**
+   * L'arrondi a l'entier etait systematique : impossible de saisir 87,5 m de
+   * cable ou 12,3 kg de sable en stock initial. Les articles marques « vendu en
+   * quantite fractionnee » gardent desormais leurs decimales ; les autres
+   * restent arrondis, une caisse qui accepterait « 2,5 vis » faussant l'inventaire.
+   */
+  const fractionne = (id: string) => !!prodById.get(id)?.decimalQty
+  const setQ = (id: string, v: number) =>
+    setQty((m) => ({ ...m, [id]: Math.max(0, fractionne(id) ? roundQty(v || 0) : Math.round(v || 0)) }))
   const removeEntry = (id: string) => setQty((m) => { const n = { ...m }; delete n[id]; return n })
   const ref = (id: string) => id.slice(-8).toUpperCase()
 
@@ -136,7 +144,8 @@ function Content() {
   }
   const addScanned = () => {
     if (!scanFound) return
-    const q = Math.max(1, Math.round(parseFloat(scanQtyInput.replace(',', '.')) || 0))
+    const brut = parseFloat(scanQtyInput.replace(',', '.')) || 0
+    const q = fractionne(scanFound.id) ? Math.max(0.001, roundQty(brut)) : Math.max(1, Math.round(brut))
     setQ(scanFound.id, (qty[scanFound.id] ?? 0) + q)
     toast(`✓ ${scanFound.name} (+${q})`)
     setScanFound(null)
@@ -155,10 +164,11 @@ function Content() {
       if (!cols || cols.length < 2) continue
       const code = String(cols[0] ?? '').replace(/"/g, '').trim()
       if (!code || /code|barre|barcode|qte|quant/i.test(code)) continue
-      const q = Math.round(parseFloat(String(cols[1] ?? '').replace(',', '.')) || 0)
+      const brut = parseFloat(String(cols[1] ?? '').replace(',', '.')) || 0
       seen.set(code, (seen.get(code) ?? 0) + 1)
       const id = byBarcode.get(code)
       if (!id) { unknown.add(code); continue }
+      const q = prodById.get(id)?.decimalQty ? roundQty(brut) : Math.round(brut)
       if (q > 0) tmp.set(id, (tmp.get(id) ?? 0) + q)
     }
     if (tmp.size === 0 && unknown.size === 0) { toast(t('si_import_none'), 'error'); return }
@@ -248,7 +258,7 @@ function Content() {
                   <td className="px-4 py-2 font-semibold text-gray-900 dark:text-white">{p.name}</td>
                   <td className="px-4 py-2 text-right text-gray-500 dark:text-zinc-400 tabular-nums">{fmtDH(p.cost)}</td>
                   <td className="px-4 py-2 text-center">
-                    <input type="number" min="0" value={v || ''} onChange={(e) => setQ(id, Number(e.target.value))} className="input-field !h-9 w-24 text-center" />
+                    <input type="number" min="0" step={fractionne(id) ? '0.01' : '1'} value={v || ''} onChange={(e) => setQ(id, Number(e.target.value))} className="input-field !h-9 w-24 text-center" />
                   </td>
                   <td className="px-4 py-2 text-right font-bold text-gray-900 dark:text-white tabular-nums">{fmtDH(v * p.cost)}</td>
                   <td className="px-4 py-2 text-right">
@@ -367,7 +377,7 @@ function Content() {
                         <td className="px-4 py-2.5"><span className="rounded-md bg-gray-100 dark:bg-white/10 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:text-zinc-400">{p.category}</span></td>
                         <td className="px-4 py-2.5 text-right text-gray-600 dark:text-zinc-400 tabular-nums">{fmtDH(p.cost)}</td>
                         <td className="px-4 py-2.5 text-center">
-                          <input type="number" min="0" value={q || ''} onChange={(e) => setQ(p.id, Number(e.target.value))} placeholder="0" className="input-field !h-9 w-24 text-center" />
+                          <input type="number" min="0" step={p.decimalQty ? '0.01' : '1'} value={q || ''} onChange={(e) => setQ(p.id, Number(e.target.value))} placeholder="0" className="input-field !h-9 w-24 text-center" />
                         </td>
                         <td className="px-4 py-2.5 text-right font-bold text-gray-900 dark:text-white tabular-nums">{q > 0 ? fmtDH(q * p.cost) : '—'}</td>
                       </tr>
@@ -411,7 +421,7 @@ function Content() {
                   </div>
                   <div>
                     <label className="mb-0.5 block text-[10px] font-semibold uppercase text-gray-400">{t('si_qty_label')}</label>
-                    <input ref={scanQtyRef} type="number" min="1" value={scanQtyInput}
+                    <input ref={scanQtyRef} type="number" min="0" step={scanFound?.decimalQty ? '0.01' : '1'} value={scanQtyInput}
                       onChange={(e) => setScanQtyInput(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') addScanned() }}
                       className="input-field !h-10 w-24 text-center" />
