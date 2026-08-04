@@ -2063,6 +2063,30 @@ export function useDroguerieState() {
     return { groupes, supprimees: aSupprimer.size, stockAvant, stockApres }
   }
 
+  /**
+   * Applique des conversions « lot → pièce + conditionnement » en UNE écriture.
+   *
+   * Le plan est construit et validé côté écran ; ici on se contente de le poser,
+   * puis de vérifier que la valeur totale du stock n'a pas bougé. Multiplier un
+   * stock par 100 en changeant le coût est juste seulement si le produit des
+   * deux reste constant.
+   */
+  const applyLotConversions = (
+    transform: { id: string; apply: (p: Product) => Product }[]
+  ): { converties: number; valeurAvant: number; valeurApres: number } => {
+    if (transform.length === 0) return { converties: 0, valeurAvant: 0, valeurApres: 0 }
+    const byId = new Map(transform.map((t) => [t.id, t.apply]))
+    const valeurAvant = Math.round(products.reduce((s, p) => s + p.stock * p.cost, 0) * 100) / 100
+    const next = products.map((p) => {
+      const fn = byId.get(p.id)
+      return fn ? fn(p) : p
+    })
+    const valeurApres = Math.round(next.reduce((s, p) => s + p.stock * p.cost, 0) * 100) / 100
+    persistProducts(next)
+    logActivity(`Conversion en conditionnements : ${transform.length} fiches`)
+    return { converties: transform.length, valeurAvant, valeurApres }
+  }
+
   const bulkDeleteProducts = (ids: string[]): number => {
     if (ids.length === 0) return 0
     const set = new Set(ids)
@@ -3570,6 +3594,7 @@ export function useDroguerieState() {
     deleteProduct,
     bulkDeleteProducts,
     mergeDuplicateProducts,
+    applyLotConversions,
     importProducts,
     addMovement,
     initializeStock,

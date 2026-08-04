@@ -107,6 +107,7 @@ const NAV_ALL: NavItem[] = [
       { href: '/produits/analyse', labelKey: 'nav_products_analysis' },
       { href: '/produits/declinaisons', labelKey: 'nav_products_variants' },
       { href: '/produits/etat', labelKey: 'nav_products_health' },
+      { href: '/produits/conversion', labelKey: 'nav_products_conversion' },
     ],
   },
   {
