@@ -33,33 +33,33 @@ const PHASES: Phase[] = [
   {
     n: '2', accent: 'border-violet-500', title: { fr: 'Catalogue & produits', ar: 'الكتالوج والمنتجات' },
     steps: [
-      { id: 's2a', fr: '**Produits › Catégories / Sous-catégories / Marques / Unités** — vérifier/compléter.', ar: '**المنتجات › الفئات / الفئات الفرعية / العلامات / الوحدات** — التحقق/الإكمال.' },
-      { id: 's2b', fr: '**Produits › Produits** — ajouter manuellement **ou** importer en masse via **Paramètres › Sauvegarde › Import CSV**.', ar: '**المنتجات › المنتجات** — الإضافة يدويًا **أو** الاستيراد بالجملة عبر **الإعدادات › النسخ الاحتياطي › استيراد CSV**.' },
+      { id: 's2a', fr: '**Catalogue › Catégories / Sous-catégories / Marques / Unités** — vérifier/compléter.', ar: '**الكتالوج › الفئات / الفئات الفرعية / العلامات / الوحدات** — التحقق/الإكمال.' },
+      { id: 's2b', fr: '**Catalogue › Produits** — ajouter manuellement **ou** importer en masse via **Paramètres › Sauvegarde › Import CSV**.', ar: '**الكتالوج › المنتجات** — الإضافة يدويًا **أو** الاستيراد بالجملة عبر **الإعدادات › النسخ الاحتياطي › استيراد CSV**.' },
       { id: 's2c', fr: 'Renseigner : nom, code-barres, catégorie, sous-catégorie, marque, unité, **prix d’achat HT**, prix de vente, stock min.', ar: 'إدخال: الاسم، الرمز الشريطي، الفئة، الفئة الفرعية، العلامة، الوحدة، **سعر الشراء**، سعر البيع، الحد الأدنى للمخزون.' },
     ],
   },
   {
     n: '3', accent: 'border-cyan-500', title: { fr: 'Codes-barres & étiquettes', ar: 'الرموز الشريطية والملصقات' },
     steps: [
-      { id: 's3a', fr: '**Produits › Codes-barres** — générer les EAN-13 manquants, régler le format d’étiquette, **imprimer sur la Zebra**, tester la douchette.', ar: '**المنتجات › الرموز الشريطية** — توليد رموز EAN-13 الناقصة، ضبط حجم الملصق، **الطباعة على Zebra**، اختبار الماسح.' },
+      { id: 's3a', fr: '**Catalogue › Codes-barres** — générer les EAN-13 manquants, régler le format d’étiquette, **imprimer sur la Zebra**, tester la douchette.', ar: '**الكتالوج › الرموز الشريطية** — توليد رموز EAN-13 الناقصة، ضبط حجم الملصق، **الطباعة على Zebra**، اختبار الماسح.' },
     ],
   },
   {
     n: '4', accent: 'border-teal-500', title: { fr: 'Emplacements de stockage (WMS)', ar: 'مواقع التخزين (WMS)' },
     hint: { fr: 'Optionnel — pour organiser physiquement l’entrepôt', ar: 'اختياري — لتنظيم المستودع فعليًا' },
     steps: [
-      { id: 'sLoc1', fr: '**Magasins › Zones / Allées / Rayons / Étagères / Niveaux / Emplacements** — construire la hiérarchie (code court + nom).', ar: '**المتاجر › المناطق / الممرات / الرفوف / الأرفف / المستويات / المواقع** — بناء التسلسل (رمز مختصر + اسم).' },
-      { id: 'sLoc2', fr: '**Produits › fiche produit** — affecter l’emplacement via le sélecteur en cascade (code auto **MAG01-A-02-…**).', ar: '**المنتجات › بطاقة المنتج** — تحديد الموقع عبر القائمة المتسلسلة (رمز تلقائي **MAG01-A-02-…**).' },
-      { id: 'sLoc3', fr: '**Magasins › Rangement (scan)** — scanner un produit et l’affecter / le déplacer vers un emplacement.', ar: '**المتاجر › الترتيب (مسح)** — مسح منتج وتحديد/نقل موقعه.' },
-      { id: 'sLoc4', fr: '**Magasins › Plan du magasin** — visualiser l’occupation (occupé / à réappro / vide), cliquer pour explorer.', ar: '**المتاجر › مخطط المتجر** — عرض الإشغال (مشغول / للتموين / فارغ)، والنقر للاستكشاف.' },
-      { id: 'sLoc5', fr: '**Stock › Consultation (scan)** — scanner pour voir la fiche complète + emplacement. Codes repris sur Réappro, Inventaire, bons & **Magasins › Impression**.', ar: '**المخزون › الاستعلام (مسح)** — المسح لعرض البطاقة الكاملة + الموقع. تظهر الرموز في التموين والجرد والسندات و**المتاجر › الطباعة**.' },
+      { id: 'sLoc1', fr: '**Magasins › Architecture › Zones / Allées / Rayons / Étagères / Niveaux / Emplacements** — construire la hiérarchie (code court + nom).', ar: '**المتاجر › المناطق / الممرات / الرفوف / الأرفف / المستويات / المواقع** — بناء التسلسل (رمز مختصر + اسم).' },
+      { id: 'sLoc2', fr: '**Catalogue › Produits › fiche produit** — affecter l’emplacement via le sélecteur en cascade (code auto **MAG01-A-02-…**).', ar: '**الكتالوج › بطاقة المنتج** — تحديد الموقع عبر القائمة المتسلسلة (رمز تلقائي **MAG01-A-02-…**).' },
+      { id: 'sLoc3', fr: '**Magasins › Exploitation › Rangement (scan)** — scanner un produit et l’affecter / le déplacer vers un emplacement.', ar: '**المتاجر › الترتيب (مسح)** — مسح منتج وتحديد/نقل موقعه.' },
+      { id: 'sLoc4', fr: '**Magasins › Architecture › Plan du magasin** — visualiser l’occupation (occupé / à réappro / vide), cliquer pour explorer.', ar: '**المتاجر › مخطط المتجر** — عرض الإشغال (مشغول / للتموين / فارغ)، والنقر للاستكشاف.' },
+      { id: 'sLoc5', fr: '**Stock › Vue d’ensemble › Consultation (scan)** — scanner pour voir la fiche complète + emplacement. Codes repris sur Réappro, Inventaire, bons & **Magasins › Impression › Étiquettes des emplacements**.', ar: '**المخزون › الاستعلام (مسح)** — المسح لعرض البطاقة الكاملة + الموقع. تظهر الرموز في التموين والجرد والسندات و**المتاجر › الطباعة**.' },
     ],
   },
   {
     n: '5', accent: 'border-rose-500', title: { fr: '★ Stock initial (mise en service)', ar: '★ المخزون الأولي (التشغيل)' },
     hint: { fr: "Le point de départ de l'inventaire", ar: 'نقطة انطلاق الجرد' },
     steps: [
-      { id: 's4a', fr: '**Stock › Stock initial** — saisir la **quantité de départ** : au clavier, à la **douchette** (+1 par scan) ou par **import CSV** (code-barres ; quantité).', ar: '**المخزون › المخزون الأولي** — إدخال **الكمية الأولية**: بلوحة المفاتيح، بالماسح (+1 لكل مسح) أو عبر **استيراد CSV** (الرمز؛ الكمية).' },
+      { id: 's4a', fr: '**Stock › Initialisation › Stock initial** — saisir la **quantité de départ** : au clavier, à la **douchette** (+1 par scan) ou par **import CSV** (code-barres ; quantité).', ar: '**المخزون › المخزون الأولي** — إدخال **الكمية الأولية**: بلوحة المفاتيح، بالماسح (+1 لكل مسح) أو عبر **استيراد CSV** (الرمز؛ الكمية).' },
       { id: 's4b', fr: 'Contrôler la **valeur du stock** (Qté × Prix d’achat) et les totaux.', ar: 'مراقبة **قيمة المخزون** (الكمية × سعر الشراء) والمجاميع.' },
       { id: 's4c', fr: '**Valider l’initialisation** → crée un mouvement **STOCK INITIAL** par produit, fixe le stock, avec magasin/utilisateur/date.', ar: '**تأكيد التهيئة** ← يُنشئ حركة **مخزون أولي** لكل منتج، ويحدد المخزون، مع المتجر/المستخدم/التاريخ.' },
       { id: 's4d', warn: true, fr: '⚠ Une seule fois par produit (les produits initialisés disparaissent). 2ᵉ initialisation réservée Gérant/Administrateur.', ar: '⚠ مرة واحدة لكل منتج (تختفي المنتجات المُهيّأة). التهيئة الثانية للمدير فقط.' },
