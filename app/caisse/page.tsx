@@ -62,6 +62,19 @@ const ticketNumber = (s: Sale) => `V${s.id.slice(-8).toUpperCase()}`
 const fmtQty = (n: number): string =>
   Number.isInteger(n) ? String(n) : String(Number(n.toFixed(3)))
 
+/**
+ * Colonnes du ticket, definies une seule fois.
+ * L'en-tete et les lignes doivent porter EXACTEMENT les memes largeurs, sinon
+ * « Qté » ne tombe pas au-dessus de la quantite. Les separer invitait la derive.
+ */
+const TCOL = {
+  row: 'flex justify-between gap-1',
+  qty: 'w-8 shrink-0 tabular-nums',
+  name: 'min-w-0 flex-1 px-1',
+  pu: 'w-14 shrink-0 text-right tabular-nums',
+  pt: 'w-14 shrink-0 text-right tabular-nums',
+}
+
 const ticketBarcode = (s: Sale) => {
   let n = ''
   for (const ch of s.id) n += ch.charCodeAt(0) % 10
@@ -998,26 +1011,26 @@ function CaisseContent() {
 
               <div className="my-3 border-t border-dashed border-gray-300" />
 
-              <div className="flex justify-between font-bold text-gray-800">
-                <span>{t('posr_col_qty')}</span>
-                <span className="flex-1 px-2">{t('posr_col_articles')}</span>
-                <span className="w-14 text-right">{t('posr_col_pu')}</span>
-                <span className="w-14 text-right">{t('posr_col_pt')}</span>
+              <div className={`${TCOL.row} font-bold text-gray-800`}>
+                <span className={TCOL.qty}>{t('posr_col_qty')}</span>
+                <span className={TCOL.name}>{t('posr_col_articles')}</span>
+                <span className={TCOL.pu}>{t('posr_col_pu')}</span>
+                <span className={TCOL.pt}>{t('posr_col_pt')}</span>
               </div>
               {receipt.items.map((i, n) => (
                 // Le conditionnement figure sur le ticket : « 3 » sans « boîtes
                 // de 100 » ne permet ni au client ni au commerçant de retrouver
                 // ce qui a été vendu.
-                <div key={`${i.productId}|${i.unitName ?? ''}|${n}`} className="mt-1 flex justify-between gap-1 text-gray-700">
-                  <span className="w-8 shrink-0 tabular-nums">{fmtQty(i.qty)}</span>
-                  <span className="min-w-0 flex-1 px-1">
+                <div key={`${i.productId}|${i.unitName ?? ''}|${n}`} className={`mt-1 ${TCOL.row} text-gray-700`}>
+                  <span className={TCOL.qty}>{fmtQty(i.qty)}</span>
+                  <span className={TCOL.name}>
                     <span className="block truncate">{i.name}</span>
                     {i.unitFactor && i.unitFactor > 1 && (
                       <span className="block truncate text-[9px] opacity-70">{i.unitName} × {i.unitFactor}</span>
                     )}
                   </span>
-                  <span className="w-14 shrink-0 text-right tabular-nums">{i.price.toFixed(2)}</span>
-                  <span className="w-14 shrink-0 text-right tabular-nums">{(i.price * i.qty).toFixed(2)}</span>
+                  <span className={TCOL.pu}>{i.price.toFixed(2)}</span>
+                  <span className={TCOL.pt}>{(i.price * i.qty).toFixed(2)}</span>
                 </div>
               ))}
 
