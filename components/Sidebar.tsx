@@ -127,7 +127,6 @@ const NAV_ALL: NavItem[] = [
         sectionKey: 'nav_stock_sec_init',
         items: [
           { href: '/stock/stock-initial', labelKey: 'nav_stock_initial' },
-          { href: '/stock/stock-initial?mode=import', labelKey: 'nav_stock_import' },
           { href: '/stock/ajustement', labelKey: 'nav_stock_adjust' },
         ],
       },
@@ -135,8 +134,6 @@ const NAV_ALL: NavItem[] = [
         sectionKey: 'nav_stock_sec_inventory',
         items: [
           { href: '/stock/inventaire', labelKey: 'nav_stock_inventory' },
-          { href: '/stock/inventaire?scope=zone', labelKey: 'nav_stock_inv_zone' },
-          { href: '/stock/inventaire?scope=emplacement', labelKey: 'nav_stock_inv_loc' },
           { href: '/stock/comptage', labelKey: 'nav_stock_quickcount' },
           { href: '/stock/ecarts', labelKey: 'nav_stock_variances' },
         ],
@@ -144,10 +141,7 @@ const NAV_ALL: NavItem[] = [
       {
         sectionKey: 'nav_stock_sec_moves',
         items: [
-          { href: '/achats/entrees-stock', labelKey: 'nav_stock_in' },
-          { href: '/stock/mouvements?flux=sorties', labelKey: 'nav_stock_out' },
           { href: '/stock/mouvements', labelKey: 'nav_stock_history' },
-          { href: '/stock/mouvements?vue=historique', labelKey: 'nav_stock_moves_history' },
           { href: '/stock/annulation', labelKey: 'nav_stock_cancel_move' },
         ],
       },
@@ -157,8 +151,6 @@ const NAV_ALL: NavItem[] = [
           { href: '/stock/transferts/nouveau', labelKey: 'nav_stock_transfer_new' },
           { href: '/stock/transferts', labelKey: 'nav_stock_transfers' },
           { href: '/stock/transferts/details', labelKey: 'nav_stock_transfers_detail' },
-          { href: '/stock/transferts?tab=reception', labelKey: 'nav_stock_transfer_recv' },
-          { href: '/stock/transferts?tab=historique', labelKey: 'nav_stock_transfer_hist' },
         ],
       },
       {
@@ -173,8 +165,6 @@ const NAV_ALL: NavItem[] = [
       {
         sectionKey: 'nav_stock_sec_reports',
         items: [
-          { href: '/stock/rapports/valorisation', labelKey: 'nav_stock_rep_value' },
-          { href: '/stock/rapports/rotation', labelKey: 'nav_stock_rep_rotation' },
           { href: '/stock/rapports/historique', labelKey: 'nav_stock_rep_history' },
           { href: '/rapports/stock', labelKey: 'nav_stock_rep_state' },
           { href: '/stock/rapports/export', labelKey: 'nav_stock_rep_export' },
@@ -201,7 +191,6 @@ const NAV_ALL: NavItem[] = [
       { href: '/achats/reception', labelKey: 'nav_purchases_reception' },
       { href: '/achats/entrees-stock', labelKey: 'nav_purchases_stock_entries' },
       { href: '/achats/factures', labelKey: 'nav_purchases_invoices' },
-      { href: '/achats/paiements', labelKey: 'nav_purchases_payments' },
       { href: '/achats/historique', labelKey: 'nav_purchases_history' },
       { href: '/achats/retours', labelKey: 'nav_purchases_returns' },
     ],
@@ -215,7 +204,6 @@ const NAV_ALL: NavItem[] = [
       { href: '/ventes/factures', labelKey: 'nav_sales_invoices' },
       { href: '/ventes/avoirs', labelKey: 'nav_sales_credits' },
       { href: '/ventes/retours', labelKey: 'nav_sales_returns' },
-      { href: '/clients/paiements', labelKey: 'nav_sales_payments' },
       { href: '/ventes', labelKey: 'nav_sales_history' },
     ],
   },
@@ -385,7 +373,6 @@ const NAV_ALL: NavItem[] = [
           { href: '/magasins/guide-emplacements', labelKey: 'nav_stores_loc_guide' },
           { href: '/magasins/rangement', labelKey: 'nav_stores_rangement' },
           { href: '/magasins/deplacement', labelKey: 'nav_st_move' },
-          { href: '/stock/inventaire?scope=emplacement', labelKey: 'nav_stock_inv_loc' },
         ],
       },
       {
@@ -393,8 +380,6 @@ const NAV_ALL: NavItem[] = [
         items: [
           { href: '/magasins/impression', labelKey: 'nav_st_labels' },
           { href: '/magasins/qr-codes', labelKey: 'nav_st_qr' },
-          { href: '/magasins/plan?print=1', labelKey: 'nav_st_plan_print' },
-          { href: '/produits/codes-barres', labelKey: 'nav_products_barcodes' },
         ],
       },
       {
@@ -492,8 +477,6 @@ const NAV_ALL: NavItem[] = [
         items: [
           // Rôles, permissions et connexions existent déjà sous Utilisateurs :
           // ce sont les mêmes écrans, pas des copies.
-          { href: '/utilisateurs/roles', labelKey: 'nav_hr_roles' },
-          { href: '/utilisateurs/permissions', labelKey: 'nav_hr_permissions' },
           { href: '/rh/securite/badges', labelKey: 'nav_hr_badges' },
           { href: '/utilisateurs/connexions', labelKey: 'nav_hr_logins' },
         ],
