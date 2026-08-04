@@ -617,8 +617,14 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
     const el = key ? groupRefs.current[key] : null
     if (!nav || !el) return
     requestAnimationFrame(() => {
-      const delta = el.getBoundingClientRect().bottom - nav.getBoundingClientRect().bottom
-      if (delta > 0) nav.scrollTo({ top: nav.scrollTop + delta + 12, behavior: 'smooth' })
+      const navBox = nav.getBoundingClientRect()
+      const box = el.getBoundingClientRect()
+      // Rien à faire si le groupe tient déjà entièrement à l'écran.
+      if (box.top >= navBox.top && box.bottom <= navBox.bottom) return
+      // Sinon on remonte son en-tête en haut de la zone visible : un groupe
+      // ouvert en bas de liste restait auparavant hors champ, et l'utilisateur
+      // devait chercher où ses sous-menus s'étaient affichés.
+      nav.scrollTo({ top: nav.scrollTop + (box.top - navBox.top) - 8, behavior: 'smooth' })
     })
   }, [expanded])
 
@@ -751,7 +757,10 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
               }
 
               const isOpen = expanded.includes(item.labelKey)
-              const active = groupActive(item)
+              // Un groupe déplié EST le groupe sur lequel on travaille : il prend
+              // la mise en évidence. Le groupe de la page courante ne la garde
+              // que lorsque rien n'est déplié.
+              const active = isOpen || (expanded.length === 0 && groupActive(item))
               return (
                 <div key={item.labelKey} ref={(el) => { groupRefs.current[item.labelKey] = el }}>
                   <button
