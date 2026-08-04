@@ -51,7 +51,13 @@ export default function Topbar({
 
   useEffect(() => {
     const sid = getActiveStoreId()
-    setLowStock(loadProducts().filter((p) => (!sid || p.storeId === sid) && p.stock <= p.minStock))
+    // « stock <= minStock » comptait TOUT article a zero sans seuil : 0 <= 0
+    // est vrai. Le badge annoncait donc 14 596 alertes sur 14 601 articles, ce
+    // qui n'appelle aucune action. Sans seuil renseigne, il n'y a rien a quoi
+    // comparer le stock : l'article n'est pas en alerte, il n'est pas pilote.
+    setLowStock(
+      loadProducts().filter((p) => (!sid || p.storeId === sid) && p.minStock > 0 && p.stock <= p.minStock)
+    )
     setSound(soundEnabled())
   }, [])
 
@@ -147,7 +153,9 @@ export default function Topbar({
             <Bell className="h-[18px] w-[18px]" />
             {lowStock.length > 0 && (
               <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">
-                {lowStock.length}
+                {/* Au-dela de 99 la pastille deborde et le chiffre exact
+                    n'apporte plus rien : le detail est dans le panneau. */}
+                {lowStock.length > 99 ? '99+' : lowStock.length}
               </span>
             )}
           </button>

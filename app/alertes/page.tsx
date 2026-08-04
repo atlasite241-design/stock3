@@ -35,8 +35,12 @@ function Content() {
   const soon = new Date()
   soon.setDate(now.getDate() + 7)
 
-  const outOfStock = products.filter((p) => p.stock === 0)
-  const lowStock = products.filter((p) => p.stock > 0 && p.stock <= p.minStock)
+  // Une rupture ne se signale que sur un article REELLEMENT suivi : sans seuil
+  // de reapprovisionnement, un stock a zero decrit un article qu'on ne tient
+  // pas, pas une vente manquee. Meme regle que le badge de la barre du haut,
+  // sinon les deux chiffres se contrediraient.
+  const outOfStock = products.filter((p) => p.minStock > 0 && p.stock <= 0)
+  const lowStock = products.filter((p) => p.minStock > 0 && p.stock > 0 && p.stock <= p.minStock)
   const debtSuppliers = suppliers.filter((s) => s.balance > 0)
   const pendingOrders = purchases.filter((p) => p.status === 'en_attente')
   const unpaidInvoices = purchases.filter((p) => p.status === 'recue' && p.paid < p.total)
