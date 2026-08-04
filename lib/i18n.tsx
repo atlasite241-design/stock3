@@ -1484,6 +1484,8 @@ const DICT = {
   fret_none: { fr: 'Aucune commande retournée', ar: 'لا توجد طلبات مرتجعة' },
   nav_suppliers_payments: { fr: 'Paiements', ar: 'المدفوعات' },
   nav_suppliers_balances: { fr: 'Soldes', ar: 'الأرصدة' },
+  pinv_scope_ph: { fr: 'Périmètre : A ou A-02…', ar: 'النطاق: A أو A-02…' },
+
   // Conversion des fiches « lot »
   nav_products_conversion: { fr: 'Conversion en conditionnements', ar: 'التحويل إلى وحدات بيع' },
   cv_title: { fr: 'Conversion en conditionnements', ar: 'التحويل إلى وحدات بيع' },

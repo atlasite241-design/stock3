@@ -26,6 +26,15 @@ function Content() {
   const toast = useToast()
 
   const [mode, setMode] = useState<Mode>('manual')
+  // Le menu propose « Import Excel » : l'entrée doit ouvrir l'onglet, pas la
+  // page nue, sinon le lien promet un écran qu'il n'affiche pas.
+  const modeFromUrl = useRef(false)
+  useEffect(() => {
+    if (modeFromUrl.current) return
+    modeFromUrl.current = true
+    const m = new URLSearchParams(window.location.search).get('mode')
+    if (m === 'import' || m === 'scanqty' || m === 'scanrepeat' || m === 'manual') setMode(m)
+  }, [])
   const [qty, setQty] = useState<Record<string, number>>({})
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('Toutes')

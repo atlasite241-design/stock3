@@ -31,6 +31,20 @@ function Content() {
   const { t } = useLanguage()
   const toast = useToast()
   const [byLocation, setByLocation] = useState(false)
+  /**
+   * Périmètre d'inventaire : préfixe de code d'emplacement.
+   * « A » compte toute la zone A, « A-02 » le rayon 2, « A-02-03-B-05 » le bac.
+   * C'est ce qui rend l'inventaire tournant praticable — compter 19 000
+   * références en une fois ne l'est pas.
+   */
+  const [perimetre, setPerimetre] = useState('')
+  const scopeFromUrl = useRef(false)
+  useEffect(() => {
+    if (scopeFromUrl.current) return
+    scopeFromUrl.current = true
+    const sc = new URLSearchParams(window.location.search).get('scope')
+    if (sc === 'emplacement' || sc === 'zone') setByLocation(true)
+  }, [])
   const router = useRouter()
 
   const [counted, setCounted] = useState<Record<string, string>>({})
@@ -81,7 +95,9 @@ function Content() {
   const deferredQuery = useDeferredValue(query)
   const filtered = (() => {
     const q = deferredQuery.trim().toLowerCase()
-    const base = !q ? products : products.filter((p) => p.name.toLowerCase().includes(q) || p.barcode.includes(q))
+    let base = !q ? products : products.filter((p) => p.name.toLowerCase().includes(q) || p.barcode.includes(q))
+    const pre = perimetre.trim().toUpperCase()
+    if (pre) base = base.filter((p) => (p.emplacementComplet ?? '').toUpperCase().startsWith(pre))
     if (!byLocation) return base
     return [...base].sort((a, b) => locationSortKey(a).localeCompare(locationSortKey(b), 'fr') || a.name.localeCompare(b.name, 'fr'))
   })()
@@ -228,6 +244,14 @@ function Content() {
             <input type="checkbox" checked={byLocation} onChange={(e) => { setByLocation(e.target.checked); setPage(1) }} className="h-4 w-4 accent-amber-500" />
             {t('pinv_sort_location')}
           </label>
+          <div className="relative">
+            <input
+              value={perimetre}
+              onChange={(e) => { setPerimetre(e.target.value); setPage(1) }}
+              placeholder={t('pinv_scope_ph')}
+              className="input-field w-44 font-mono text-sm"
+            />
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px]">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertTriangle, ChevronRight, Layers, MapPin, Package, PackageX, Store, X } from 'lucide-react'
@@ -18,6 +18,16 @@ function Content() {
   // Chemin de navigation : ids sélectionnés du haut vers le bas.
   const [path, setPath] = useState<string[]>([])
   const [panel, setPanel] = useState<{ level: number; node: Node } | null>(null)
+  // Entrée « Plan imprimable » : on laisse le plan se peindre avant d'ouvrir la
+  // boîte d'impression, sinon le navigateur imprime une page vide.
+  const printed = useRef(false)
+  useEffect(() => {
+    if (printed.current) return
+    if (new URLSearchParams(window.location.search).get('print') !== '1') return
+    printed.current = true
+    const id = setTimeout(() => window.print(), 600)
+    return () => clearTimeout(id)
+  }, [])
 
   const storeCode = useMemo(() => {
     const idx = stores.findIndex((s) => s.id === activeStoreId)

@@ -127,6 +127,7 @@ const NAV_ALL: NavItem[] = [
         sectionKey: 'nav_stock_sec_init',
         items: [
           { href: '/stock/stock-initial', labelKey: 'nav_stock_initial' },
+          { href: '/stock/stock-initial?mode=import', labelKey: 'nav_stock_import' },
           { href: '/stock/ajustement', labelKey: 'nav_stock_adjust' },
         ],
       },
@@ -134,6 +135,7 @@ const NAV_ALL: NavItem[] = [
         sectionKey: 'nav_stock_sec_inventory',
         items: [
           { href: '/stock/inventaire', labelKey: 'nav_stock_inventory' },
+          { href: '/stock/inventaire?scope=emplacement', labelKey: 'nav_stock_inv_loc' },
           { href: '/stock/comptage', labelKey: 'nav_stock_quickcount' },
           { href: '/stock/ecarts', labelKey: 'nav_stock_variances' },
         ],
@@ -141,6 +143,8 @@ const NAV_ALL: NavItem[] = [
       {
         sectionKey: 'nav_stock_sec_moves',
         items: [
+          { href: '/stock/mouvements?type=entree', labelKey: 'nav_stock_in' },
+          { href: '/stock/mouvements?type=sortie', labelKey: 'nav_stock_out' },
           { href: '/stock/mouvements', labelKey: 'nav_stock_history' },
           { href: '/stock/annulation', labelKey: 'nav_stock_cancel_move' },
         ],
@@ -151,6 +155,8 @@ const NAV_ALL: NavItem[] = [
           { href: '/stock/transferts/nouveau', labelKey: 'nav_stock_transfer_new' },
           { href: '/stock/transferts', labelKey: 'nav_stock_transfers' },
           { href: '/stock/transferts/details', labelKey: 'nav_stock_transfers_detail' },
+          { href: '/stock/transferts?tab=reception', labelKey: 'nav_stock_transfer_recv' },
+          { href: '/stock/transferts?tab=historique', labelKey: 'nav_stock_transfer_hist' },
         ],
       },
       {
@@ -379,6 +385,7 @@ const NAV_ALL: NavItem[] = [
         sectionKey: 'nav_st_sec_print',
         items: [
           { href: '/magasins/impression', labelKey: 'nav_st_labels' },
+          { href: '/magasins/plan?print=1', labelKey: 'nav_st_plan_print' },
           { href: '/magasins/qr-codes', labelKey: 'nav_st_qr' },
         ],
       },

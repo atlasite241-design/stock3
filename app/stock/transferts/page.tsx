@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
@@ -65,6 +65,17 @@ function Content() {
   const [srcFilter, setSrcFilter] = useState('all')
   const [dstFilter, setDstFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  // « Réception » = ce qui est expédié et attend d'être reçu ; « Historique » =
+  // ce qui est terminé. Sans cette lecture, les deux entrées du menu
+  // affichaient la liste complète et ne tenaient pas leur promesse.
+  const tabFromUrl = useRef(false)
+  useEffect(() => {
+    if (tabFromUrl.current) return
+    tabFromUrl.current = true
+    const tab = new URLSearchParams(window.location.search).get('tab')
+    if (tab === 'reception') setStatusFilter('expedie')
+    else if (tab === 'historique') setStatusFilter('termine')
+  }, [])
   const [query, setQuery] = useState('')
   const [sortDesc, setSortDesc] = useState(true)
   const [page, setPage] = useState(1)
