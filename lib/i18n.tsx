@@ -897,6 +897,7 @@ const DICT = {
     ar: "تُجمع مخزونات البطاقات المكررة — فهو الصنف نفسه في المكان نفسه. البطاقة المحتفظ بها هي التي لها مخزون، ثم موقع، ثم الأكثر اكتمالاً؛ وتُستكمل حقولها الفارغة من نظيراتها.",
   },
   pa_absorbed: { fr: "fiches absorbées", ar: "بطاقة مدمجة" },
+  po_col_unit: { fr: 'Unité d’achat', ar: 'وحدة الشراء' },
   pa_merge_name: { fr: 'Fusionner les doublons de nom', ar: 'دمج تكرارات الاسم' },
   pa_name_rule: {
     fr: "Vérifiez d'abord la liste : un même nom peut cacher deux conditionnements différents. Si les tailles figurent déjà dans le nom et qu'elles sont identiques, ce sont de vrais doublons. Les codes-barres des fiches absorbées restent reconnus en caisse — aucune étiquette déjà collée ne cesse de fonctionner.",

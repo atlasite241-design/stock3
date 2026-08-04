@@ -425,6 +425,10 @@ export interface SaleItem {
   unitFactor?: number
 }
 
+/** Facteur d'une ligne d'achat vers l'unité de stock. 1 par défaut. */
+export const purchaseFactor = (i: Pick<PurchaseItem, 'unitFactor'>) =>
+  i.unitFactor && i.unitFactor > 0 ? i.unitFactor : 1
+
 /** Quantité en unités de STOCK que représente une ligne de vente. */
 export const baseQty = (i: Pick<SaleItem, 'qty' | 'unitFactor'>) =>
   Math.round(i.qty * (i.unitFactor && i.unitFactor > 0 ? i.unitFactor : 1) * 1000) / 1000
@@ -567,8 +571,19 @@ export interface PurchaseItem {
   name: string
   barcode?: string
   sku?: string
+  /** Coût d'UNE unité d'achat : d'une bobine si l'on achète à la bobine. */
   cost: number
+  /** Quantité dans l'unité d'ACHAT (3 bobines, pas 300 mètres). */
   qty: number
+  /**
+   * Conditionnement d'achat. Absent = l'unité de stock.
+   *
+   * Sans lui, acheter « 3 bobines de 100 m à 700 DH » entrait 3 mètres en stock
+   * et fixait le coût du mètre à 700 DH. La quantité comme le prix doivent être
+   * ramenés à l'unité de stock au moment de la réception.
+   */
+  unitName?: string
+  unitFactor?: number
   discount?: number
   tva?: number
   deliveredQty?: number
@@ -2800,10 +2815,15 @@ export function useDroguerieState() {
       if (!i) return
       const p = curProducts.find((x) => x.id === r.productId)
       if (!p) return
+      // La quantité reçue est comptée dans l'unité d'ACHAT ; le stock et le
+      // coût unitaire, eux, vivent dans l'unité de stock.
+      const f = purchaseFactor(i)
+      const qBase = roundQty(r.receivedQty * f)
+      const coutBase = Math.round((i.cost / f) * 10000) / 10000
       receivedValue += r.receivedQty * i.cost
-      curProducts = curProducts.map((x) => (x.id === r.productId ? { ...x, stock: x.stock + r.receivedQty, cost: i.cost } : x))
+      curProducts = curProducts.map((x) => (x.id === r.productId ? { ...x, stock: roundQty(x.stock + qBase), cost: coutBase } : x))
       curMovements = [
-        { id: uid() + r.productId, date: new Date().toISOString(), productId: r.productId, productName: i.name, type: 'entree' as const, qty: r.receivedQty, note: `${po.ref} / ${brRef}`, storeId: po.storeId, depotId: meta?.depotId || undefined },
+        { id: uid() + r.productId, date: new Date().toISOString(), productId: r.productId, productName: i.name, type: 'entree' as const, qty: qBase, note: `${po.ref} / ${brRef}`, storeId: po.storeId, depotId: meta?.depotId || undefined },
         ...curMovements,
       ]
     })

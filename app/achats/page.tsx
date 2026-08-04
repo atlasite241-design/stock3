@@ -40,6 +40,7 @@ function Content() {
   const [note, setNote] = useState('')
   const [globalDiscount, setGlobalDiscount] = useState('0')
   const [lines, setLines] = useState<PurchaseItem[]>([])
+  const [lineUnit, setLineUnit] = useState('')
   const [lineProduct, setLineProduct] = useState('')
   const [lineQty, setLineQty] = useState('10')
   const [lineDiscount, setLineDiscount] = useState('0')
@@ -91,6 +92,16 @@ function Content() {
     setNewOpen(true)
   }
 
+  /** Conditionnements proposés pour le produit choisi, unité de stock comprise. */
+  const uniteAchatOptions = (() => {
+    const p = products.find((x) => x.id === lineProduct)
+    if (!p) return []
+    return [
+      { value: '', label: `${p.unit || t('pos_unit_piece')} — ${fmtDH(p.cost)}` },
+      ...(p.saleUnits ?? []).map((u) => ({ value: u.id, label: `${u.name} ×${u.factor}` })),
+    ]
+  })()
+
   const addLine = () => {
     const p = products.find((x) => x.id === lineProduct)
     if (!p) {
@@ -100,13 +111,23 @@ function Content() {
     const qty = Math.max(1, Math.round(parseFloat(lineQty.replace(',', '.')) || 0))
     const discount = Math.max(0, parseFloat(lineDiscount.replace(',', '.')) || 0)
     const tva = Math.max(0, parseFloat(lineTva.replace(',', '.')) || 0)
+    // Acheter au carton : la ligne porte le conditionnement, et son coût est
+    // celui du carton — pas celui de la pièce multiplié.
+    const unit = (p.saleUnits ?? []).find((u) => u.id === lineUnit)
+    const cost = unit ? Math.round(p.cost * unit.factor * 100) / 100 : p.cost
     setLines((ls) => {
-      const ex = ls.find((l) => l.productId === p.id)
+      const cle = (l: PurchaseItem) => `${l.productId}|${l.unitName ?? ''}`
+      const nouvelle = `${p.id}|${unit?.name ?? ''}`
+      const ex = ls.find((l) => cle(l) === nouvelle)
       return ex
-        ? ls.map((l) => (l.productId === p.id ? { ...l, qty: l.qty + qty } : l))
-        : [...ls, { productId: p.id, name: p.name, barcode: p.barcode, cost: p.cost, qty, discount, tva }]
+        ? ls.map((l) => (cle(l) === nouvelle ? { ...l, qty: l.qty + qty } : l))
+        : [...ls, {
+            productId: p.id, name: p.name, barcode: p.barcode, cost, qty, discount, tva,
+            unitName: unit?.name, unitFactor: unit?.factor,
+          }]
     })
     setLineProduct('')
+    setLineUnit('')
     setLineQty('10')
   }
 
@@ -309,6 +330,14 @@ function Content() {
                   ...products.map((p) => ({ value: p.id, label: `${p.name} (${t('po_buy_abbr')} ${fmtDH(p.cost)})` })),
                 ]}
               />
+              {/* Le selecteur n'apparait que si le produit a des conditionnements :
+                  inutile de demander « en quelle unite » quand il n'y en a qu'une. */}
+              {uniteAchatOptions.length > 1 && (
+                <div className="w-44">
+                  <span className="mb-1 block text-[11px] font-medium text-gray-500 dark:text-zinc-400">{t('po_col_unit')}</span>
+                  <Select value={lineUnit} onChange={setLineUnit} options={uniteAchatOptions} />
+                </div>
+              )}
               <div className="w-20">
                 <span className="mb-1 block text-[11px] font-medium text-gray-500 dark:text-zinc-400">{t('po_col_qty')}</span>
                 <input type="number" min="1" value={lineQty} onChange={(e) => setLineQty(e.target.value)} className="input-field w-full" />
@@ -344,16 +373,28 @@ function Content() {
                 </thead>
                 <tbody>
                   {lines.map((l) => (
-                    <tr key={l.productId} className="border-b border-gray-50 dark:border-white/5">
+                    <tr key={`${l.productId}|${l.unitName ?? ''}`} className="border-b border-gray-50 dark:border-white/5">
                       <td className="px-3 py-2 text-xs text-gray-500 dark:text-zinc-400">{l.barcode || '—'}</td>
-                      <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">{l.name}</td>
-                      <td className="px-3 py-2 text-center tabular-nums text-gray-700 dark:text-zinc-200">{l.qty}</td>
+                      <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
+                        {l.name}
+                        {l.unitFactor && l.unitFactor > 1 && (
+                          <span className="ml-1 text-[11px] font-normal text-amber-600 dark:text-amber-400">
+                            {l.unitName} ×{l.unitFactor}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-center tabular-nums text-gray-700 dark:text-zinc-200">
+                        {l.qty}
+                        {l.unitFactor && l.unitFactor > 1 && (
+                          <span className="block text-[10px] text-gray-400">= {l.qty * l.unitFactor}</span>
+                        )}
+                      </td>
                       <td className="px-3 py-2 text-right tabular-nums text-gray-700 dark:text-zinc-200">{fmtDH(l.cost)}</td>
                       <td className="px-3 py-2 text-center tabular-nums text-gray-600 dark:text-zinc-400">{l.discount ?? 0}%</td>
                       <td className="px-3 py-2 text-center tabular-nums text-gray-600 dark:text-zinc-400">{l.tva ?? 0}%</td>
                       <td className="px-3 py-2 text-right font-bold tabular-nums text-gray-900 dark:text-white">{fmtDH(lineTotal(l))}</td>
                       <td className="px-3 py-2 text-right">
-                        <button onClick={() => setLines(lines.filter((x) => x.productId !== l.productId))} className="rounded p-1 text-gray-400 dark:text-zinc-500 hover:bg-rose-50 hover:text-rose-500">
+                        <button onClick={() => setLines(lines.filter((x) => !(x.productId === l.productId && (x.unitName ?? '') === (l.unitName ?? ''))))} className="rounded p-1 text-gray-400 dark:text-zinc-500 hover:bg-rose-50 hover:text-rose-500">
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </td>
