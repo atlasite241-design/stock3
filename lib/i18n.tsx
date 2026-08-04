@@ -1486,6 +1486,15 @@ const DICT = {
   nav_suppliers_payments: { fr: 'Paiements', ar: 'المدفوعات' },
   nav_suppliers_balances: { fr: 'Soldes', ar: 'الأرصدة' },
   pinv_scope_ph: { fr: 'Périmètre : A ou A-02…', ar: 'النطاق: A أو A-02…' },
+  pinv_title_loc: { fr: 'Inventaire par emplacement', ar: 'الجرد حسب الموقع' },
+  pinv_subtitle_loc: {
+    fr: 'Comptez un rayon à la fois : saisissez son code d’emplacement, l’écran ne montre que ce qui s’y trouve.',
+    ar: 'اعدّوا رفاً واحداً في كل مرة: أدخلوا رمز موقعه، ولن تعرض الشاشة إلا ما يوجد فيه.',
+  },
+  pinv_scope_hint: {
+    fr: 'Saisissez un code d’emplacement dans le champ Périmètre pour restreindre le comptage. « A » couvre toute la zone A, « A-02 » le rayon 2, « A-02-03-B-05 » le bac seul. Sans périmètre, cet écran affiche tout le catalogue — utilisez alors Inventaire physique.',
+    ar: 'أدخلوا رمز موقع في خانة النطاق لتقييد العدّ. «A» يغطي المنطقة A كاملة، و«A-02» الرف 2، و«A-02-03-B-05» الصندوق وحده. بدون نطاق، تعرض هذه الشاشة الكتالوج كله — استعملوا حينها الجرد المادي.',
+  },
 
   // Conversion des fiches « lot »
   nav_products_conversion: { fr: 'Conversion en conditionnements', ar: 'التحويل إلى وحدات بيع' },

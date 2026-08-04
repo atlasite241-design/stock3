@@ -1,5 +1,7 @@
 'use client'
 
+import { useSearchParams } from 'next/navigation'
+
 import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Loader from '@/components/Loader'
@@ -28,13 +30,14 @@ function Content() {
   const [mode, setMode] = useState<Mode>('manual')
   // Le menu propose « Import Excel » : l'entrée doit ouvrir l'onglet, pas la
   // page nue, sinon le lien promet un écran qu'il n'affiche pas.
-  const modeFromUrl = useRef(false)
+  // Relu a chaque changement d'URL : sinon, deja sur cet ecran, l'entree
+  // « Import du stock » du menu n'ouvrait pas l'onglet.
+  const modeParam = useSearchParams().get('mode')
   useEffect(() => {
-    if (modeFromUrl.current) return
-    modeFromUrl.current = true
-    const m = new URLSearchParams(window.location.search).get('mode')
-    if (m === 'import' || m === 'scanqty' || m === 'scanrepeat' || m === 'manual') setMode(m)
-  }, [])
+    if (modeParam === 'import' || modeParam === 'scanqty' || modeParam === 'scanrepeat' || modeParam === 'manual') {
+      setMode(modeParam)
+    }
+  }, [modeParam])
   const [qty, setQty] = useState<Record<string, number>>({})
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('Toutes')

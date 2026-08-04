@@ -1,6 +1,8 @@
 'use client'
 
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+
+import React, { useEffect, useMemo, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
@@ -68,14 +70,15 @@ function Content() {
   // « Réception » = ce qui est expédié et attend d'être reçu ; « Historique » =
   // ce qui est terminé. Sans cette lecture, les deux entrées du menu
   // affichaient la liste complète et ne tenaient pas leur promesse.
-  const tabFromUrl = useRef(false)
+  // Relu a chaque changement d'URL, sinon passer de « Transferts » a
+  // « Reception » depuis le menu ne filtrait rien.
+  const tabParam = useSearchParams().get('tab')
   useEffect(() => {
-    if (tabFromUrl.current) return
-    tabFromUrl.current = true
-    const tab = new URLSearchParams(window.location.search).get('tab')
-    if (tab === 'reception') setStatusFilter('expedie')
-    else if (tab === 'historique') setStatusFilter('termine')
-  }, [])
+    if (tabParam === 'reception') setStatusFilter('expedie')
+    else if (tabParam === 'historique') setStatusFilter('termine')
+    else setStatusFilter('all')
+    setPage(1)
+  }, [tabParam])
   const [query, setQuery] = useState('')
   const [sortDesc, setSortDesc] = useState(true)
   const [page, setPage] = useState(1)

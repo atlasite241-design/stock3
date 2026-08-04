@@ -1,6 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+
+import { useEffect, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { ArrowDownCircle, ArrowUpCircle, Plus, Search, SlidersHorizontal } from 'lucide-react'
@@ -22,17 +24,18 @@ function Content() {
   const [query, setQuery] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState({ type: 'entree' as 'entree' | 'sortie' | 'ajustement', productId: '', qty: '1', sens: '+', note: '' })
-  const urlConsumed = useRef(false)
 
+  // Relu a chaque changement d'URL : « Entrees » puis « Sorties » depuis le
+  // menu restaient sur le meme filtre, le composant n'etant pas remonte.
+  const typeParam = useSearchParams().get('type')
   useEffect(() => {
-    if (urlConsumed.current) return
-    urlConsumed.current = true
-    const t = new URLSearchParams(window.location.search).get('type')
-    if (t === 'entree' || t === 'sortie' || t === 'ajustement') {
-      setFilter(t)
-      setForm((f) => ({ ...f, type: t }))
+    if (typeParam === 'entree' || typeParam === 'sortie' || typeParam === 'ajustement') {
+      setFilter(typeParam)
+      setForm((f) => ({ ...f, type: typeParam }))
+    } else {
+      setFilter('tous')
     }
-  }, [])
+  }, [typeParam])
 
   if (!ready) {
     return <Loader />

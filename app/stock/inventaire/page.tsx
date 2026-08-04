@@ -2,7 +2,7 @@
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import Loader from '@/components/Loader'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   Barcode,
@@ -38,13 +38,18 @@ function Content() {
    * références en une fois ne l'est pas.
    */
   const [perimetre, setPerimetre] = useState('')
-  const scopeFromUrl = useRef(false)
+  /**
+   * Le paramètre doit être relu à CHAQUE changement d'URL, pas seulement au
+   * montage : passer d'« Inventaire physique » à « Inventaire par emplacement »
+   * ne remonte pas le composant — même route, seule la requête change. Les deux
+   * écrans affichaient donc rigoureusement la même chose.
+   */
+  const scope = useSearchParams().get('scope')
+  const parEmplacement = scope === 'emplacement' || scope === 'zone'
   useEffect(() => {
-    if (scopeFromUrl.current) return
-    scopeFromUrl.current = true
-    const sc = new URLSearchParams(window.location.search).get('scope')
-    if (sc === 'emplacement' || sc === 'zone') setByLocation(true)
-  }, [])
+    setByLocation(parEmplacement)
+    setPage(1)
+  }, [parEmplacement])
   const router = useRouter()
 
   const [counted, setCounted] = useState<Record<string, string>>({})
@@ -148,10 +153,10 @@ function Content() {
       >
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
-            {t('pinv_title')}
+            {parEmplacement ? t('pinv_title_loc') : t('pinv_title')}
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
-            {t('pinv_subtitle')}
+            {parEmplacement ? t('pinv_subtitle_loc') : t('pinv_subtitle')}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -249,11 +254,17 @@ function Content() {
               value={perimetre}
               onChange={(e) => { setPerimetre(e.target.value); setPage(1) }}
               placeholder={t('pinv_scope_ph')}
-              className="input-field w-44 font-mono text-sm"
+              autoFocus={parEmplacement}
+              className={`input-field w-44 font-mono text-sm ${parEmplacement ? 'ring-2 ring-amber-400' : ''}`}
             />
           </div>
         </div>
-        <div className="overflow-x-auto">
+        {parEmplacement && !perimetre.trim() && (
+        <p className="rounded-xl border border-dashed border-amber-200 bg-amber-50/50 p-3 text-xs leading-relaxed text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/[0.06] dark:text-amber-300">
+          {t('pinv_scope_hint')}
+        </p>
+      )}
+      <div className="overflow-x-auto">
           <table className="w-full min-w-[640px]">
             <thead>
               <tr className="border-b border-gray-100 dark:border-white/10 text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500">
