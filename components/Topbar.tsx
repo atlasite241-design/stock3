@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, Bell, Languages, LogOut, Menu, Moon, Search, Settings, Sun, Volume2, VolumeX, Wifi, WifiOff } from 'lucide-react'
+import { AlertTriangle, Bell, Languages, LogOut, Menu, Moon, Search, Sun, Volume2, VolumeX, Wifi, WifiOff } from 'lucide-react'
 import { getActiveStoreId, loadProducts, type Product } from '@/lib/store'
 import type { Theme } from '@/lib/theme'
 import { playSound, setSoundEnabled, soundEnabled } from '@/lib/sound'
@@ -195,17 +195,10 @@ export default function Topbar({
           )}
         </div>
 
-        <Link
-          href="/parametres"
-          className="rounded-xl p-2.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white"
-        >
-          <Settings className="h-[18px] w-[18px]" />
-        </Link>
-
         <div className="mx-2 h-6 w-px bg-gray-200 dark:bg-white/10" />
 
         <Link
-          href="/parametres"
+          href="/parametres/societe"
           className="flex items-center gap-3 rounded-xl p-1.5 transition hover:bg-gray-100 dark:hover:bg-white/5 sm:pr-3"
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-yellow-500 text-xs font-bold text-gray-900">
