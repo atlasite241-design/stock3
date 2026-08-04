@@ -54,6 +54,14 @@ import { useLanguage } from '@/lib/i18n'
 
 const ticketNumber = (s: Sale) => `V${s.id.slice(-8).toUpperCase()}`
 
+/**
+ * Quantite affichee sur le ticket : entiere quand elle l'est.
+ * « 3.00 vis » n'a pas de sens ; « 7.5 m » de cable, si. Les decimales ne
+ * s'affichent donc que lorsqu'il y en a reellement.
+ */
+const fmtQty = (n: number): string =>
+  Number.isInteger(n) ? String(n) : String(Number(n.toFixed(3)))
+
 const ticketBarcode = (s: Sale) => {
   let n = ''
   for (const ch of s.id) n += ch.charCodeAt(0) % 10
@@ -967,7 +975,6 @@ function CaisseContent() {
                 <ShoppingCart className="h-6 w-6 shrink-0" />
                 <p className="text-2xl font-black uppercase tracking-tight">{settings.storeName}</p>
               </div>
-              <p className="mt-0.5 text-center text-[10px] tracking-widest text-gray-500">{t('posr_market_tag')}</p>
 
               <div className="my-3 border-t border-dashed border-gray-300" />
 
@@ -1002,7 +1009,7 @@ function CaisseContent() {
                 // de 100 » ne permet ni au client ni au commerçant de retrouver
                 // ce qui a été vendu.
                 <div key={`${i.productId}|${i.unitName ?? ''}|${n}`} className="mt-1 flex justify-between gap-1 text-gray-700">
-                  <span className="w-8 shrink-0 tabular-nums">{i.qty.toFixed(2)}</span>
+                  <span className="w-8 shrink-0 tabular-nums">{fmtQty(i.qty)}</span>
                   <span className="min-w-0 flex-1 px-1">
                     <span className="block truncate">{i.name}</span>
                     {i.unitFactor && i.unitFactor > 1 && (
@@ -1075,7 +1082,7 @@ function CaisseContent() {
               <div className="my-3 border-t border-dashed border-gray-300" />
 
               <p className="text-gray-700">
-                {t('posr_items_count')} {receipt.items.reduce((a, i) => a + i.qty, 0).toFixed(2)}
+                {t('posr_items_count')} {fmtQty(receipt.items.reduce((a, i) => a + i.qty, 0))}
               </p>
               <p className="text-gray-700">{t('posr_register_number')} POS01</p>
               <p className="text-gray-700">
