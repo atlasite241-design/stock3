@@ -4233,7 +4233,7 @@ const DICT = {
   nav_users_employees: { fr: 'Employés', ar: 'الموظفون' },
   nav_users_roles: { fr: 'Rôles', ar: 'الأدوار' },
   nav_users_permissions: { fr: 'Permissions', ar: 'الصلاحيات' },
-  nav_users_journal: { fr: "Journal d'activité", ar: 'سجل النشاط' },
+  nav_users_journal: { fr: 'Journal d’activité', ar: 'سجل النشاط' },
   usr_roles_title: { fr: 'Rôles', ar: 'الأدوار' },
   usr_roles_subtitle: { fr: 'Rôles disponibles et nombre de permissions accordées.', ar: 'الأدوار المتاحة وعدد الصلاحيات الممنوحة.' },
   usr_roles_col_role: { fr: 'Rôle', ar: 'الدور' },

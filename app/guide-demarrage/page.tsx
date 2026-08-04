@@ -36,6 +36,21 @@ const PHASES: Phase[] = [
       { id: 's2a', fr: '**Catalogue › Catégories / Sous-catégories / Marques / Unités** — vérifier/compléter.', ar: '**الكتالوج › الفئات / الفئات الفرعية / العلامات / الوحدات** — التحقق/الإكمال.' },
       { id: 's2b', fr: '**Catalogue › Produits** — ajouter manuellement **ou** importer en masse via **Paramètres › Sauvegarde › Import CSV**.', ar: '**الكتالوج › المنتجات** — الإضافة يدويًا **أو** الاستيراد بالجملة عبر **الإعدادات › النسخ الاحتياطي › استيراد CSV**.' },
       { id: 's2c', fr: 'Renseigner : nom, code-barres, catégorie, sous-catégorie, marque, unité, **prix d’achat HT**, prix de vente, stock min.', ar: 'إدخال: الاسم، الرمز الشريطي، الفئة، الفئة الفرعية، العلامة، الوحدة، **سعر الشراء**، سعر البيع، الحد الأدنى للمخزون.' },
+      { id: 's2d', fr: '**Après un import, dans cet ordre :** **Catalogue › Analyse du catalogue** — fusionner les doublons de code-barres. Leurs stocks s’additionnent, rien n’est perdu.', ar: '**بعد الاستيراد، وبهذا الترتيب:** **الكتالوج › تحليل الكتالوج** — دمج تكرارات الرمز الشريطي. تُجمع مخزوناتها ولا يُفقد شيء.' },
+      { id: 's2e', fr: '**Catalogue › Conversion en conditionnements** — une fiche « Cheville 100 pcs » décrit des BOÎTES, pas des chevilles : la conversion la découpe pour que vous puissiez vendre à la pièce.', ar: '**الكتالوج › التحويل إلى وحدات بيع** — بطاقة «خابور 100 قطعة» تصف علباً لا خوابير: التحويل يفصلها لتتمكنوا من البيع بالقطعة.' },
+      { id: 's2f', fr: '**Catalogue › État du catalogue** — mesurer ce qui manque encore. Corrigez dans l’ordre de la liste : les cent premières lignes couvrent l’essentiel des passages en caisse.', ar: '**الكتالوج › حالة الكتالوج** — قياس ما ينقص بعد. صحّحوا حسب ترتيب القائمة: السطور المائة الأولى تغطي معظم عمليات الأداء.' },
+      { id: 's2warn', warn: true, fr: 'Ne créez jamais une fiche parce que vous ne trouvez pas l’existante : cherchez d’abord par code-barres, puis par référence fournisseur. C’est ainsi qu’un catalogue passe de 19 000 à 86 000 lignes.', ar: 'لا تُنشئوا بطاقة لأنكم لم تجدوا الموجودة: ابحثوا أولاً بالرمز الشريطي ثم بمرجع المورد. هكذا ينتقل كتالوج من 19 ألفاً إلى 86 ألف سطر.' },
+    ],
+  },
+  {
+    n: '2b', accent: 'border-fuchsia-500', title: { fr: 'Vendre à la pièce et à la coupe', ar: 'البيع بالقطعة وبالقص' },
+    hint: { fr: 'Le cœur du métier de quincaillier', ar: 'جوهر مهنة الخردوات' },
+    steps: [
+      { id: 's2u1', fr: '**Catalogue › Produits › fiche produit › Conditionnements de vente** — déclarer comment l’article se vend : à la pièce, au sachet de 10, à la boîte de 100, au carton.', ar: '**الكتالوج › بطاقة المنتج › وحدات البيع** — تحديد كيفية بيع الصنف: بالقطعة، بكيس من 10، بعلبة من 100، بالكرتون.' },
+      { id: 's2u2', fr: 'Le **prix de chaque conditionnement se saisit librement** : un carton de 2 000 vis ne se vend pas 2 000 fois le prix pièce. C’est votre remise de volume, pas une multiplication.', ar: '**يُدخَل ثمن كل وحدة بحرية**: كرتون من 2000 برغي لا يُباع بـ2000 ضعف ثمن القطعة. هذا تخفيضكم على الكمية لا عملية ضرب.', },
+      { id: 's2u3', fr: 'Chaque conditionnement peut porter **son propre code-barres** — celui imprimé sur le carton. Le scanner ajoute un carton, pas une pièce.', ar: 'يمكن لكل وحدة أن تحمل **رمزها الشريطي الخاص** — المطبوع على الكرتون. مسحه يضيف كرتوناً لا قطعة.' },
+      { id: 's2u4', fr: 'Câble au mètre, peinture au litre, sable au kilo : cocher **Vendu en quantité fractionnée** sur la fiche. À laisser décoché pour tout ce qui se compte à l’unité.', ar: 'الكابل بالمتر، الصباغة باللتر، الرمل بالكيلو: أشّروا **يُباع بكميات جزئية** في البطاقة. اتركوه غير مؤشَّر لكل ما يُعدّ بالوحدة.' },
+      { id: 's2u5', warn: true, fr: 'Le stock reste tenu dans l’unité de base : vendre 3 boîtes de 100 en sort 300 pièces. Ne créez pas une fiche par conditionnement.', ar: 'يبقى المخزون محسوباً بالوحدة الأساسية: بيع 3 علب من 100 يُخرج 300 قطعة. لا تُنشئوا بطاقة لكل وحدة تعبئة.' },
     ],
   },
   {
@@ -83,7 +98,7 @@ const PHASES: Phase[] = [
     steps: [
       { id: 's7a', fr: '**Point de vente (POS) › Nouvelle vente** — scanner les produits, quantités/remises, client, mode de paiement, puis **Encaisser** → ticket ou facture.', ar: '**نقطة البيع › بيع جديد** — مسح المنتجات، الكميات/الخصومات، العميل، طريقة الدفع، ثم **التحصيل** ← تذكرة أو فاتورة.' },
       { id: 's7b', fr: '**Ventes › Devis** — créer un devis, générer le PDF, puis **Convertir en vente** (→ facture).', ar: '**المبيعات › عروض الأسعار** — إنشاء عرض، توليد PDF، ثم **التحويل إلى بيع** (← فاتورة).' },
-      { id: 's7c', fr: '**Ventes › Factures / Avoirs / Retours** et **Clients › Crédits / Fidélité** pour le suivi.', ar: '**المبيعات › الفواتير / إشعارات دائنة / المرتجعات** و **العملاء › الديون / الوفاء** للمتابعة.' },
+      { id: 's7c', fr: '**Ventes › Factures clients / Avoirs / Retours** et **Clients › Crédits / Fidélité** pour le suivi.', ar: '**المبيعات › الفواتير / إشعارات دائنة / المرتجعات** و **العملاء › الديون / الوفاء** للمتابعة.' },
     ],
   },
   {
@@ -92,6 +107,7 @@ const PHASES: Phase[] = [
       { id: 's8a', fr: '**Caisse › Dépenses / Recettes / Transfert d’argent** — trésorerie du jour.', ar: '**الصندوق › المصاريف / المداخيل / تحويل الأموال** — خزينة اليوم.' },
       { id: 's8b', fr: '**Caisse › Fin de journée** puis **Fermer la caisse** — comptage, écart, clôture.', ar: '**الصندوق › نهاية اليوم** ثم **إغلاق الصندوق** — الإحصاء، الفارق، الإقفال.' },
       { id: 's8c', fr: '**Rapports** — ventes, marges, stock, caisse, clients (+ export).', ar: '**التقارير** — المبيعات، الهوامش، المخزون، الصندوق، العملاء (+ تصدير).' },
+      { id: 's8d', fr: 'La mise en service s’arrête ici. Pour le rythme quotidien — ce qu’on ouvre le matin, le soir, chaque semaine — voyez **Aide › Guide d’exploitation**.', ar: 'ينتهي التشغيل هنا. أما الإيقاع اليومي — ما يُفتح صباحاً ومساءً وكل أسبوع — فانظروا **المساعدة › دليل التشغيل**.' },
     ],
   },
   {
