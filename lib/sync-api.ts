@@ -8,7 +8,15 @@
 
 export interface PullRow { collection: string; id: string; data: string; updated_at: number; deleted: number }
 export interface AllRow { collection: string; id: string; data: string; updated_at: number }
-export interface UpsertRow { collection: string; id: string; storeId: string | null; data: string; updated_at: number }
+export interface UpsertRow {
+  collection: string
+  id: string
+  storeId: string | null
+  data: string
+  updated_at: number
+  /** 1 = enregistrement supprimé : la ligne distante est marquée, pas effacée. */
+  deleted?: 0 | 1
+}
 
 /** Nombre maximal d'enregistrements acceptés par appel d'écriture (cf. route). */
 export const UPSERT_LIMIT = 200

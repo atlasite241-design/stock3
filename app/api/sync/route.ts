@@ -23,11 +23,18 @@ export const dynamic = 'force-dynamic'
 const PAGE = 500
 const MAX_UPSERT = 200
 
+/**
+ * Une suppression est un upsert avec deleted = 1 : la ligne reste, marquee.
+ *
+ * Sans cela, supprimer une fiche localement ne l'effacait JAMAIS du serveur.
+ * Le catalogue distant gardait tout, et le moindre retelechargement complet
+ * ressuscitait les fiches supprimees.
+ */
 const UPSERT = `INSERT INTO records (collection, id, store_id, data, updated_at, deleted)
-VALUES (?, ?, ?, ?, ?, 0)
+VALUES (?, ?, ?, ?, ?, ?)
 ON CONFLICT(collection, id) DO UPDATE SET
   store_id = excluded.store_id, data = excluded.data,
-  updated_at = excluded.updated_at, deleted = 0`
+  updated_at = excluded.updated_at, deleted = excluded.deleted`
 
 /**
  * Magasin d'un enregistrement, lu dans son JSON. On évite JSON.parse sur des
@@ -175,7 +182,7 @@ export async function POST(req: NextRequest) {
       }
     }
     const stmts = raw.map((x) => {
-      const r = x as { collection?: unknown; id?: unknown; storeId?: unknown; data?: unknown; updated_at?: unknown }
+      const r = x as { collection?: unknown; id?: unknown; storeId?: unknown; data?: unknown; updated_at?: unknown; deleted?: unknown }
       return {
         sql: UPSERT,
         args: [
@@ -184,6 +191,7 @@ export async function POST(req: NextRequest) {
           r.storeId == null || r.storeId === '' ? { type: 'null' as const } : { type: 'text' as const, value: String(r.storeId) },
           { type: 'text' as const, value: String(r.data ?? '') },
           { type: 'integer' as const, value: String(Number(r.updated_at) || Date.now()) },
+          { type: 'integer' as const, value: r.deleted ? '1' : '0' },
         ],
       }
     })

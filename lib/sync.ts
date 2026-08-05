@@ -175,6 +175,28 @@ async function pushOne(c: Collection, now: number): Promise<number> {
       batch.push(upsertStmtRaw(c.collection, rec.id, rec.storeId ?? null, data, now))
       if (batch.length >= UPSERT_LIMIT) await flush()
     }
+
+    /**
+     * SUPPRESSIONS.
+     *
+     * Jusqu'ici seuls les enregistrements PRÉSENTS étaient envoyés : effacer une
+     * fiche localement ne la retirait jamais du serveur. La base distante gardait
+     * tout, et le moindre retéléchargement complet ressuscitait les fiches
+     * supprimées — c'est ainsi qu'un catalogue nettoyé à 14 600 est remonté à
+     * 49 555.
+     *
+     * On ne marque que les identifiants que CET appareil a lui-même poussés puis
+     * n'a plus : sans empreinte précédente, on ne supprime rien. Un appareil dont
+     * le périmètre ne couvre qu'un magasin ne peut donc pas effacer les fiches
+     * des autres.
+     */
+    if (prev) {
+      for (const [id] of prev) {
+        if (nextSnapshot.has(id)) continue
+        batch.push({ collection: c.collection, id, storeId: null, data: '', updated_at: now, deleted: 1 })
+        if (batch.length >= UPSERT_LIMIT) await flush()
+      }
+    }
     await flush()
   }
 
@@ -568,7 +590,24 @@ async function verifierIntegrite(): Promise<void> {
     // Tolérance : un écart de quelques fiches est normal entre deux pulls.
     const ecart = nD - nL
     if (ecart <= 20 || ecart / nD < 0.01) return
-    pushLog(`⚠ catalogue incomplet : ${nL} local / ${nD} distant — retéléchargement`)
+
+    /**
+     * Un écart ne suffit PAS à conclure que le local est en retard.
+     *
+     * Tant que les suppressions n'étaient pas transmises, le distant conservait
+     * les fiches effacées ici : le local était donc légitimement plus petit, et
+     * retélécharger ressuscitait tout ce qu'on venait de nettoyer. C'est ce qui
+     * a fait remonter un catalogue de 14 600 à 49 555.
+     *
+     * On ne retélécharge donc que si le local est VIDE ou dérisoire. Dans les
+     * autres cas on signale l'écart et on laisse le pull incrémental faire son
+     * travail — il rapatrie les ajouts sans écraser les suppressions.
+     */
+    if (nL > 100 && nL / nD > 0.05) {
+      pushLog(`⚠ écart catalogue : ${nL} local / ${nD} distant (suppressions non encore propagées ?)`)
+      return
+    }
+    pushLog(`⚠ catalogue quasi vide : ${nL} local / ${nD} distant — retéléchargement`)
     await resyncFromStart()
     pushLog('✓ catalogue rétabli')
   } catch {
