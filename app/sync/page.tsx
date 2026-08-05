@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { countRemote, localCounts, pushAll, resyncFromStart, syncState } from '@/lib/sync'
 import { tursoConfigured } from '@/lib/sync'
 import { useDroguerie } from '@/lib/store'
+import { localStorageUsage } from '@/lib/pstore'
 
 export default function SyncPage() {
   // Monter useDroguerie déclenche startSync() (comme sur les vraies pages).
@@ -12,6 +13,10 @@ export default function SyncPage() {
   const [log, setLog] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const [rows, setRows] = useState<{ collection: string; local: number; remote: number }[]>([])
+  // Poids réel de localStorage. Son plafond (~5 Mo pour toute l'origine) est une
+  // panne silencieuse : une fois atteint, TOUTE écriture échoue — les réglages,
+  // la file hors-ligne, la caisse — sans que rien ne l'indique à l'écran.
+  const [stockage, setStockage] = useState<{ key: string; bytes: number }[]>([])
   const [error, setError] = useState('')
   const [tick, setTick] = useState(0)
 
@@ -20,6 +25,7 @@ export default function SyncPage() {
   const refresh = async () => {
     setError('')
     try {
+      setStockage(localStorageUsage())
       const local = localCounts()
       const remote = await countRemote()
       const rmap = new Map(remote.map((r) => [r.collection, r.n]))
@@ -133,6 +139,43 @@ export default function SyncPage() {
           <pre style={{ whiteSpace: 'pre-wrap', marginTop: 8, fontSize: 13 }}>{error}</pre>
         </div>
       )}
+
+      {/* Occupation de localStorage */}
+      <h2 style={{ fontSize: 16, fontWeight: 700, marginTop: 24 }}>Stockage local du navigateur</h2>
+      {(() => {
+        const total = stockage.reduce((a, x) => a + x.bytes, 0)
+        const PLAFOND = 5 * 1024 * 1024 // ~5 Mo, valeur usuelle par origine
+        const pct = Math.round((total / PLAFOND) * 100)
+        const ko = (b: number) => (b / 1024).toFixed(b < 10240 ? 1 : 0) + ' Ko'
+        return (
+          <>
+            <p style={{ fontSize: 13, color: pct >= 80 ? '#c2410c' : '#64748b' }}>
+              {ko(total)} utilisés sur ~5 Mo ({pct} %). Au-delà du plafond, plus aucune donnée
+              ne peut être enregistrée : les réglages et les ventes en attente sont perdus en silence.
+              Le catalogue produits, lui, vit dans IndexedDB et ne compte pas ici.
+            </p>
+            <table style={{ marginTop: 8, borderCollapse: 'collapse', width: '100%', fontSize: 14 }}>
+              <thead>
+                <tr style={{ textAlign: 'left', color: '#64748b', fontSize: 12 }}>
+                  <th style={{ padding: '6px 8px' }}>Clé</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'right' }}>Poids</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stockage.slice(0, 10).map((x) => (
+                  <tr key={x.key} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                    <td style={{ padding: '6px 8px', fontFamily: 'ui-monospace, monospace', fontSize: 12 }}>{x.key}</td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700, color: x.bytes > 512 * 1024 ? '#c2410c' : undefined }}>{ko(x.bytes)}</td>
+                  </tr>
+                ))}
+                {stockage.length > 10 && (
+                  <tr><td colSpan={2} style={{ padding: '6px 8px', fontSize: 12, color: '#64748b' }}>+ {stockage.length - 10} autres clés</td></tr>
+                )}
+              </tbody>
+            </table>
+          </>
+        )
+      })()}
 
       {/* Local vs Turso */}
       <h2 style={{ fontSize: 16, fontWeight: 700, marginTop: 24 }}>Local vs Turso</h2>

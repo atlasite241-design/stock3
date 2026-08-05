@@ -1,7 +1,7 @@
 'use client'
 
 import { apiAll, apiCounts, apiPull, apiUpsert, syncStatus, UPSERT_LIMIT, type UpsertRow } from './sync-api'
-import { storageGet, storageSet } from './pstore'
+import { kvGet, kvSet, storageGet, storageSet } from './pstore'
 
 /**
  * Synchronisation localStorage ⇄ Turso (table `records`).
@@ -96,34 +96,62 @@ function upsertStmtRaw(collection: string, id: string, storeId: string | null, d
 // 60 000+ chaînes JSON en mémoire faisait planter l'onglet lors d'un gros import.
 const pushedSnapshot = new Map<string, Map<string, string>>()
 
-// L'empreinte est PERSISTÉE en localStorage : sans ça, elle repartait vide à
-// chaque chargement de page → le 1er push de session renvoyait TOUT le catalogue
-// (des dizaines de milliers d'écritures), puis chaque appareil re-lisait ces
-// lignes au pull. Persistée, on ne pousse que ce qui a réellement changé depuis
-// la dernière session.
+// L'empreinte est PERSISTÉE : sans ça, elle repartait vide à chaque chargement
+// de page → le 1er push de session renvoyait TOUT le catalogue (des dizaines de
+// milliers d'écritures), puis chaque appareil re-lisait ces lignes au pull.
+//
+// Persistée dans INDEXEDDB, pas dans localStorage. L'empreinte d'un catalogue de 100 000 fiches pèse
+// ~4 Mo ; le plafond de localStorage est de ~5 Mo pour toute l'origine. Elle
+// saturait donc le quota et faisait échouer TOUTES les autres écritures —
+// « Setting the value of 'dp_settings' exceeded the quota » — c'est-à-dire les
+// réglages, la file hors-ligne et le catalogue lui-même. Elle vit désormais dans
+// IndexedDB, où la capacité se compte en centaines de mégaoctets.
 const SIG_PREFIX = 'dp_pushsig_'
 
-function loadSnapshots() {
-  if (typeof localStorage === 'undefined') return
+// Attente que les empreintes soient lues (IndexedDB, donc asynchrone).
+let empreintesPretes: Promise<void> | null = null
+
+async function loadSnapshots() {
   for (const c of COLLECTIONS) {
     try {
-      const raw = localStorage.getItem(SIG_PREFIX + c.collection)
+      const raw = await kvGet(SIG_PREFIX + c.collection)
       if (raw) pushedSnapshot.set(c.collection, new Map(JSON.parse(raw) as [string, string][]))
     } catch {
       /* empreinte illisible : on repart de zéro pour cette collection */
     }
   }
+  // Purge des empreintes de l'ancien emplacement : elles ne servent plus à rien
+  // et ce sont elles qui occupent le quota. À faire même quand IndexedDB a déjà
+  // repris la main, sinon la place n'est jamais rendue.
+  if (typeof localStorage !== 'undefined') {
+    const anciennes: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)
+      if (k && k.startsWith(SIG_PREFIX)) anciennes.push(k)
+    }
+    for (const k of anciennes) {
+      // Reprise avant suppression : ne pas perdre l'empreinte d'un appareil qui
+      // n'a encore rien migré, sinon son prochain envoi repousserait tout.
+      if (!pushedSnapshot.has(k.slice(SIG_PREFIX.length))) {
+        try {
+          const raw = localStorage.getItem(k)
+          if (raw) {
+            const col = k.slice(SIG_PREFIX.length)
+            pushedSnapshot.set(col, new Map(JSON.parse(raw) as [string, string][]))
+            void kvSet(k, raw)
+          }
+        } catch { /* illisible : on la jette */ }
+      }
+      try { localStorage.removeItem(k) } catch { /* ignore */ }
+    }
+  }
 }
 
 function saveSnapshot(collection: string) {
-  if (typeof localStorage === 'undefined') return
   const snap = pushedSnapshot.get(collection)
   if (!snap) return
-  try {
-    localStorage.setItem(SIG_PREFIX + collection, JSON.stringify([...snap]))
-  } catch {
-    /* quota : tant pis, l'empreinte mémoire suffit pour cette session */
-  }
+  // Écriture asynchrone : l'empreinte mémoire fait déjà foi pour cette session.
+  void kvSet(SIG_PREFIX + collection, JSON.stringify([...snap]))
 }
 
 // Signature compacte d'une chaîne : « longueur|hash32 ». La longueur ajoutée au
@@ -268,6 +296,9 @@ function markPending(collection: string, on: boolean) {
 }
 
 async function flushOne(c: Collection) {
+  // Aucun envoi tant que les empreintes ne sont pas chargées : sans elles, tout
+  // paraît nouveau et la collection entière repart vers Turso.
+  if (empreintesPretes) await empreintesPretes
   try {
     const n = await pushOne(c, Date.now())
     markPending(c.collection, false)
@@ -666,11 +697,40 @@ export function startSync() {
   // Confirme auprès du serveur que la synchro est configurée (sans bloquer).
   void refreshSyncConfig()
 
+  window.addEventListener('online', () => void flushDirty())
+
+  // Le pull tournait toutes les 4 s, même onglet en arrière-plan : c'est ce qui a
+  // consommé des centaines de millions de « rows read » chez Turso. On espace, et
+  // on ne lit rien quand l'onglet n'est pas visible (rattrapage au retour).
+  const safePull = () => void pull().catch((e) => pushLog(`✗ pull: ${e instanceof Error ? e.message : String(e)}`))
+  setInterval(() => {
+    if (typeof document !== 'undefined' && document.hidden) return
+    safePull()
+  }, 60000)
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) safePull()
+    })
+  }
+
+  void amorcer()
+}
+
+/**
+ * Amorçage : empreintes, puis PREMIÈRE LECTURE, puis premier envoi.
+ *
+ * Les empreintes viennent d'IndexedDB, donc de façon asynchrone. Rien ne doit
+ * partir avant qu'elles soient là : sans empreinte, `pushOne` considère tout
+ * comme nouveau et re-téléverse le catalogue entier — des dizaines de milliers
+ * d'écritures Turso à chaque ouverture d'onglet.
+ */
+async function amorcer() {
   // Empreinte anti-re-push : on charge celle de la session précédente. Pour les
   // collections sans empreinte (1re fois après cette mise à jour), on l'initialise
   // depuis le local — SAUF les collections « sales » (modifs non encore poussées).
   // Sans ça, le 1er push de session renvoyait TOUT le catalogue à chaque ouverture.
-  loadSnapshots()
+  empreintesPretes = loadSnapshots()
+  await empreintesPretes
   const dirty = new Set(loadPending())
   for (const c of COLLECTIONS) {
     if (c.singleton || pushedSnapshot.has(c.collection) || dirty.has(c.collection)) continue
@@ -687,8 +747,6 @@ export function startSync() {
       /* collection illisible : on la laissera se pousser normalement */
     }
   }
-
-  window.addEventListener('online', () => void flushDirty())
 
   // Auto-réparation : si le local n'a aucun produit, on télécharge tout depuis
   // Turso (SELECT complet, fiable) au lieu du pull incrémental — sinon on
@@ -709,20 +767,6 @@ export function startSync() {
    * Avec trois postes, chacun imposait sa vue à tour de rôle et rien ne
    * convergeait. On lit d'abord, on envoie ensuite ce qui reste réellement neuf.
    */
-  void first
-    .catch((e) => pushLog(`✗ pull initial: ${e instanceof Error ? e.message : String(e)}`))
-    .finally(() => void flushDirty())
-  // Le pull tournait toutes les 4 s, même onglet en arrière-plan : c'est ce qui a
-  // consommé des centaines de millions de « rows read » chez Turso. On espace, et
-  // on ne lit rien quand l'onglet n'est pas visible (rattrapage au retour).
-  const safePull = () => void pull().catch((e) => pushLog(`✗ pull: ${e instanceof Error ? e.message : String(e)}`))
-  setInterval(() => {
-    if (typeof document !== 'undefined' && document.hidden) return
-    safePull()
-  }, 60000)
-  if (typeof document !== 'undefined') {
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) safePull()
-    })
-  }
+  await first.catch((e) => pushLog(`✗ pull initial: ${e instanceof Error ? e.message : String(e)}`))
+  await flushDirty()
 }

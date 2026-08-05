@@ -117,14 +117,27 @@ const SHARED = new Set([
 ])
 
 export interface Scope {
+  /** Rôle, issu du cookie signé. L'administrateur n'est jamais restreint. */
+  role?: string
   /** Permissions effectives, embarquées dans la session signée. */
   perms: Set<string>
   /** Magasins autorisés. Vide = accès à tous (administrateur / gérant global). */
   storeIds: string[]
 }
 
-const holds = (need: string | string[], s: Scope): boolean =>
-  Array.isArray(need) ? need.some((p) => s.perms.has(p)) : s.perms.has(need)
+/**
+ * L'Administrateur détient TOUJOURS tout — comme côté client.
+ *
+ * Les permissions sont figées dans le cookie à la connexion. Une session ouverte
+ * avant l'ajout d'un module (les RH, par exemple) ne porte donc pas ses
+ * permissions, et le serveur refusait l'écriture avec `forbidden_collection` —
+ * bloquant toute la synchronisation d'un administrateur, sans qu'aucune
+ * reconnexion soit suggérée.
+ */
+const holds = (need: string | string[], s: Scope): boolean => {
+  if (s.role === 'Administrateur') return true
+  return Array.isArray(need) ? need.some((p) => s.perms.has(p)) : s.perms.has(need)
+}
 
 export const canRead = (collection: string, s: Scope): boolean => {
   if (!(collection in READ_PERM)) return false // collection inconnue : refus par défaut

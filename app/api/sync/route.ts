@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
 
   // Périmètre de la session : ce qu'elle a le droit de lire, d'écrire, et sur
   // quels magasins. Tout est issu du cookie SIGNÉ — rien ne vient du client.
-  const scope: Scope = { perms: new Set(session.perms ?? []), storeIds: session.storeIds ?? [] }
+  const scope: Scope = { role: session.role, perms: new Set(session.perms ?? []), storeIds: session.storeIds ?? [] }
 
   // --- pull : changements depuis un curseur horodaté ---
   if (op === 'pull') {

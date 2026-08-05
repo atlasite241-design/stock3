@@ -142,6 +142,57 @@ export function productsRemove(): void {
   try { if (typeof localStorage !== 'undefined') localStorage.removeItem(PRODUCTS_KEY) } catch {}
 }
 
+/**
+ * Réserve clé/valeur GÉNÉRIQUE dans la même base IndexedDB.
+ *
+ * localStorage est plafonné à ~5 Mo pour TOUTE l'origine : une seule valeur
+ * volumineuse (l'empreinte de synchronisation d'un catalogue de 100 000 fiches
+ * pèse ~4 Mo) suffit à faire échouer l'écriture de toutes les autres — les
+ * réglages, la caisse, la file d'attente hors-ligne. Ce qui est gros vit donc
+ * ici, où la capacité se compte en centaines de mégaoctets.
+ */
+export async function kvGet(key: string): Promise<string | null> {
+  const db = await openDB()
+  if (!db) return null
+  return new Promise((resolve) => {
+    let done = false
+    const finish = (v: string | null) => { if (!done) { done = true; resolve(v) } }
+    try {
+      const req = db.transaction(STORE, 'readonly').objectStore(STORE).get(key)
+      req.onsuccess = () => finish((req.result as string) ?? null)
+      req.onerror = () => finish(null)
+      setTimeout(() => finish(null), 6000)
+    } catch { finish(null) }
+  })
+}
+
+export async function kvSet(key: string, value: string): Promise<void> {
+  const db = await openDB()
+  if (!db) return
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE, 'readwrite')
+      tx.objectStore(STORE).put(value, key)
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => resolve()
+      tx.onabort = () => resolve()
+    } catch { resolve() }
+  })
+}
+
+/** Poids réel de localStorage, par clé — décroissant. Sert au diagnostic. */
+export function localStorageUsage(): { key: string; bytes: number }[] {
+  if (typeof localStorage === 'undefined') return []
+  const out: { key: string; bytes: number }[] = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i)
+    if (k == null) continue
+    // UTF-16 : chaque caractère occupe 2 octets, clé comprise.
+    out.push({ key: k, bytes: ((localStorage.getItem(k) || '').length + k.length) * 2 })
+  }
+  return out.sort((a, b) => b.bytes - a.bytes)
+}
+
 /** Routage localStorage-compatible : la clé produits passe par IndexedDB, le reste par localStorage. */
 export function storageGet(key: string): string | null {
   if (key === PRODUCTS_KEY) return productsGet()
