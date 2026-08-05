@@ -689,14 +689,29 @@ export function startSync() {
   }
 
   window.addEventListener('online', () => void flushDirty())
-  void flushDirty()
+
   // Auto-réparation : si le local n'a aucun produit, on télécharge tout depuis
   // Turso (SELECT complet, fiable) au lieu du pull incrémental — sinon on
   // enchaîne les pulls incrémentaux normaux.
   const first = localProductsEmpty()
     ? resyncFromStart().then(() => undefined)
     : pull().then(() => verifierIntegrite())
-  void first.catch((e) => pushLog(`✗ pull initial: ${e instanceof Error ? e.message : String(e)}`))
+
+  /**
+   * LIRE AVANT D'ÉCRIRE.
+   *
+   * L'envoi partait avant la première lecture. Un appareil resté en arrière
+   * pendant quelques jours poussait donc sa vue périmée AVANT de découvrir
+   * l'état réel : chaque envoi réécrivant `updated_at`, sa version ancienne
+   * écrasait la récente, et les fiches supprimées ailleurs qu'il détenait encore
+   * repartaient vers le serveur avec `deleted = 0` — ressuscitées.
+   *
+   * Avec trois postes, chacun imposait sa vue à tour de rôle et rien ne
+   * convergeait. On lit d'abord, on envoie ensuite ce qui reste réellement neuf.
+   */
+  void first
+    .catch((e) => pushLog(`✗ pull initial: ${e instanceof Error ? e.message : String(e)}`))
+    .finally(() => void flushDirty())
   // Le pull tournait toutes les 4 s, même onglet en arrière-plan : c'est ce qui a
   // consommé des centaines de millions de « rows read » chez Turso. On espace, et
   // on ne lit rien quand l'onglet n'est pas visible (rattrapage au retour).
