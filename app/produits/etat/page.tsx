@@ -111,17 +111,29 @@ function Content() {
       {res && (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Un pourcentage calculé sur zéro fiche n'existe pas. L'afficher à
+                100 % ferait lire « tout va bien » là où il n'y a rien à mesurer. */}
             <div className="glass-card p-4">
-              <p className={`text-3xl font-extrabold tabular-nums ${res.scoreComptoir >= 90 ? 'text-emerald-600 dark:text-emerald-400' : res.scoreComptoir >= 60 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                {res.scoreComptoir} %
+              <p className={`text-3xl font-extrabold tabular-nums ${
+                res.scoreComptoir === null ? 'text-gray-300 dark:text-zinc-700'
+                : res.scoreComptoir >= 90 ? 'text-emerald-600 dark:text-emerald-400'
+                : res.scoreComptoir >= 60 ? 'text-amber-600 dark:text-amber-400'
+                : 'text-rose-600 dark:text-rose-400'}`}>
+                {res.scoreComptoir === null ? '—' : `${res.scoreComptoir} %`}
               </p>
               <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-zinc-500">{t('ec_kpi_counter')}</p>
-              <p className="mt-0.5 text-[11px] text-gray-500 dark:text-zinc-400">{t('ec_kpi_counter_sub')}</p>
+              <p className="mt-0.5 text-[11px] text-gray-500 dark:text-zinc-400">
+                {res.scoreComptoir === null ? t('ec_kpi_na') : t('ec_kpi_counter_sub')}
+              </p>
             </div>
             <div className="glass-card p-4">
-              <p className="text-3xl font-extrabold tabular-nums text-gray-900 dark:text-white">{res.scoreComplet} %</p>
+              <p className={`text-3xl font-extrabold tabular-nums ${res.scoreComplet === null ? 'text-gray-300 dark:text-zinc-700' : 'text-gray-900 dark:text-white'}`}>
+                {res.scoreComplet === null ? '—' : `${res.scoreComplet} %`}
+              </p>
               <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-zinc-500">{t('ec_kpi_full')}</p>
-              <p className="mt-0.5 text-[11px] text-gray-500 dark:text-zinc-400">{t('ec_kpi_full_sub')}</p>
+              <p className="mt-0.5 text-[11px] text-gray-500 dark:text-zinc-400">
+                {res.scoreComplet === null ? t('ec_kpi_na') : t('ec_kpi_full_sub')}
+              </p>
             </div>
             <div className="glass-card p-4">
               <p className="text-3xl font-extrabold tabular-nums text-indigo-600 dark:text-indigo-400">{res.actifs.toLocaleString('fr-FR')}</p>
@@ -134,6 +146,12 @@ function Content() {
               <p className="mt-0.5 text-[11px] text-gray-500 dark:text-zinc-400">{t('ec_kpi_dormant_sub')}</p>
             </div>
           </div>
+
+          {res.actifs === 0 && res.total > 0 && (
+            <p className="rounded-xl border border-dashed border-amber-200 bg-amber-50/50 p-4 text-sm leading-relaxed text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/[0.06] dark:text-amber-300">
+              {t('ec_none_active')}
+            </p>
+          )}
 
           <div className="glass-card p-5">
             <p className="text-sm font-bold text-gray-900 dark:text-white">{t('ec_read')}</p>

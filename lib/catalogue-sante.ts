@@ -66,10 +66,15 @@ export interface EtatCatalogue {
   stockSeul: number
   dormants: number
   mesures: Mesure[]
-  /** Part des fiches ACTIVES sans aucun défaut bloquant. */
-  scoreComptoir: number
+  /**
+   * Part des fiches ACTIVES sans aucun défaut bloquant.
+   *
+   * `null` quand aucune fiche ne compte : afficher 100 % là où il n'y a rien à
+   * mesurer laisse croire que tout va bien, alors que le stock est vide.
+   */
+  scoreComptoir: number | null
   /** Part des fiches actives sans aucun défaut, toutes gravités confondues. */
-  scoreComplet: number
+  scoreComplet: number | null
   /** Fiches actives à corriger en priorité, les plus vendues d'abord. */
   chantier: {
     id: string
@@ -198,8 +203,8 @@ export function etatCatalogue(products: Product[], sales: Sale[], jours = 180): 
         valeurConcernee: e.valeur,
       }
     }).sort((a, b) => b.manquantActif - a.manquantActif),
-    scoreComptoir: actifs ? Math.round((sansDefautBloquant / actifs) * 100) : 100,
-    scoreComplet: actifs ? Math.round((sansAucunDefaut / actifs) * 100) : 100,
+    scoreComptoir: actifs ? Math.round((sansDefautBloquant / actifs) * 100) : null,
+    scoreComplet: actifs ? Math.round((sansAucunDefaut / actifs) * 100) : null,
     chantier,
     valeur: {
       total: totalValeur,

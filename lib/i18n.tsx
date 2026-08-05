@@ -1655,6 +1655,11 @@ const DICT = {
     fr: "La très grande majorité des fiches « actives » n'ont jamais été vendues : elles ne comptent que parce qu'un stock leur est attribué. Si ce stock vient d'un import et non d'un comptage réel, le chiffre des fiches actives est surévalué — et votre chantier est bien plus petit qu'il n'y paraît. Fiez-vous d'abord à la colonne des fiches vendues.",
     ar: 'الغالبية العظمى من البطاقات «النشطة» لم تُبَع قط: تُحتسب فقط لأن لها مخزوناً مسنداً. إذا كان هذا المخزون آتياً من استيراد لا من جرد فعلي، فرقم البطاقات النشطة مبالغ فيه — وورشكم أصغر بكثير مما يبدو. اعتمدوا أولاً على عمود البطاقات المبيعة.',
   },
+  ec_kpi_na: { fr: 'aucune fiche à mesurer', ar: 'لا توجد بطاقة للقياس' },
+  ec_none_active: {
+    fr: "Aucune fiche n'a de stock ni de vente : les deux pourcentages ci-dessus ne portent sur rien et s'affichent donc en tiret. Ce n'est pas que le catalogue est parfait — c'est qu'il est vide de stock. Vérifiez si vos quantités ont été perdues avant d'en conclure quoi que ce soit.",
+    ar: 'لا توجد بطاقة لها مخزون أو مبيعات: النسبتان أعلاه لا تستندان إلى شيء، لذا تظهران بشرطة. هذا لا يعني أن الكتالوج مثالي — بل أنه خالٍ من المخزون. تحققوا مما إذا كانت كمياتكم قد فُقدت قبل استخلاص أي نتيجة.',
+  },
   ec_val_title: { fr: 'Vraisemblance de la valorisation', ar: 'معقولية التقييم' },
   ec_val_total: { fr: 'Valeur du stock', ar: 'قيمة المخزون' },
   ec_val_mean: { fr: 'Moyenne par article', ar: 'المعدل لكل صنف' },
