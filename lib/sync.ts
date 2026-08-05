@@ -481,6 +481,19 @@ async function fetchAllRows(): Promise<{ collection: string; id: string; data: s
   return out
 }
 
+/**
+ * Retéléchargement complet.
+ *
+ * L'opération REMPLAÇAIT le local par le distant. Tout ce qui n'avait pas encore
+ * été poussé disparaissait donc sans un mot — une fiche créée à la main quelques
+ * secondes plus tôt, une saisie de stock en attente d'envoi. C'est ainsi qu'un
+ * produit saisi manuellement s'est volatilisé.
+ *
+ * Désormais on FUSIONNE. Un enregistrement local absent du serveur est de deux
+ * natures, et l'empreinte des envois les distingue :
+ *   — déjà poussé par cet appareil, donc supprimé ailleurs → on le laisse partir ;
+ *   — jamais poussé → il est neuf, on le garde, il partira au prochain envoi.
+ */
 export async function resyncFromStart(): Promise<number> {
   const rows = await fetchAllRows()
 
@@ -504,13 +517,34 @@ export async function resyncFromStart(): Promise<number> {
     }
     const arr: unknown[] = []
     const snap = new Map<string, string>()
+    const vusDistant = new Set<string>()
     for (const r of rows) {
       try {
         const rec = JSON.parse(r.data) as Row
         arr.push(rec)
-        if (rec && rec.id) snap.set(String(rec.id), sig(r.data))
+        if (rec && rec.id) {
+          snap.set(String(rec.id), sig(r.data))
+          vusDistant.add(String(rec.id))
+        }
       } catch {}
     }
+
+    // Rattrapage des enregistrements locaux jamais envoyés.
+    const dejaPousse = pushedSnapshot.get(colName)
+    try {
+      const brut = storageGet(c.key)
+      const locaux = brut ? (JSON.parse(brut) as Row[]) : []
+      if (Array.isArray(locaux)) {
+        for (const rec of locaux) {
+          if (!rec || !rec.id) continue
+          const id = String(rec.id)
+          if (vusDistant.has(id)) continue          // le serveur fait autorité
+          if (dejaPousse && dejaPousse.has(id)) continue // supprimé ailleurs : on l'accepte
+          arr.push(rec)                              // jamais poussé : on le garde
+        }
+      }
+    } catch { /* local illisible : le distant seul fait foi */ }
+
     storageSet(c.key, JSON.stringify(arr))
     // Local reconstruit à l'identique du remote → empreinte reconstruite pour NE
     // PAS re-pousser tout après une re-synchronisation.
