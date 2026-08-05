@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { countRemote, localCounts, pushAll, resyncFromStart, syncState } from '@/lib/sync'
 import { tursoConfigured } from '@/lib/sync'
 import { useDroguerie } from '@/lib/store'
-import { localStorageUsage } from '@/lib/pstore'
+import { initProductCache, localStorageUsage, productCacheReady } from '@/lib/pstore'
 
 export default function SyncPage() {
   // Monter useDroguerie déclenche startSync() (comme sur les vraies pages).
@@ -26,6 +26,11 @@ export default function SyncPage() {
     setError('')
     try {
       setStockage(localStorageUsage())
+      // Le catalogue vit dans IndexedDB, dont la lecture est asynchrone. Compter
+      // avant qu'elle soit terminée affichait « products : 0 » sur un poste qui
+      // en détenait des dizaines de milliers — un faux vide, précisément le
+      // symptôme qu'on cherche à diagnostiquer ici.
+      if (!productCacheReady()) await initProductCache()
       const local = localCounts()
       const remote = await countRemote()
       const rmap = new Map(remote.map((r) => [r.collection, r.n]))
