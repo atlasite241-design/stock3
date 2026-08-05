@@ -5,6 +5,7 @@ import { ImagePlus, X } from 'lucide-react'
 import Select from '@/components/Select'
 import { useLanguage } from '@/lib/i18n'
 import type { Store } from '@/lib/store'
+import { compresserImage } from '@/lib/image'
 
 export interface StoreFormValues {
   name: string
@@ -55,16 +56,19 @@ export default function StoreForm({
   const set = <K extends keyof StoreFormValues>(k: K, v: StoreFormValues[K]) => onChange({ ...value, [k]: v })
   const [uploading, setUploading] = useState(false)
 
-  const onLogo = (file?: File | null) => {
+  const onLogo = async (file?: File | null) => {
     if (!file) return
     setUploading(true)
-    const reader = new FileReader()
-    reader.onload = () => {
-      set('logoDataUrl', String(reader.result))
+    try {
+      // Réduite avant stockage : les logos de magasin s'accumulent dans une même
+      // clé (`dp_stores`), et une seule photo non réduite y suffit à saturer
+      // le quota du navigateur.
+      set('logoDataUrl', await compresserImage(file))
+    } catch {
+      /* image illisible : on ne remplace pas l'existante */
+    } finally {
       setUploading(false)
     }
-    reader.onerror = () => setUploading(false)
-    reader.readAsDataURL(file)
   }
 
   return (

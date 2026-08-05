@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { bootstrapFromRemote, startSync, syncOnSave } from './sync'
 import { syncStatus } from './sync-api'
 import { getSession } from './auth'
+import { compacterImagesStockees } from './storage-repair'
 import {
   PRODUCTS_KEY,
   initProductCache,
@@ -1779,6 +1780,17 @@ export function useDroguerieState() {
       // Charge d'abord le cache produits depuis IndexedDB (migre l'ancien localStorage).
       mark('idb', 'Lecture du catalogue local…')
       await initProductCache()
+
+      // Réparation du stockage AVANT toute écriture. Un logo enregistré en
+      // pleine résolution peut à lui seul dépasser le plafond de localStorage :
+      // tant qu'il n'est pas réduit, plus rien ne peut être enregistré — et
+      // surtout pas le rapatriement qui suit.
+      try {
+        const bilan = await compacterImagesStockees()
+        if (bilan.images > 0) {
+          console.info(`[boot] stockage: ${bilan.images} image(s) réduite(s), ${Math.round(bilan.octets / 1024)} Ko rendus (${bilan.cles.join(', ')})`)
+        }
+      } catch { /* la réparation ne doit jamais empêcher le démarrage */ }
 
       // Détection d'un CHANGEMENT DE BASE Turso (migration de compte/quota). Si la
       // base configurée diffère de celle mémorisée, les données locales appartiennent

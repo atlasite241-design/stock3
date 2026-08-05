@@ -9,6 +9,7 @@ import InvoiceDocument from '@/components/InvoiceDocument'
 import EAN13 from '@/components/EAN13'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
+import { compresserImage } from '@/lib/image'
 import { fmtDH, useDroguerie, type Settings } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
@@ -57,29 +58,29 @@ function Content() {
 
   const cancel = () => setForm(settings)
 
-  const onLogoChange = (e: React.ChangeEvent<HTMLInputElement>, key: 'logoDataUrl' | 'logoLightDataUrl' | 'signatureDataUrl') => {
+  const onLogoChange = async (e: React.ChangeEvent<HTMLInputElement>, key: 'logoDataUrl' | 'logoLightDataUrl' | 'signatureDataUrl') => {
     const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const next = { ...form, [key]: String(reader.result) }
-      setForm(next)
-      // Persistance immédiate : une image est lourde, on ne veut pas la perdre
-      // si l'utilisateur rafraîchit sans cliquer « Enregistrer ».
-      try {
-        saveSettings({
-          ...next,
-          storeName: next.storeName.trim() || 'Droguerie Pro',
-          currency: next.currency.trim() || 'MAD (DH)',
-          tva: Math.max(0, Number(next.tva) || 0),
-        })
-        toast(`✓ ${t('soc_logo_saved')}`)
-      } catch {
-        toast(t('soc_logo_too_large'), 'error')
-      }
-    }
-    reader.readAsDataURL(file)
     e.target.value = ''
+    if (!file) return
+    // Réduction AVANT stockage. Une photo de téléphone non réduite pèse plus que
+    // le quota entier de localStorage : elle saturait le navigateur et bloquait
+    // toute autre écriture — réglages, ventes en attente, catalogue.
+    const data = await compresserImage(file)
+    const next = { ...form, [key]: data }
+    setForm(next)
+    // Persistance immédiate : une image est lourde, on ne veut pas la perdre
+    // si l'utilisateur rafraîchit sans cliquer « Enregistrer ».
+    try {
+      saveSettings({
+        ...next,
+        storeName: next.storeName.trim() || 'Droguerie Pro',
+        currency: next.currency.trim() || 'MAD (DH)',
+        tva: Math.max(0, Number(next.tva) || 0),
+      })
+      toast(`✓ ${t('soc_logo_saved')}`)
+    } catch {
+      toast(t('soc_logo_too_large'), 'error')
+    }
   }
 
   // Impression d'une étiquette de test (iframe isolé, mêmes réglages que la Zebra).

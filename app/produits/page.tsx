@@ -15,7 +15,7 @@ import Select from '@/components/Select'
 import LocationPicker, { type ProductLocation } from '@/components/LocationPicker'
 import { useToast } from '@/components/Toast'
 import { exportProductsCSVAsync, fmtDH, roundQty, uniteDivisible, useDroguerie, type Product, type SaleUnit } from '@/lib/store'
-import { removeWhiteBackground } from '@/lib/image'
+import { compresserImage, recompresserSiLourde, removeWhiteBackground } from '@/lib/image'
 import { useLanguage } from '@/lib/i18n'
 import SaleUnitsEditor from '@/components/SaleUnitsEditor'
 
@@ -163,18 +163,21 @@ function ProduitsContent() {
     setModalOpen(true)
   }
 
-  const onImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => setForm((f) => ({ ...f, image: String(reader.result) }))
-    reader.readAsDataURL(file)
     e.target.value = ''
+    if (!file) return
+    // Réduite avant stockage : une photo de téléphone brute pèse plusieurs Mo,
+    // et ces images finissent toutes dans une seule clé de stockage.
+    const data = await compresserImage(file)
+    setForm((f) => ({ ...f, image: data }))
   }
 
   const cutoutImage = async () => {
     if (!form.image) return
-    const out = await removeWhiteBackground(form.image)
+    // Le détourage renvoie du PNG : sans recompression il repart bien plus lourd
+    // que la photo d'origine.
+    const out = await recompresserSiLourde(await removeWhiteBackground(form.image))
     setForm((f) => ({ ...f, image: out }))
     toast(`✓ ${t('prod_photo_cutout_done')}`)
   }
