@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { countRemote, localCounts, pushAll, resyncFromStart, syncState } from '@/lib/sync'
+import { countRemote, localCounts, pushAll, reparerImagesRecues, resyncFromStart, syncState } from '@/lib/sync'
 import { tursoConfigured } from '@/lib/sync'
 import { useDroguerie } from '@/lib/store'
 import { initProductCache, localStorageUsage, productCacheReady } from '@/lib/pstore'
@@ -68,6 +68,22 @@ export default function SyncPage() {
     }
   }
 
+  const reduireImages = async () => {
+    setBusy(true)
+    setError('')
+    setLog([])
+    try {
+      add('🖼 Réduction des images stockées…')
+      await reparerImagesRecues()
+      add('✓ Terminé. Voir le poids par clé ci-dessous.')
+      await refresh()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const addTestProduct = () => {
     addProduct({ name: 'TEST-' + Date.now().toString().slice(-5), barcode: '', category: 'Divers', brand: '', unit: 'Pièce', price: 1, cost: 0, stock: 1, minStock: 0 })
   }
@@ -95,6 +111,10 @@ export default function SyncPage() {
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 720, margin: '32px auto', padding: 24 }}>
       <h1 style={{ fontSize: 22, fontWeight: 800 }}>Synchronisation Turso — diagnostic</h1>
+      {/* Quelle version du code s'exécute réellement dans cet onglet. */}
+      <p style={{ fontSize: 12, color: '#64748b', marginTop: 4, fontFamily: 'ui-monospace, monospace' }}>
+        build {process.env.NEXT_PUBLIC_COMMIT || 'inconnu'}
+      </p>
 
       {/* État */}
       <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -122,6 +142,9 @@ export default function SyncPage() {
         </button>
         <button onClick={refresh} disabled={busy} style={{ padding: '10px 18px', borderRadius: 10, border: '1px solid #cbd5e1', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>
           Rafraîchir les compteurs
+        </button>
+        <button onClick={reduireImages} disabled={busy} style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: '#ea580c', color: '#fff', fontWeight: 700, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+          🖼 Réduire les images stockées
         </button>
         <button onClick={addTestProduct} style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
           ➕ Ajouter un produit test

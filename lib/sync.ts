@@ -2,6 +2,7 @@
 
 import { apiAll, apiCounts, apiPull, apiUpsert, syncStatus, UPSERT_LIMIT, type UpsertRow } from './sync-api'
 import { kvGet, kvSet, storageGet, storageSet } from './pstore'
+import { compacterImagesStockees } from './storage-repair'
 
 /**
  * Synchronisation localStorage ⇄ Turso (table `records`).
@@ -485,6 +486,30 @@ async function pullInner(): Promise<void> {
     // On transmet les collections réellement modifiées : le store ne recharge
     // ainsi que ce qui a changé (recharger les produits = parser ~15 Mo).
     window.dispatchEvent(new CustomEvent('droguerie-sync-pull', { detail: { collections: changedCols } }))
+    await reparerImagesRecues()
+  }
+}
+
+/**
+ * Réduit les images arrivées du serveur, puis renvoie la version allégée.
+ *
+ * Réparer le stockage local au démarrage ne suffisait pas : le serveur détient
+ * lui aussi le logo en pleine résolution, et le pull suivant le réécrivait
+ * aussitôt en local — le quota repassait à 126 % dans la minute. On compacte
+ * donc APRÈS chaque réception, et on repousse le résultat pour que la copie
+ * distante soit corrigée à son tour. Une seule tournée suffit à converger.
+ */
+export async function reparerImagesRecues(): Promise<void> {
+  try {
+    const bilan = await compacterImagesStockees()
+    if (bilan.images === 0) return
+    pushLog(`🖼 ${bilan.images} image(s) réduite(s), ${Math.round(bilan.octets / 1024)} Ko rendus`)
+    for (const cle of bilan.cles) {
+      const c = KEY_TO_COL.get(cle)
+      if (c) await flushOne(c) // la version allégée remplace celle du serveur
+    }
+  } catch {
+    /* la réparation ne doit jamais faire échouer une synchro */
   }
 }
 
@@ -587,6 +612,7 @@ export async function resyncFromStart(): Promise<number> {
   setCursor(maxTs)
   pushLog(`↺ re-synchronisation complète : ${total} enregistrements`)
   window.dispatchEvent(new CustomEvent('droguerie-sync-pull'))
+  await reparerImagesRecues()
   return total
 }
 
@@ -627,6 +653,7 @@ export async function bootstrapFromRemote(): Promise<boolean> {
   for (const [collection, snap] of snaps) { pushedSnapshot.set(collection, snap); saveSnapshot(collection) }
   setCursor(maxTs)
   pushLog(`⇣ amorçage depuis le serveur : ${rows.length} enregistrements`)
+  await reparerImagesRecues()
   return true
 }
 
