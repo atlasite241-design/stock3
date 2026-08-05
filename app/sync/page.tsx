@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { countRemote, localCounts, pushAll, reparerImagesRecues, resyncFromStart, syncState } from '@/lib/sync'
+import { apiMigrate } from '@/lib/sync-api'
 import { tursoConfigured } from '@/lib/sync'
 import { useDroguerie } from '@/lib/store'
 import { initProductCache, localStorageUsage, productCacheReady } from '@/lib/pstore'
@@ -12,7 +13,9 @@ export default function SyncPage() {
 
   const [log, setLog] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
-  const [rows, setRows] = useState<{ collection: string; local: number; remote: number }[]>([])
+  // `remote: null` = pas encore compté. Le COUNT distant balaie toute la table :
+  // il ne part plus au montage, seulement sur clic explicite.
+  const [rows, setRows] = useState<{ collection: string; local: number; remote: number | null }[]>([])
   // Poids réel de localStorage. Son plafond (~5 Mo pour toute l'origine) est une
   // panne silencieuse : une fois atteint, TOUTE écriture échoue — les réglages,
   // la file hors-ligne, la caisse — sans que rien ne l'indique à l'écran.
@@ -21,6 +24,13 @@ export default function SyncPage() {
   const [tick, setTick] = useState(0)
 
   const add = (m: string) => setLog((l) => [...l, m])
+
+  /** Comptage LOCAL seul : aucune requête serveur, donc aucun coût de lecture. */
+  const refreshLocal = async () => {
+    setStockage(localStorageUsage())
+    if (!productCacheReady()) await initProductCache()
+    setRows(localCounts().map((l) => ({ collection: l.collection, local: l.n, remote: null })))
+  }
 
   const refresh = async () => {
     setError('')
@@ -46,7 +56,7 @@ export default function SyncPage() {
     // la page restait ouverte. Les compteurs se rafraîchissent maintenant via le
     // bouton « Rafraîchir les compteurs ». Le tick ne fait qu'un re-rendu léger
     // pour montrer le journal de synchro en direct (aucune requête DB).
-    void refresh()
+    void refreshLocal()
     const id = setInterval(() => setTick((t) => t + 1), 2000)
     return () => clearInterval(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -61,6 +71,21 @@ export default function SyncPage() {
       const n = await resyncFromStart()
       add(`✓ Terminé — ${n} enregistrement(s) rapatrié(s). Données à jour.`)
       await refresh()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const migrer = async () => {
+    setBusy(true)
+    setError('')
+    setLog([])
+    try {
+      add('⚙ Création des index manquants sur la base…')
+      const n = await apiMigrate()
+      add(`✓ ${n} index vérifiés/créés. Les lectures de synchro cessent de balayer toute la table.`)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -143,6 +168,9 @@ export default function SyncPage() {
         <button onClick={refresh} disabled={busy} style={{ padding: '10px 18px', borderRadius: 10, border: '1px solid #cbd5e1', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>
           Rafraîchir les compteurs
         </button>
+        <button onClick={migrer} disabled={busy} style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: '#0f766e', color: '#fff', fontWeight: 700, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+          ⚙ Créer les index
+        </button>
         <button onClick={reduireImages} disabled={busy} style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: '#ea580c', color: '#fff', fontWeight: 700, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}>
           🖼 Réduire les images stockées
         </button>
@@ -207,7 +235,11 @@ export default function SyncPage() {
 
       {/* Local vs Turso */}
       <h2 style={{ fontSize: 16, fontWeight: 700, marginTop: 24 }}>Local vs Turso</h2>
-      <p style={{ fontSize: 13, color: '#64748b' }}>Une différence (local &gt; Turso) signale un changement pas encore synchronisé.</p>
+      <p style={{ fontSize: 13, color: '#64748b' }}>
+        Une différence (local &gt; Turso) signale un changement pas encore synchronisé. La colonne
+        Turso reste à « — » tant qu'on ne la demande pas : ce comptage balaie toute la table
+        distante, et il ne doit pas partir tout seul à chaque ouverture de la page.
+      </p>
       <table style={{ marginTop: 8, borderCollapse: 'collapse', width: '100%', fontSize: 14 }}>
         <thead>
           <tr style={{ textAlign: 'left', color: '#64748b', fontSize: 12 }}>
@@ -218,12 +250,14 @@ export default function SyncPage() {
         </thead>
         <tbody>
           {rows.map((r) => {
-            const diff = r.local !== r.remote
+            const diff = r.remote != null && r.local !== r.remote
             return (
               <tr key={r.collection} style={{ borderBottom: '1px solid #e2e8f0', background: diff ? '#fff7ed' : undefined }}>
                 <td style={{ padding: '6px 8px' }}>{r.collection}</td>
                 <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700 }}>{r.local}</td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700, color: diff ? '#c2410c' : '#166534' }}>{r.remote}</td>
+                <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700, color: diff ? '#c2410c' : '#166534' }}>
+                  {r.remote == null ? '—' : r.remote}
+                </td>
               </tr>
             )
           })}

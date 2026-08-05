@@ -15,6 +15,14 @@ CREATE TABLE IF NOT EXISTS records (
 );
 CREATE INDEX IF NOT EXISTS idx_records_sync  ON records (collection, updated_at);
 CREATE INDEX IF NOT EXISTS idx_records_store ON records (collection, store_id, updated_at);
+-- Index du PULL. Les deux précédents sont préfixés par `collection` ; la requête
+-- de synchronisation, elle, ne filtre PAS sur la collection :
+--   WHERE updated_at > ? OR (updated_at = ? AND id > ?) ORDER BY updated_at, id
+-- Aucun des deux n'était donc utilisable, et chaque pull faisait un balayage
+-- COMPLET de la table. À 60 pulls/heure sur 106 880 lignes, cela représente
+-- 6,4 millions de lignes lues par heure et par onglet ouvert — l'essentiel du
+-- quota de lecture consommé. Avec cet index, un pull ne lit que ce qui a changé.
+CREATE INDEX IF NOT EXISTS idx_records_pull  ON records (updated_at, id);
 
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY, name TEXT NOT NULL, phone TEXT, email TEXT UNIQUE,

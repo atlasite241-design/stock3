@@ -48,6 +48,12 @@ async function call<T>(payload: Record<string, unknown>): Promise<T> {
   return json
 }
 
+/** Crée les index manquants sur la base (idempotent, administrateur seulement). */
+export async function apiMigrate(): Promise<number> {
+  const r = await call<{ n: number }>({ op: 'migrate' })
+  return Number(r.n) || 0
+}
+
 let statusCache: { configured: boolean; dbId: string } | null = null
 
 /** Synchro configurée côté serveur ? (mémoïsé pour la session) */

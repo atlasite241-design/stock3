@@ -46,6 +46,22 @@ function storeOf(data: string): string | null {
   return m ? m[1] : null
 }
 
+/**
+ * Index de la table `records`. `CREATE INDEX IF NOT EXISTS` est idempotent :
+ * l'opération peut être rejouée sans risque.
+ *
+ * `idx_records_pull` est le plus important et manquait. Les deux autres sont
+ * préfixés par `collection`, or la requête de pull ne filtre pas dessus : SQLite
+ * n'avait aucun index utilisable et balayait la table ENTIÈRE à chaque lecture,
+ * toutes les 60 secondes. Sur 106 880 lignes, cela consommait des millions de
+ * lignes lues par heure et par onglet.
+ */
+const INDEXES = [
+  'CREATE INDEX IF NOT EXISTS idx_records_pull  ON records (updated_at, id)',
+  'CREATE INDEX IF NOT EXISTS idx_records_sync  ON records (collection, updated_at)',
+  'CREATE INDEX IF NOT EXISTS idx_records_store ON records (collection, store_id, updated_at)',
+]
+
 type Cell = { value: string } | undefined
 const txt = (c: Cell) => String(c?.value ?? '')
 const num = (c: Cell) => Number(c?.value ?? 0)
@@ -198,6 +214,16 @@ export async function POST(req: NextRequest) {
     const r = await tursoExec(stmts)
     if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 502 })
     return NextResponse.json({ ok: true, n: stmts.length })
+  }
+
+  // --- migrate : (re)crée les index. Idempotent, réservé à l'administrateur ---
+  if (op === 'migrate') {
+    if (session.role !== 'Administrateur') {
+      return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 })
+    }
+    const r = await tursoExec(INDEXES.map((sql) => ({ sql })))
+    if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 502 })
+    return NextResponse.json({ ok: true, n: INDEXES.length })
   }
 
   return NextResponse.json({ ok: false, error: 'unknown_op' }, { status: 400 })
