@@ -4028,6 +4028,7 @@ const DICT = {
   imp_pick_import: { fr: 'Importer', ar: 'استيراد' },
   imp_pick_products: { fr: 'produits sélectionnés', ar: 'منتجات محددة' },
   imp_pick_in_file: { fr: 'produits dans le fichier', ar: 'منتجات في الملف' },
+  imp_pick_more: { fr: 'produits plus bas — continuez à défiler', ar: 'منتجات أخرى بالأسفل — تابع التمرير' },
   imp_pick_none_selected: { fr: 'Aucune sélection', ar: 'لا يوجد تحديد' },
   imp_pick_title_prod: { fr: 'Choisir les produits', ar: 'اختر المنتجات' },
   imp_pick_desc_prod: { fr: 'Ajuste la sélection produit par produit avant l’import.', ar: 'عدّل التحديد منتجًا بمنتج قبل الاستيراد.' },

@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react'
 import { Check, ChevronLeft, FolderTree, Search, Upload, X } from 'lucide-react'
 import Modal from './Modal'
 import { useLanguage } from '@/lib/i18n'
-import Pagination from './Pagination'
 
 export interface PickerRow {
   name?: string
@@ -13,7 +12,14 @@ export interface PickerRow {
   subcategory?: string
 }
 
-const PAGE_SIZE = 50
+/*
+ * Pas de pagination ici : la liste defile en continu et se complete toute
+ * seule en approchant du bas. On ne REND pas les 14 000 lignes d'un coup —
+ * autant de cases a cocher fige le navigateur — on en rend une tranche qui
+ * grandit au fil du defilement.
+ */
+const LIMITE_INITIALE = 100
+const LIMITE_PAS = 200
 
 /**
  * Sélection en trois temps avant un import CSV :
@@ -42,7 +48,7 @@ export default function ImportPicker<T extends PickerRow>({
   const [candidates, setCandidates] = useState<number[]>([])
   const [chosen, setChosen] = useState<Set<number>>(new Set())
   const [query, setQuery] = useState('')
-  const [page, setPage] = useState(1)
+  const [limite, setLimite] = useState(LIMITE_INITIALE)
   const [replace, setReplace] = useState(true)
 
   const catName = (r: PickerRow) => (r.category || '').trim() || '—'
@@ -93,8 +99,7 @@ export default function ImportPicker<T extends PickerRow>({
     })
   }, [candidates, rows, q])
 
-  const pageCount = Math.max(1, Math.ceil(visibleProds.length / PAGE_SIZE))
-  const pageItems = visibleProds.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const affiches = visibleProds.slice(0, limite)
 
   const selectedCount = useMemo(() => {
     if (step === 'cat') {
@@ -144,7 +149,7 @@ export default function ImportPicker<T extends PickerRow>({
     setCandidates(cand)
     setChosen(pre)
     setQuery('')
-    setPage(1)
+    setLimite(LIMITE_INITIALE)
     setStep('prod')
   }
 
@@ -152,7 +157,7 @@ export default function ImportPicker<T extends PickerRow>({
 
   const reset = () => {
     setStep('cat'); setCats(new Set()); setSubs(new Set()); setChosen(new Set())
-    setCandidates([]); setQuery(''); setPage(1); setMaxPerSub(20); setReplace(true)
+    setCandidates([]); setQuery(''); setLimite(LIMITE_INITIALE); setMaxPerSub(20); setReplace(true)
   }
   const cancel = () => { reset(); onCancel() }
 
@@ -179,7 +184,7 @@ export default function ImportPicker<T extends PickerRow>({
           <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             value={query}
-            onChange={(e) => { setQuery(e.target.value); setPage(1) }}
+            onChange={(e) => { setQuery(e.target.value); setLimite(LIMITE_INITIALE) }}
             placeholder={t('imp_pick_search')}
             className="input-field pl-10"
           />
@@ -210,7 +215,18 @@ export default function ImportPicker<T extends PickerRow>({
         </div>
       )}
 
-      <div className="mt-3 max-h-[42vh] overflow-y-auto rounded-xl border border-gray-100 dark:border-white/10">
+      <div
+        className="mt-3 max-h-[42vh] overflow-y-auto rounded-xl border border-gray-100 dark:border-white/10"
+        onScroll={(e) => {
+          if (step !== 'prod' || limite >= visibleProds.length) return
+          const el = e.currentTarget
+          // 300 px d'avance : la suite arrive avant que l'utilisateur ne bute
+          // sur le fond de la liste.
+          if (el.scrollTop + el.clientHeight >= el.scrollHeight - 300) {
+            setLimite((l) => l + LIMITE_PAS)
+          }
+        }}
+      >
         {step === 'cat' &&
           visibleCats.map(([c, n]) => (
             <label key={c} className="flex cursor-pointer items-center gap-3 border-b border-gray-50 px-4 py-2.5 last:border-0 hover:bg-amber-50/40 dark:border-white/5 dark:hover:bg-white/5">
@@ -237,7 +253,7 @@ export default function ImportPicker<T extends PickerRow>({
           ))}
 
         {step === 'prod' &&
-          pageItems.map((i) => {
+          affiches.map((i) => {
             const r = rows[i]
             return (
               <label key={i} className="flex cursor-pointer items-center gap-3 border-b border-gray-50 px-4 py-2.5 last:border-0 hover:bg-amber-50/40 dark:border-white/5 dark:hover:bg-white/5">
@@ -250,18 +266,13 @@ export default function ImportPicker<T extends PickerRow>({
               </label>
             )
           })}
-      </div>
 
-      {step === 'prod' && (
-        <Pagination
-          accent="bleu"
-          page={page}
-          pageCount={pageCount}
-          total={visibleProds.length}
-          onChange={setPage}
-          className="mt-2"
-        />
-      )}
+        {step === 'prod' && visibleProds.length > limite && (
+          <div className="px-4 py-2.5 text-center text-xs text-gray-400 tabular-nums dark:text-zinc-500">
+            {(visibleProds.length - limite).toLocaleString('fr-FR')} {t('imp_pick_more')}
+          </div>
+        )}
+      </div>
 
       <div className="mt-3 flex items-center justify-between text-sm">
         <span className="text-gray-500 tabular-nums dark:text-zinc-400">
@@ -288,7 +299,7 @@ export default function ImportPicker<T extends PickerRow>({
         <button onClick={cancel} className="btn-secondary">{t('imp_pick_cancel')}</button>
         {step !== 'cat' && (
           <button
-            onClick={() => { setQuery(''); setPage(1); setStep(step === 'prod' ? 'sub' : 'cat') }}
+            onClick={() => { setQuery(''); setLimite(LIMITE_INITIALE); setStep(step === 'prod' ? 'sub' : 'cat') }}
             className="btn-secondary"
           >
             <ChevronLeft className="h-4 w-4" />
