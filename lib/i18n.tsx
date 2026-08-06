@@ -4620,6 +4620,12 @@ const DICT = {
   spay_receipt_amount: { fr: 'MONTANT PAYÉ', ar: 'المبلغ المدفوع' },
   spay_print: { fr: 'Imprimer', ar: 'طباعة' },
   spay_close: { fr: 'Fermer', ar: 'إغلاق' },
+  pag_page: { fr: 'Page', ar: 'صفحة' },
+  pag_results: { fr: 'Résultats', ar: 'النتائج' },
+  pag_first: { fr: 'Première page', ar: 'الصفحة الأولى' },
+  pag_prev: { fr: 'Page précédente', ar: 'الصفحة السابقة' },
+  pag_next: { fr: 'Page suivante', ar: 'الصفحة التالية' },
+  pag_last: { fr: 'Dernière page', ar: 'الصفحة الأخيرة' },
 } as const
 
 export type TKey = keyof typeof DICT

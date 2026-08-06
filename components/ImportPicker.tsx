@@ -1,9 +1,10 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Check, ChevronLeft, ChevronRight, FolderTree, Search, Upload, X } from 'lucide-react'
+import { Check, ChevronLeft, FolderTree, Search, Upload, X } from 'lucide-react'
 import Modal from './Modal'
 import { useLanguage } from '@/lib/i18n'
+import Pagination from './Pagination'
 
 export interface PickerRow {
   name?: string
@@ -251,18 +252,14 @@ export default function ImportPicker<T extends PickerRow>({
           })}
       </div>
 
-      {step === 'prod' && pageCount > 1 && (
-        <div className="mt-2 flex items-center justify-between">
-          <p className="text-xs text-gray-500 tabular-nums dark:text-zinc-400">{visibleProds.length} · {page}/{pageCount}</p>
-          <div className="flex gap-1">
-            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10">
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={page === pageCount} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10">
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+      {step === 'prod' && (
+        <Pagination
+          page={page}
+          pageCount={pageCount}
+          total={visibleProds.length}
+          onChange={setPage}
+          className="mt-2"
+        />
       )}
 
       <div className="mt-3 flex items-center justify-between text-sm">
