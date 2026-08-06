@@ -31,6 +31,15 @@ export interface PaginationProps {
   className?: string
 }
 
+/*
+ * Couleur des digits : celle du THEME ACTIF (Parametres > Theme), pas un bleu
+ * fige. --c-amber-400 est posee sur <html> par lib/primary et suit le
+ * prereglage choisi (ambre, violet, sarcelle, rose, bleu ou personnalise) —
+ * les classes amber-* de Tailwind pointent sur les memes variables.
+ * SevenSegment l'applique via style : var() ne passe pas dans un attribut SVG.
+ */
+const COULEUR_THEME = 'rgb(var(--c-amber-400))'
+
 export default function Pagination({
   page,
   pageCount,
@@ -76,18 +85,18 @@ export default function Pagination({
       {/* --- Position et volume, en afficheur --- */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 dark:border-white/10 dark:bg-black/30">
-          <span className="h-1.5 w-1.5 rounded-full bg-sky-400 shadow-[0_0_6px] shadow-sky-400" aria-hidden="true" />
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_6px] shadow-amber-400" aria-hidden="true" />
           <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400 dark:text-zinc-500">
             {t('pag_page')}
           </span>
-          <SevenSegment value={page} size={18} couleur="#38bdf8" className="text-gray-400 dark:text-zinc-600" />
+          <SevenSegment value={page} size={18} couleur={COULEUR_THEME} className="text-gray-400 dark:text-zinc-600" />
           <span className="text-gray-300 dark:text-zinc-700" aria-hidden="true">/</span>
-          <SevenSegment value={pageCount} size={18} couleur="#38bdf8" className="text-gray-400 dark:text-zinc-600" />
+          <SevenSegment value={pageCount} size={18} couleur={COULEUR_THEME} className="text-gray-400 dark:text-zinc-600" />
         </div>
 
         {total !== undefined && (
           <div className="leading-none">
-            <SevenSegment value={total} size={20} couleur="#38bdf8" className="text-gray-400 dark:text-zinc-600" />
+            <SevenSegment value={total} size={20} couleur={COULEUR_THEME} className="text-gray-400 dark:text-zinc-600" />
             <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400 dark:text-zinc-500">
               {t('pag_results')}
             </div>
@@ -112,11 +121,11 @@ export default function Pagination({
             aria-current={n === page ? 'page' : undefined}
             className={
               n === page
-                ? 'inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-sky-400 bg-sky-400/10 px-1 font-semibold text-sky-500 shadow-[0_0_10px_-2px] shadow-sky-400/60 dark:text-sky-300'
+                ? 'inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-amber-400 bg-amber-400/10 px-1 font-semibold text-amber-500 shadow-[0_0_10px_-2px] shadow-amber-400/60 dark:text-amber-300'
                 : btn + ' min-w-8 px-1'
             }
           >
-            <SevenSegment value={n} size={14} couleur={n === page ? '#38bdf8' : 'currentColor'} fantome={n === page ? 0.16 : 0.1} />
+            <SevenSegment value={n} size={14} couleur={n === page ? COULEUR_THEME : 'currentColor'} fantome={n === page ? 0.16 : 0.1} />
           </button>
         ))}
 

@@ -80,11 +80,16 @@ function Digit({ char, couleur, fantome, taille }: DigitProps) {
           <path
             key={nom}
             d={d}
-            fill={couleur}
             /* Les segments éteints restent visibles, très faiblement : c'est
-               ce qui distingue un afficheur d'un simple texte coloré. */
-            opacity={actif ? 1 : fantome}
-            style={actif ? { filter: `drop-shadow(0 0 ${taille / 12}px ${couleur})` } : undefined}
+               ce qui distingue un afficheur d'un simple texte coloré.
+               Le remplissage passe par style et non par l'attribut fill : les
+               variables CSS — dont la couleur du thème actif — ne sont pas
+               substituées dans les attributs de présentation SVG. */
+            style={{
+              fill: couleur,
+              opacity: actif ? 1 : fantome,
+              ...(actif ? { filter: `drop-shadow(0 0 ${taille / 12}px ${couleur})` } : {}),
+            }}
           />
         )
       })}
