@@ -254,6 +254,7 @@ export default function ImportPicker<T extends PickerRow>({
 
       {step === 'prod' && (
         <Pagination
+          accent="bleu"
           page={page}
           pageCount={pageCount}
           total={visibleProds.length}
