@@ -307,10 +307,16 @@ function ProduitsContent() {
         transition={{ delay: 0.1, duration: 0.4 }}
         className="glass-card print-area overflow-hidden"
       >
-        <div className="overflow-x-auto">
+        {/*
+         * max-h + overflow-auto : le tableau défile dans son propre cadre et
+         * l'en-tête (thead-fixe) reste visible — coller à la page est
+         * impossible, le conteneur horizontal étant déjà un conteneur de
+         * défilement. À l'impression, le cadre disparaît (print:).
+         */}
+        <div className="max-h-[70vh] overflow-auto print:max-h-none print:overflow-visible">
           <table className="w-full min-w-[980px]">
-            <thead>
-              <tr className="border-b border-gray-100 dark:border-white/10 text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500">
+            <thead className="thead-fixe">
+              <tr className="text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500">
                 <th className="px-5 py-3.5">{t('prod_col_product')}</th>
                 <th className="px-5 py-3.5">{t('prod_col_category')}</th>
                 <th className="px-5 py-3.5">{t('prod_col_subcategory')}</th>

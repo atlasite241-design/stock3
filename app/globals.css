@@ -124,6 +124,24 @@ table [contenteditable='true'] {
     @apply transition-all duration-300 hover:-translate-y-0.5 hover:border-amber-300/70 hover:shadow-md dark:hover:border-amber-500/30;
   }
 
+  /*
+   * En-tête de tableau qui reste visible au défilement. S'applique au <thead>,
+   * le conteneur du tableau devant défiler lui-même (max-h + overflow-auto) :
+   * `sticky` colle au plus proche conteneur défilant, et le conteneur
+   * horizontal (overflow-x-auto) en est déjà un — coller à la page est donc
+   * impossible sans casser le défilement horizontal sur mobile.
+   *
+   * Le trait sous l'en-tête est une ombre interne, pas une bordure : avec
+   * border-collapse, la bordure du <tr> reste avec les lignes au lieu de
+   * voyager avec l'en-tête collé.
+   */
+  .thead-fixe th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    @apply bg-white shadow-[inset_0_-1px_0_theme(colors.gray.100)] dark:bg-[#12121a] dark:shadow-[inset_0_-1px_0_rgba(255,255,255,0.1)];
+  }
+
   .btn-primary {
     @apply inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 px-4 text-sm font-bold text-gray-900 shadow-lg shadow-amber-400/30 transition hover:from-amber-300 hover:to-yellow-400 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:h-10;
   }
@@ -207,6 +225,11 @@ table [contenteditable='true'] {
     background-color: white !important;
     color: #111827 !important;
     border-color: #d1d5db !important;
+  }
+  /* À l'impression, tout se déroule : rien ne colle, rien ne coupe. */
+  .thead-fixe th {
+    position: static;
+    box-shadow: none;
   }
 }
 
