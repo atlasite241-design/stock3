@@ -84,6 +84,14 @@ function Content() {
     if (scanning) barcodeRef.current?.focus()
   }, [scanning])
 
+  /*
+   * TOUS les hooks avant le premier return conditionnel — regle des hooks.
+   * useDeferredValue etait appele apres le garde « !ready » : l'ordre des
+   * hooks changeait entre le rendu de chargement et le rendu reel, ce qui ne
+   * tenait que parce que ce composant n'est monte qu'une fois pret.
+   */
+  const deferredQuery = useDeferredValue(query)
+
   if (!ready) {
     return <Loader />
   }
@@ -96,7 +104,6 @@ function Content() {
 
   // Affichage paginé + recherche : sans ça, les 19 000 lignes (une saisie par
   // ligne) étaient toutes rendues → navigation lente vers l'inventaire.
-  const deferredQuery = useDeferredValue(query)
   const filtered = (() => {
     const q = deferredQuery.trim().toLowerCase()
     let base = !q ? products : products.filter((p) => p.name.toLowerCase().includes(q) || p.barcode.includes(q))

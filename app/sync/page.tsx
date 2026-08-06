@@ -60,7 +60,6 @@ export default function SyncPage() {
     void refreshLocal()
     const id = setInterval(() => setTick((t) => t + 1), 2000)
     return () => clearInterval(id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const resync = async () => {
@@ -275,7 +274,7 @@ export default function SyncPage() {
       <h2 style={{ fontSize: 16, fontWeight: 700, marginTop: 24 }}>Local vs Turso</h2>
       <p style={{ fontSize: 13, color: '#64748b' }}>
         Une différence (local &gt; Turso) signale un changement pas encore synchronisé. La colonne
-        Turso reste à « — » tant qu'on ne la demande pas : ce comptage balaie toute la table
+        Turso reste à « — » tant qu&apos;on ne la demande pas : ce comptage balaie toute la table
         distante, et il ne doit pas partir tout seul à chaque ouverture de la page.
       </p>
       <table style={{ marginTop: 8, borderCollapse: 'collapse', width: '100%', fontSize: 14 }}>

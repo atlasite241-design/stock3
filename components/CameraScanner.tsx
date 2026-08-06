@@ -23,7 +23,13 @@ export default function CameraScanner({
     let stopped = false
 
     const start = async () => {
-      const BD = (window as any).BarcodeDetector
+      // Le type BarcodeDetector n'existe pas encore dans lib.dom : on declare
+      // le minimum utilise plutot que d'eteindre le typage avec any.
+      const BD = (window as unknown as {
+        BarcodeDetector?: new (options: { formats: string[] }) => {
+          detect(source: CanvasImageSource): Promise<{ rawValue: string }[]>
+        }
+      }).BarcodeDetector
       if (!BD) {
         setError("Le scanner caméra n'est pas supporté par ce navigateur. Utilisez Chrome ou Edge, ou votre douchette USB.")
         return

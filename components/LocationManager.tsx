@@ -64,6 +64,16 @@ export default function LocationManager({
     return storeShortCode(idx < 0 ? 0 : idx)
   }, [d.stores, d.activeStoreId])
 
+  // Regle des hooks : ce useMemo vivait apres le garde « !ready ».
+  // Dépôt de la zone sélectionnée (segment DEP01 du code) — repli sur le dépôt principal.
+  const depotCode = useMemo(() => {
+    const storeDepots = d.depots.filter((x) => x.storeId === d.activeStoreId)
+    const zDepot = (d.zones.find((z) => z.id === sel.zone)?.depotId) as string | undefined
+    const dep = (zDepot && storeDepots.find((x) => x.id === zDepot)) || storeDepots[0]
+    const idx = storeDepots.findIndex((x) => x.id === dep?.id)
+    return dep?.code || depotShortCode(idx < 0 ? 0 : idx)
+  }, [d.depots, d.zones, d.activeStoreId, sel.zone])
+
   if (!d.ready) return <Loader />
 
   // Options d'un niveau ancêtre, filtrées par la sélection de son propre parent.
@@ -92,15 +102,6 @@ export default function LocationManager({
   const list = parentReady
     ? target.items.filter((it) => it.storeId === d.activeStoreId && it[target.pf] === parentId).sort((a, b) => a.code.localeCompare(b.code, 'fr'))
     : []
-
-  // Dépôt de la zone sélectionnée (segment DEP01 du code) — repli sur le dépôt principal.
-  const depotCode = useMemo(() => {
-    const storeDepots = d.depots.filter((x) => x.storeId === d.activeStoreId)
-    const zDepot = (d.zones.find((z) => z.id === sel.zone)?.depotId) as string | undefined
-    const dep = (zDepot && storeDepots.find((x) => x.id === zDepot)) || storeDepots[0]
-    const idx = storeDepots.findIndex((x) => x.id === dep?.id)
-    return dep?.code || depotShortCode(idx < 0 ? 0 : idx)
-  }, [d.depots, d.zones, d.activeStoreId, sel.zone])
 
   // Code d'emplacement complet à partir de la chaîne sélectionnée + un code donné.
   const codeOf = (li: number) => (chain[li].items.find((it) => it.id === sel[chain[li].key])?.code) ?? ''

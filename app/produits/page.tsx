@@ -119,7 +119,6 @@ function ProduitsContent() {
       const okQuery = !q || p.name.toLowerCase().includes(q) || p.barcode.includes(q) || p.brand.toLowerCase().includes(q) || (p.emplacementComplet ?? '').toLowerCase().includes(q)
       return okCat && okQuery
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products, query, category])
 
   // Pagination : indispensable pour les gros catalogues (ne pas rendre 50 000 lignes).

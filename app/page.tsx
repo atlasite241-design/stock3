@@ -40,7 +40,13 @@ import { useLanguage, type TKey } from '@/lib/i18n'
 const DAY_KEYS: TKey[] = ['day_sun', 'day_mon', 'day_tue', 'day_wed', 'day_thu', 'day_fri', 'day_sat']
 const DONUT_COLORS = ['#f59e0b', '#facc15', '#fb923c', '#0ea5e9', '#10b981', '#a78bfa', '#94a3b8']
 
-function ChartTooltip({ active, payload, label }: any) {
+interface TooltipProps {
+  active?: boolean
+  label?: string
+  payload?: { value: number | string; name?: string; payload: { ventes?: number; name?: string } }[]
+}
+
+function ChartTooltip({ active, payload, label }: TooltipProps) {
   if (!active || !payload?.length) return null
   return (
     <div className="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#12121a] px-4 py-3 shadow-xl">
@@ -55,7 +61,7 @@ function ChartTooltip({ active, payload, label }: any) {
   )
 }
 
-function DonutTooltip({ active, payload }: any) {
+function DonutTooltip({ active, payload }: TooltipProps) {
   if (!active || !payload?.length) return null
   return (
     <div className="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#12121a] px-3 py-2 shadow-xl">

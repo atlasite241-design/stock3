@@ -110,7 +110,7 @@ function Content() {
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">{t('vr_title')}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{t('vr_subtitle')}</p>
           <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-            Format {settings.labelWidthMm ?? 40} × {settings.labelHeightMm ?? 30} mm · à l'impression : imprimante Zebra (ZDesigner), marges « aucune », échelle 100 %.
+            Format {settings.labelWidthMm ?? 40} × {settings.labelHeightMm ?? 30} mm · à l&apos;impression : imprimante Zebra (ZDesigner), marges « aucune », échelle 100 %.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">

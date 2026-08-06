@@ -147,7 +147,12 @@ function Content() {
   }
 
   const persist = (s: Set<string>) => { setChecks(new Set(s)); try { localStorage.setItem(KEY, JSON.stringify([...s])) } catch {} }
-  const toggle = (id: string) => { const s = new Set(checks); s.has(id) ? s.delete(id) : s.add(id); persist(s) }
+  const toggle = (id: string) => {
+    const s = new Set(checks)
+    if (s.has(id)) s.delete(id)
+    else s.add(id)
+    persist(s)
+  }
   const reset = () => persist(new Set())
   const done = ALL_IDS.filter((id) => checks.has(id)).length
   const pct = Math.round((done / ALL_IDS.length) * 100)

@@ -76,7 +76,6 @@ export default function Select({
       window.removeEventListener('scroll', onScroll, true)
       window.removeEventListener('resize', onScroll)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   const normalized: SelectOption[] = useMemo(
