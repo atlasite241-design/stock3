@@ -8,8 +8,6 @@ import {
   Barcode,
   Camera,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   ClipboardList,
   MapPin,
   PackagePlus,
@@ -25,6 +23,7 @@ import CameraScanner from '@/components/CameraScanner'
 import { useToast } from '@/components/Toast'
 import { useDroguerie } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
+import Pagination from '@/components/Pagination'
 
 function Content() {
   const { ready, products, applyInventory, locationSortKey } = useDroguerie()
@@ -320,11 +319,14 @@ function Content() {
         </div>
         {pageCount > 1 && (
           <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3 dark:border-white/10 no-print">
-            <p className="text-xs text-gray-500 dark:text-zinc-400 tabular-nums">{filtered.length} · {page}/{pageCount}</p>
-            <div className="flex gap-1">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronLeft className="h-4 w-4" /></button>
-              <button onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={page === pageCount} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronRight className="h-4 w-4" /></button>
-            </div>
+            <Pagination
+              page={page}
+              pageCount={pageCount}
+              total={filtered.length}
+              onChange={setPage}
+              encadre={false}
+              className="w-full"
+            />
           </div>
         )}
       </motion.div>

@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { Camera, ChevronLeft, ChevronRight, ImagePlus, MapPin, Package, Pencil, Plus, Printer, Scissors, Search, Trash2, Wand2 } from 'lucide-react'
+import { Camera, ImagePlus, MapPin, Package, Pencil, Plus, Printer, Scissors, Search, Trash2, Wand2 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
 import DangerConfirm from '@/components/DangerConfirm'
@@ -18,6 +18,7 @@ import { exportProductsCSVAsync, fmtDH, roundQty, uniteDivisible, useDroguerie, 
 import { compresserImage, recompresserSiLourde, removeWhiteBackground } from '@/lib/image'
 import { useLanguage } from '@/lib/i18n'
 import SaleUnitsEditor from '@/components/SaleUnitsEditor'
+import Pagination from '@/components/Pagination'
 
 const EMPTY_FORM = {
   name: '',
@@ -401,13 +402,14 @@ function ProduitsContent() {
         </div>
         {pageCount > 1 && (
           <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3 dark:border-white/10">
-            <p className="text-xs text-gray-500 dark:text-zinc-400 tabular-nums">{filtered.length} · {safePage}/{pageCount}</p>
-            <div className="flex items-center gap-1">
-              <button onClick={() => setPage(1)} disabled={safePage === 1} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-500 disabled:opacity-40 dark:border-white/10">«</button>
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage === 1} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronLeft className="h-4 w-4" /></button>
-              <button onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={safePage === pageCount} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronRight className="h-4 w-4" /></button>
-              <button onClick={() => setPage(pageCount)} disabled={safePage === pageCount} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-500 disabled:opacity-40 dark:border-white/10">»</button>
-            </div>
+            <Pagination
+              page={safePage}
+              pageCount={pageCount}
+              total={filtered.length}
+              onChange={setPage}
+              encadre={false}
+              className="w-full"
+            />
           </div>
         )}
       </motion.div>

@@ -20,6 +20,14 @@ export interface PaginationProps {
   onChange: (page: number) => void
   /** Nombre maximal de boutons numérotés affichés. */
   fenetre?: number
+  /**
+   * Cadre et fond propres.
+   *
+   * `false` quand la barre vit déjà dans un pied de carte : deux bordures
+   * imbriquées se voient, et donnent l'impression d'un élément posé de
+   * travers plutôt qu'intégré.
+   */
+  encadre?: boolean
   className?: string
 }
 
@@ -29,6 +37,7 @@ export default function Pagination({
   total,
   onChange,
   fenetre = 5,
+  encadre = true,
   className = '',
 }: PaginationProps) {
   const { t } = useLanguage()
@@ -56,7 +65,13 @@ export default function Pagination({
 
   return (
     <div
-      className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50/60 px-3 py-2 dark:border-white/10 dark:bg-white/[0.03] ${className}`}
+      className={
+        'flex flex-wrap items-center justify-between gap-3 ' +
+        (encadre
+          ? 'rounded-xl border border-gray-200 bg-gray-50/60 px-3 py-2 dark:border-white/10 dark:bg-white/[0.03] '
+          : '') +
+        className
+      }
     >
       {/* --- Position et volume, en afficheur --- */}
       <div className="flex items-center gap-4">

@@ -11,8 +11,6 @@ import {
   ArrowRight,
   CheckCircle2,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   PackageCheck,
   Plus,
@@ -37,6 +35,7 @@ import {
   type TransferStatus,
 } from '@/lib/store'
 import { useLanguage, type TKey } from '@/lib/i18n'
+import Pagination from '@/components/Pagination'
 
 const STATUS_KEY: Record<TransferStatus, TKey> = {
   brouillon: 'trf_status_brouillon',
@@ -276,11 +275,14 @@ function Content() {
 
         {pageCount > 1 && (
           <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 dark:border-white/10">
-            <p className="text-xs text-gray-500 dark:text-zinc-400">{filtered.length} · {page}/{pageCount}</p>
-            <div className="flex gap-1">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronLeft className="h-4 w-4" /></button>
-              <button onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={page === pageCount} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronRight className="h-4 w-4" /></button>
-            </div>
+            <Pagination
+              page={page}
+              pageCount={pageCount}
+              total={filtered.length}
+              onChange={setPage}
+              encadre={false}
+              className="w-full"
+            />
           </div>
         )}
       </motion.div>

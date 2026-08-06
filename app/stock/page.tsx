@@ -3,13 +3,14 @@
 import { useDeferredValue, useMemo, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { AlertTriangle, Boxes, ChevronLeft, ChevronRight, Minus, PackageX, Plus, Search, TrendingUp, Truck, Warehouse } from 'lucide-react'
+import { AlertTriangle, Boxes, Minus, PackageX, Plus, Search, TrendingUp, Truck, Warehouse } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
 import { fmtDH, useDroguerie, type Product } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
+import Pagination from '@/components/Pagination'
 
 type Filter = 'tous' | 'faible' | 'rupture'
 const PAGE_SIZE = 50
@@ -254,11 +255,14 @@ function StockContent() {
         </div>
         {pageCount > 1 && (
           <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3 dark:border-white/10">
-            <p className="text-xs text-gray-500 dark:text-zinc-400 tabular-nums">{filtered.length} · {page}/{pageCount}</p>
-            <div className="flex gap-1">
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronLeft className="h-4 w-4" /></button>
-              <button onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={page === pageCount} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronRight className="h-4 w-4" /></button>
-            </div>
+            <Pagination
+              page={page}
+              pageCount={pageCount}
+              total={filtered.length}
+              onChange={setPage}
+              encadre={false}
+              className="w-full"
+            />
           </div>
         )}
       </motion.div>

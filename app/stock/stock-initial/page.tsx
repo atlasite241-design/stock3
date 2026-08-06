@@ -6,7 +6,7 @@ import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from 'r
 import { motion, AnimatePresence } from 'framer-motion'
 import Loader from '@/components/Loader'
 import {
-  AlertTriangle, Barcode, Boxes, CheckCircle2, ChevronLeft, ChevronRight, FileSpreadsheet,
+  AlertTriangle, Barcode, Boxes, CheckCircle2, FileSpreadsheet,
   Keyboard, PackageCheck, Plus, RotateCcw, Save, ScanLine, Search, ShieldAlert, Store, Trash2, Upload, Warehouse, X,
 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
@@ -17,6 +17,7 @@ import { useToast } from '@/components/Toast'
 import { fmtDH, useDroguerie, type Product, roundQty } from '@/lib/store'
 import { useAuth } from '@/lib/auth-context'
 import { useLanguage } from '@/lib/i18n'
+import Pagination from '@/components/Pagination'
 
 const PAGE_SIZE = 12
 type Mode = 'manual' | 'scanqty' | 'scanrepeat' | 'import'
@@ -394,11 +395,14 @@ function Content() {
             </div>
             {pageCount > 1 && (
               <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 dark:border-white/10">
-                <p className="text-xs text-gray-500 dark:text-zinc-400 tabular-nums">{total} · {page}/{pageCount}</p>
-                <div className="flex gap-1">
-                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronLeft className="h-4 w-4" /></button>
-                  <button onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={page === pageCount} className="rounded-lg border border-gray-200 p-1.5 text-gray-500 disabled:opacity-40 dark:border-white/10"><ChevronRight className="h-4 w-4" /></button>
-                </div>
+                <Pagination
+                  page={page}
+                  pageCount={pageCount}
+                  total={total}
+                  onChange={setPage}
+                  encadre={false}
+                  className="w-full"
+                />
               </div>
             )}
           </motion.div>
