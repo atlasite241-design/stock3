@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { countRemote, localCounts, pushAll, reparerImagesRecues, resyncFromStart, syncState } from '@/lib/sync'
 import { apiMigrate } from '@/lib/sync-api'
+import { COLLECTIONS } from '@/lib/sync'
 import { tursoConfigured } from '@/lib/sync'
 import { useDroguerie } from '@/lib/store'
 import { initProductCache, localStorageUsage, productCacheReady } from '@/lib/pstore'
@@ -93,6 +94,40 @@ export default function SyncPage() {
     }
   }
 
+  /**
+   * Export des collections RH en JSON — pour la reprise vers le module Laravel.
+   *
+   * Lit le LOCAL, pas le serveur : c'est ce poste qui detient la verite du
+   * moment, et l'export ne coute aucune lecture Turso. Le fichier se donne a
+   * la commande `php artisan hr:reprendre`.
+   */
+  const exporterRH = () => {
+    const collections: Record<string, unknown> = {}
+    let n = 0
+    for (const c of COLLECTIONS) {
+      if (!c.collection.startsWith('hr')) continue
+      try {
+        const brut = localStorage.getItem(c.key)
+        const valeurs = brut ? JSON.parse(brut) : []
+        collections[c.collection] = valeurs
+        n += Array.isArray(valeurs) ? valeurs.length : 0
+      } catch {
+        collections[c.collection] = []
+      }
+    }
+    const blob = new Blob(
+      [JSON.stringify({ exported_at: new Date().toISOString(), collections }, null, 2)],
+      { type: 'application/json' }
+    )
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `export-rh-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    setLog((l) => [...l, `⇩ export RH : ${n} enregistrement(s) dans ${Object.keys(collections).length} collections`])
+  }
+
   const reduireImages = async () => {
     setBusy(true)
     setError('')
@@ -173,6 +208,9 @@ export default function SyncPage() {
         </button>
         <button onClick={reduireImages} disabled={busy} style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: '#ea580c', color: '#fff', fontWeight: 700, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}>
           🖼 Réduire les images stockées
+        </button>
+        <button onClick={exporterRH} style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: '#4f46e5', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+          ⇩ Exporter les données RH (JSON)
         </button>
         <button onClick={addTestProduct} style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
           ➕ Ajouter un produit test
