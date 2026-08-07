@@ -7,8 +7,9 @@
 // propre prix. Le prix n'est jamais calculé depuis l'unité de base : un carton
 // de 2 000 vis ne se vend pas 2 000 fois le prix pièce.
 
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Wand2 } from 'lucide-react'
 import DecimalInput from '@/components/DecimalInput'
+import { generateEan13 } from '@/components/EAN13'
 import { uid, fmtDH, type SaleUnit } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
@@ -99,12 +100,24 @@ export default function SaleUnitsEditor({
                   placeholder={t('su_price')}
                   className="input-field !h-9 text-sm tabular-nums sm:col-span-2"
                 />
-                <input
-                  value={u.barcode ?? ''}
-                  onChange={(e) => patch(u.id, { barcode: e.target.value })}
-                  placeholder={t('su_barcode')}
-                  className="input-field !h-9 font-mono text-xs sm:col-span-3"
-                />
+                <div className="flex gap-1 sm:col-span-3">
+                  <input
+                    value={u.barcode ?? ''}
+                    onChange={(e) => patch(u.id, { barcode: e.target.value })}
+                    placeholder={t('su_barcode')}
+                    className="input-field !h-9 min-w-0 flex-1 font-mono text-xs"
+                  />
+                  {/* Un code interne pour le carton qui n'en imprime pas : le
+                      même geste que sur la fiche produit. */}
+                  <button
+                    type="button"
+                    onClick={() => patch(u.id, { barcode: generateEan13() })}
+                    className="btn-secondary !h-9 shrink-0 !px-2.5"
+                    title={t('prod_generate_ean')}
+                  >
+                    <Wand2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => remove(u.id)}
