@@ -56,6 +56,26 @@ import { useLanguage } from '@/lib/i18n'
 const ticketNumber = (s: Sale) => `V${s.id.slice(-8).toUpperCase()}`
 
 /**
+ * « 2 × Boîte de 100 + 38 Pièce » : le stock restant exprimé en
+ * conditionnements, du plus gros au plus petit. Pur affichage — le stock
+ * reste tenu à l'unité de base ; ceci répond à la question du comptoir :
+ * « si j'en vends 3, qu'est-ce qu'il reste dans la boîte ? »
+ */
+function ventilerStock(restant: number, unites: SaleUnit[], uniteBase: string): string {
+  const parts: string[] = []
+  let reste = restant
+  for (const u of [...unites].filter((x) => x.factor > 1).sort((a, b) => b.factor - a.factor)) {
+    const n = Math.floor(reste / u.factor)
+    if (n > 0) {
+      parts.push(`${n} × ${u.name}`)
+      reste = roundQty(reste - n * u.factor)
+    }
+  }
+  if (reste > 0 || parts.length === 0) parts.push(`${reste} ${uniteBase}`)
+  return parts.join(' + ')
+}
+
+/**
  * Quantite affichee sur le ticket : entiere quand elle l'est.
  * « 3.00 vis » n'a pas de sens ; « 7.5 m » de cable, si. Les decimales ne
  * s'affichent donc que lorsqu'il y en a reellement.
@@ -498,6 +518,18 @@ function CaisseContent() {
                     )
                   })}
                 </div>
+              )}
+
+              {/* Le reste après CE panier, ventilé en conditionnements : le
+                  vendeur voit la boîte s'entamer au fur et à mesure. */}
+              {units.length > 0 && prod && (
+                <p className="mt-1.5 text-[11px] tabular-nums text-gray-500 dark:text-zinc-400">
+                  {t('pos_stock_reste')} : {ventilerStock(
+                    roundQty(Math.max(0, availableStock(prod) - inCartBase(prod.id))),
+                    units,
+                    prod.unit || t('pos_unit_piece')
+                  )}
+                </p>
               )}
 
               <div className="mt-2 flex items-center justify-between">
