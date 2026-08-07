@@ -38,7 +38,14 @@ function Content() {
     .map((m) => {
       const po = findPurchase(m.note)
       const item = findItem(m.note, m.productId)
-      const cost = item?.cost ?? 0
+      /*
+       * Le mouvement est en unités de BASE ; le coût de la ligne d'achat est
+       * celui de l'unité d'ACHAT (le carton). Valoriser cost × qty mélangeait
+       * les deux : 6 000 pièces au prix du carton. On ramène le coût à
+       * l'unité de base avant de multiplier.
+       */
+      const f = item?.unitFactor && item.unitFactor > 0 ? item.unitFactor : 1
+      const cost = item ? Math.round((item.cost / f) * 10000) / 10000 : 0
       return {
         id: m.id,
         date: m.date,
@@ -49,6 +56,7 @@ function Content() {
         qty: m.qty,
         cost,
         value: cost * m.qty,
+        user: m.user,
       }
     })
     .filter((r) => !supplierFilter || r.supplierId === supplierFilter)
@@ -147,7 +155,7 @@ function Content() {
                   <td className="px-5 py-3.5 text-sm font-semibold text-gray-900 dark:text-white tabular-nums">{r.qty}</td>
                   <td className="px-5 py-3.5 text-sm text-gray-600 dark:text-zinc-400 tabular-nums">{fmtDH(r.cost)}</td>
                   <td className="px-5 py-3.5 text-sm font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">{fmtDH(r.value)}</td>
-                  <td className="px-5 py-3.5 text-sm text-gray-500 dark:text-zinc-400">ADMIN</td>
+                  <td className="px-5 py-3.5 text-sm text-gray-500 dark:text-zinc-400">{r.user || '—'}</td>
                 </tr>
               ))}
               {rows.length === 0 && (

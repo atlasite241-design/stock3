@@ -565,6 +565,8 @@ export interface StockMovement {
   storeId?: string
   /** Dépôt concerné (optionnel) — utilisé pour la ventilation du stock par dépôt. */
   depotId?: string
+  /** Qui a fait le geste. Sans lui, « qui a sorti 50 pièces ? » est sans réponse. */
+  user?: string
 }
 
 export interface PurchaseItem {
@@ -813,6 +815,12 @@ export interface Settings {
   paymentModes?: string[]
   /** État de l'assistant de configuration (Setup Wizard). */
   setup?: { completed?: boolean; step?: number; done?: string[] }
+  /**
+   * Autoriser le stock à passer sous zéro. Par défaut NON : la caisse bloque
+   * au plafond du disponible. À OUI, la vente passe et le stock devient
+   * négatif — l'anomalie reste VISIBLE au lieu d'être rognée en silence.
+   */
+  allowNegativeStock?: boolean
 }
 
 export interface Expense {
@@ -2227,6 +2235,20 @@ export function useDroguerieState() {
   }
 
   // ---- Stock movements ----
+
+  /** Auteur des mouvements de stock — repris de la session, comme les ventes. */
+  const mvUser = () => {
+    try { return getSession()?.name || undefined } catch { return undefined }
+  }
+
+  /**
+   * Débit de stock selon la règle de l'enseigne : par défaut on ne descend
+   * jamais sous zéro (le rognage éventuel se voit à l'inventaire) ; si le
+   * stock négatif est autorisé, l'écart reste visible en négatif.
+   */
+  const debiterStock = (stock: number, qtyBase: number) =>
+    settings.allowNegativeStock ? roundQty(stock - qtyBase) : roundQty(Math.max(0, stock - qtyBase))
+
   const addMovement = (
     productId: string,
     type: StockMovement['type'],
@@ -2240,7 +2262,7 @@ export function useDroguerieState() {
     const p = list.find((x) => x.id === productId)
     if (!p) return
     const nextProducts = list.map((x) =>
-      x.id === productId ? { ...x, stock: Math.max(0, x.stock + qty) } : x
+      x.id === productId ? { ...x, stock: qty < 0 ? debiterStock(x.stock, -qty) : roundQty(x.stock + qty) } : x
     )
     persistProducts(nextProducts)
     const mv: StockMovement = {
@@ -2253,6 +2275,7 @@ export function useDroguerieState() {
       note,
       storeId: p.storeId ?? activeStoreRef.current,
       depotId: depotId || undefined,
+      user: mvUser(),
     }
     persistMovements([mv, ...(baseMovements ?? movements)])
     return nextProducts
@@ -2286,6 +2309,7 @@ export function useDroguerieState() {
           type: 'inventaire' as const,
           qty: delta,
           note: `Inventaire physique (écart ${delta > 0 ? '+' : ''}${delta})`,
+          user: mvUser(),
         },
         ...curMovements,
       ]
@@ -2310,7 +2334,7 @@ export function useDroguerieState() {
     const nextProducts = products.map((p) => {
       const q = qtyMap.get(p.id)
       if (q === undefined || p.storeId !== sid) return p
-      newMovements.push({ id: uid(), date: nowIso, productId: p.id, productName: p.name, type: 'stock_initial', qty: q, note: 'Initialisation du stock', storeId: sid, depotId: depotId || undefined })
+      newMovements.push({ id: uid(), date: nowIso, productId: p.id, productName: p.name, type: 'stock_initial', qty: q, note: 'Initialisation du stock', storeId: sid, depotId: depotId || undefined, user: mvUser() })
       return { ...p, stock: q }
     })
     persistProducts(nextProducts)
@@ -2349,7 +2373,7 @@ export function useDroguerieState() {
       products.map((p) => {
         // Décrément en unités de STOCK : vendre 3 boîtes de 100 sort 300 pièces.
         const qty = items.filter((i) => i.productId === p.id).reduce((s, i) => s + baseQty(i), 0)
-        return qty ? { ...p, stock: roundQty(Math.max(0, p.stock - qty)) } : p
+        return qty ? { ...p, stock: debiterStock(p.stock, qty) } : p
       })
     )
     persistMovements([
@@ -2365,6 +2389,7 @@ export function useDroguerieState() {
         note: `Vente ${sale.id.slice(-5)}`,
         storeId: activeStoreRef.current,
         depotId: depotId || undefined,
+        user: who?.name,
       })),
       ...movements,
     ])
@@ -2522,6 +2547,7 @@ export function useDroguerieState() {
         type: 'retour' as const,
         qty: baseQty(i),
         note: `Retour vente ${sale.id.slice(-5)}`,
+        user: mvUser(),
       })),
       ...movements,
     ])
@@ -2835,7 +2861,7 @@ export function useDroguerieState() {
       receivedValue += r.receivedQty * i.cost
       curProducts = curProducts.map((x) => (x.id === r.productId ? { ...x, stock: roundQty(x.stock + qBase), cost: coutBase } : x))
       curMovements = [
-        { id: uid() + r.productId, date: new Date().toISOString(), productId: r.productId, productName: i.name, type: 'entree' as const, qty: qBase, note: `${po.ref} / ${brRef}`, storeId: po.storeId, depotId: meta?.depotId || undefined },
+        { id: uid() + r.productId, date: new Date().toISOString(), productId: r.productId, productName: i.name, type: 'entree' as const, qty: qBase, note: `${po.ref} / ${brRef}`, storeId: po.storeId, depotId: meta?.depotId || undefined, user: meta?.employee || mvUser() },
         ...curMovements,
       ]
     })
@@ -2904,11 +2930,19 @@ export function useDroguerieState() {
     let curProducts = products
     let curMovements = movements
     po.items.forEach((i) => {
+      /*
+       * EN UNITÉS DE BASE, comme partout. La version précédente déduisait
+       * i.qty tel quel : retourner une commande de « 3 cartons de 2000 »
+       * retirait 3 pièces du stock au lieu de 6000. On rend ce qui a été
+       * REÇU (receivedQty, accumulé par les réceptions partielles), converti
+       * par le facteur d'achat — le symétrique exact de validateReception.
+       */
+      const qBase = roundQty((i.receivedQty ?? i.qty) * purchaseFactor(i))
       curProducts = curProducts.map((x) =>
-        x.id === i.productId ? { ...x, stock: Math.max(0, x.stock - i.qty) } : x
+        x.id === i.productId ? { ...x, stock: debiterStock(x.stock, qBase) } : x
       )
       curMovements = [
-        { id: uid() + i.productId, date: new Date().toISOString(), productId: i.productId, productName: i.name, type: 'retour' as const, qty: -i.qty, note: `Retour ${po.ref}` },
+        { id: uid() + i.productId, date: new Date().toISOString(), productId: i.productId, productName: i.name, type: 'retour' as const, qty: -qBase, note: `Retour ${po.ref}`, storeId: po.storeId, user: mvUser() },
         ...curMovements,
       ]
     })
@@ -3470,6 +3504,7 @@ export function useDroguerieState() {
         note: `Transfert ${tr.ref} → ${storeName(tr.destStoreId)}`,
         storeId: tr.sourceStoreId,
         depotId: tr.sourceDepotId || undefined,
+        user,
       })
     }
     persistProducts(curProducts)
@@ -3537,6 +3572,7 @@ export function useDroguerieState() {
         note: `Transfert ${tr.ref} ← ${storeName(tr.sourceStoreId)}`,
         storeId: tr.destStoreId,
         depotId: tr.destDepotId || undefined,
+        user,
       })
     })
     persistProducts(curProducts)

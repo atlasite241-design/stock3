@@ -52,6 +52,12 @@ function Content() {
   const router = useRouter()
 
   const [counted, setCounted] = useState<Record<string, string>>({})
+  /*
+   * Comptage PAR CONDITIONNEMENT : « 3 cartons + 2 boîtes + 41 » saisi tel
+   * quel, converti en unités de base par le logiciel — jamais par la tête du
+   * compteur. Clé de niveau = id du conditionnement, ou 'base'.
+   */
+  const [parNiveau, setParNiveau] = useState<Record<string, Record<string, string>>>({})
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [initialized, setInitialized] = useState(false)
 
@@ -97,7 +103,20 @@ function Content() {
   }
 
   // Écarts calculés sur TOUT le catalogue (pour la validation), en un passage.
-  const cnt = (p: (typeof products)[number]) => Math.max(0, Math.round(parseFloat((counted[p.id] ?? '').replace(',', '.')) || 0))
+  const num = (v: string | undefined) => Math.max(0, Math.round(parseFloat((v ?? '').replace(',', '.')) || 0))
+  const niveauxTouches = (p: (typeof products)[number]) => {
+    const lv = parNiveau[p.id]
+    return !!lv && Object.values(lv).some((v) => v.trim() !== '')
+  }
+  const cnt = (p: (typeof products)[number]) => {
+    if (niveauxTouches(p)) {
+      const lv = parNiveau[p.id]
+      let total = num(lv.base)
+      for (const u of p.saleUnits ?? []) total += num(lv[u.id]) * u.factor
+      return total
+    }
+    return num(counted[p.id])
+  }
   const diffs = products
     .map((p) => ({ product: p, counted: cnt(p), delta: cnt(p) - p.stock }))
     .filter((r) => r.delta !== 0)
@@ -122,6 +141,7 @@ function Content() {
     toast(`✓ ${t('pinv_toast_validated')} ${diffs.length} ${t('pinv_toast_corrected')}`)
     setConfirmOpen(false)
     setInitialized(false)
+    setParNiveau({})
   }
 
   const flash = (id: string) => {
@@ -298,13 +318,44 @@ function Content() {
                   </td>
                   <td className="px-5 py-3 text-sm font-bold text-gray-700 dark:text-zinc-300 tabular-nums">{p.stock}</td>
                   <td className="px-5 py-3">
-                    <input
-                      type="number"
-                      min="0"
-                      value={counted[p.id] ?? ''}
-                      onChange={(e) => setCounted({ ...counted, [p.id]: e.target.value })}
-                      className="input-field !h-9 w-28"
-                    />
+                    {p.saleUnits && p.saleUnits.length > 0 ? (
+                      /* Un champ par niveau, du plus gros au plus petit ; le
+                         total en unité de base se calcule seul. */
+                      <div className="flex flex-wrap items-center gap-1">
+                        {[...p.saleUnits].sort((a, b) => b.factor - a.factor).map((u) => (
+                          <input
+                            key={u.id}
+                            type="number"
+                            min="0"
+                            placeholder={u.name}
+                            title={`${u.name} ×${u.factor}`}
+                            value={parNiveau[p.id]?.[u.id] ?? ''}
+                            onChange={(e) => setParNiveau((n) => ({ ...n, [p.id]: { ...n[p.id], [u.id]: e.target.value } }))}
+                            className="input-field !h-9 w-24 text-sm"
+                          />
+                        ))}
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder={p.unit || t('pinv_unit_base')}
+                          title={p.unit || t('pinv_unit_base')}
+                          value={parNiveau[p.id]?.base ?? ''}
+                          onChange={(e) => setParNiveau((n) => ({ ...n, [p.id]: { ...n[p.id], base: e.target.value } }))}
+                          className="input-field !h-9 w-20 text-sm"
+                        />
+                        <span className={`text-xs font-bold tabular-nums ${niveauxTouches(p) ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-zinc-500'}`}>
+                          = {cnt(p)}
+                        </span>
+                      </div>
+                    ) : (
+                      <input
+                        type="number"
+                        min="0"
+                        value={counted[p.id] ?? ''}
+                        onChange={(e) => setCounted({ ...counted, [p.id]: e.target.value })}
+                        className="input-field !h-9 w-28"
+                      />
+                    )}
                   </td>
                   <td className="px-5 py-3">
                     <span

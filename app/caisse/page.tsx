@@ -163,17 +163,25 @@ function CaisseContent() {
   const inCartBase = (id: string) =>
     cart.filter((i) => i.productId === id).reduce((s, i) => s + baseQty(i), 0)
 
+  /*
+   * Vente au-delà du stock : BLOQUÉE par défaut — c'est la règle qui garde le
+   * stock théorique honnête. Le réglage « autoriser le stock négatif »
+   * (Paramètres → Administration) la lève : la vente passe et l'écart reste
+   * visible en négatif au lieu d'être rogné.
+   */
+  const ventePlafonnee = !settings.allowNegativeStock
+
   const addToCart = (p: Product, unit?: SaleUnit) => {
     // Sellable stock excludes quantities reserved by pending transfers.
     const avail = availableStock(p)
     const pas = unit ? unit.factor : 1
-    if (avail <= 0) {
+    if (ventePlafonnee && avail <= 0) {
       toast(`${p.name} — ${t('pos_toast_out_of_stock')}`, 'error')
       return
     }
     // Le contrôle porte sur l'unité de stock : ajouter une boîte de 100 exige
     // 100 pièces disponibles, pas une.
-    if (inCartBase(p.id) + pas > avail) {
+    if (ventePlafonnee && inCartBase(p.id) + pas > avail) {
       toast(`${t('pos_toast_insufficient_stock')} — ${p.name} (${avail} ${t('pos_toast_available')})`, 'error')
       return
     }
@@ -320,7 +328,7 @@ function CaisseContent() {
         const p = prodById.get(i.productId)
         // Le plafond s'évalue en unités de stock, toutes lignes du même produit
         // confondues : 5 pièces + 1 boîte de 100 pèsent 105 sur le stock.
-        if (p) {
+        if (p && ventePlafonnee) {
           const autres = c
             .filter((x) => x.productId === i.productId && lineKey(x.productId, x.unitName) !== key)
             .reduce((s, x) => s + baseQty(x), 0)
@@ -342,7 +350,7 @@ function CaisseContent() {
         const q = roundQty(Math.max(0, raw))
         if (q <= 0) return [i] // la suppression passe par la corbeille, pas par un zéro accidentel
         const p = prodById.get(i.productId)
-        if (p) {
+        if (p && ventePlafonnee) {
           const autres = c
             .filter((x) => x.productId === i.productId && lineKey(x.productId, x.unitName) !== key)
             .reduce((s, x) => s + baseQty(x), 0)

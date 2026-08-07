@@ -10,7 +10,8 @@ import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
-import { MOVEMENT_META, useDroguerie, type StockMovement } from '@/lib/store'
+import Pagination from '@/components/Pagination'
+import { MOVEMENT_META, roundQty, useDroguerie, type StockMovement } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 type TypeFilter = 'tous' | StockMovement['type']
@@ -22,6 +23,9 @@ function Content() {
 
   const [filter, setFilter] = useState<TypeFilter>('tous')
   const [query, setQuery] = useState('')
+  const [productId, setProductId] = useState('')
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 50
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState({ type: 'entree' as 'entree' | 'sortie' | 'ajustement', productId: '', qty: '1', sens: '+', note: '' })
 
@@ -52,12 +56,34 @@ function Content() {
     { key: 'inventaire', label: t('mv_filter_inventory') },
   ]
 
-  const visible = movements.filter((m) => {
+  /*
+   * SOLDE COURANT : quand un article est choisi, chaque ligne montre le stock
+   * APRÈS le mouvement. Il se déroule à rebours depuis le stock actuel — et il
+   * se calcule sur TOUS les mouvements de l'article, avant les autres filtres,
+   * sinon une recherche qui masque des lignes fausserait la colonne.
+   */
+  const produitChoisi = productId ? products.find((p) => p.id === productId) : null
+  let annotes: (StockMovement & { solde?: number })[] = movements
+  if (produitChoisi) {
+    let solde = produitChoisi.stock
+    annotes = movements
+      .filter((m) => m.productId === productId)
+      .map((m) => {
+        const ligne = { ...m, solde }
+        solde = roundQty(solde - m.qty)
+        return ligne
+      })
+  }
+
+  const visible = annotes.filter((m) => {
     // Le réapprovisionnement est une entrée de stock → il apparaît aussi sous « Entrées ».
     const okType = filter === 'tous' || m.type === filter || (filter === 'entree' && m.type === 'reappro')
     const q = query.trim().toLowerCase()
-    return okType && (!q || m.productName.toLowerCase().includes(q) || m.note.toLowerCase().includes(q))
+    return okType && (!q || m.productName.toLowerCase().includes(q) || m.note.toLowerCase().includes(q) || (m.user ?? '').toLowerCase().includes(q))
   })
+  const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
+  const safePage = Math.min(page, pageCount)
+  const pageRows = visible.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
   const submit = () => {
     if (!form.productId) {
@@ -117,15 +143,27 @@ function Content() {
             {f.label}
           </button>
         ))}
-        <div className="relative ml-auto min-w-[200px]">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-zinc-500" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t('mv_search_placeholder')}
-            className="input-field pl-10"
+        <div className="ml-auto flex min-w-[200px] flex-wrap items-center gap-2">
+          <Select
+            value={productId}
+            onChange={(v) => { setProductId(v); setPage(1) }}
+            placeholder={t('mv_all_products')}
+            options={[
+              { value: '', label: t('mv_all_products') },
+              ...products.map((p) => ({ value: p.id, label: p.name })),
+            ]}
+            className="w-auto min-w-[200px]"
           />
+          <div className="relative min-w-[180px]">
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-zinc-500" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setPage(1) }}
+              placeholder={t('mv_search_placeholder')}
+              className="input-field pl-10"
+            />
+          </div>
         </div>
       </div>
 
@@ -144,11 +182,13 @@ function Content() {
                 <th className="px-5 py-3.5">{t('mv_col_product')}</th>
                 <th className="px-5 py-3.5">{t('mv_col_type')}</th>
                 <th className="px-5 py-3.5">{t('mv_col_qty')}</th>
+                {produitChoisi && <th className="px-5 py-3.5 text-right">{t('mv_col_balance')}</th>}
+                <th className="px-5 py-3.5">{t('mv_col_user')}</th>
                 <th className="px-5 py-3.5">{t('mv_col_note')}</th>
               </tr>
             </thead>
             <tbody>
-              {visible.map((m) => (
+              {pageRows.map((m) => (
                 <tr key={m.id} className="border-b border-gray-50 transition-colors hover:bg-amber-50/40">
                   <td className="px-5 py-3.5">
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -178,12 +218,18 @@ function Content() {
                       {m.qty > 0 ? `+${m.qty}` : m.qty}
                     </span>
                   </td>
+                  {produitChoisi && (
+                    <td className={`px-5 py-3.5 text-right text-sm font-bold tabular-nums ${(m.solde ?? 0) < 0 ? 'text-rose-500 dark:text-rose-400' : 'text-gray-900 dark:text-white'}`}>
+                      {m.solde}
+                    </td>
+                  )}
+                  <td className="px-5 py-3.5 text-sm text-gray-500 dark:text-zinc-400">{m.user || '—'}</td>
                   <td className="px-5 py-3.5 text-sm text-gray-500 dark:text-zinc-400">{m.note || '—'}</td>
                 </tr>
               ))}
               {visible.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-10 text-center text-sm text-gray-400 dark:text-zinc-500">
+                  <td colSpan={produitChoisi ? 7 : 6} className="px-5 py-10 text-center text-sm text-gray-400 dark:text-zinc-500">
                     {t('mv_none')}
                   </td>
                 </tr>
@@ -191,6 +237,11 @@ function Content() {
             </tbody>
           </table>
         </div>
+        {pageCount > 1 && (
+          <div className="border-t border-gray-100 px-5 py-3 dark:border-white/10">
+            <Pagination page={safePage} pageCount={pageCount} total={visible.length} onChange={setPage} encadre={false} className="w-full" />
+          </div>
+        )}
       </motion.div>
 
       {/* New movement modal */}

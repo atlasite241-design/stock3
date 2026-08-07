@@ -44,7 +44,7 @@ function Digital({ label, value, tone, icon }: { label: string; value: number; t
 }
 
 function Content() {
-  const { ready, users, updateUser, deleteUser } = useDroguerie()
+  const { ready, users, updateUser, deleteUser, settings, saveSettings } = useDroguerie()
   const { session, currentUser } = useAuth()
   const { t } = useLanguage()
   const toast = useToast()
@@ -304,6 +304,26 @@ function Content() {
             </div>
           ))
         )}
+      </motion.div>
+
+      {/* Règles de stock — décisions d'enseigne, donc derrière la porte admin. */}
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="glass-card p-5">
+        <h2 className="text-sm font-black uppercase tracking-wide text-gray-900 dark:text-white">{t('adm_stock_rules')}</h2>
+        <label className="mt-3 flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={!!settings.allowNegativeStock}
+            onChange={(e) => {
+              saveSettings({ ...settings, allowNegativeStock: e.target.checked })
+              toast(`✓ ${t('adm_stock_rules')}`)
+            }}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-amber-500"
+          />
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-gray-900 dark:text-white">{t('adm_neg_title')}</span>
+            <span className="mt-0.5 block text-[11px] leading-relaxed text-gray-500 dark:text-zinc-400">{t('adm_neg_hint')}</span>
+          </span>
+        </label>
       </motion.div>
 
       {/* Résultat d'approbation */}
