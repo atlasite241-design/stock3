@@ -146,6 +146,7 @@ const NAV_ALL: NavItem[] = [
           { href: '/stock/mouvements?type=entree', labelKey: 'nav_stock_in' },
           { href: '/stock/mouvements?type=sortie', labelKey: 'nav_stock_out' },
           { href: '/stock/mouvements', labelKey: 'nav_stock_history' },
+          { href: '/stock/lots', labelKey: 'nav_stock_lots' },
           { href: '/stock/annulation', labelKey: 'nav_stock_cancel_move' },
         ],
       },

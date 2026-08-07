@@ -44,7 +44,7 @@ function Digital({ label, value, tone, icon }: { label: string; value: number; t
 }
 
 function Content() {
-  const { ready, users, updateUser, deleteUser, settings, saveSettings } = useDroguerie()
+  const { ready, users, updateUser, deleteUser, settings, saveSettings, categories } = useDroguerie()
   const { session, currentUser } = useAuth()
   const { t } = useLanguage()
   const toast = useToast()
@@ -324,6 +324,38 @@ function Content() {
             <span className="mt-0.5 block text-[11px] leading-relaxed text-gray-500 dark:text-zinc-400">{t('adm_neg_hint')}</span>
           </span>
         </label>
+
+        {/* FEFO par catégorie : ce qui périme sort DLC la plus proche d'abord. */}
+        <div className="mt-5 border-t border-gray-100 pt-4 dark:border-white/10">
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">{t('adm_fefo_title')}</p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-gray-500 dark:text-zinc-400">{t('adm_fefo_hint')}</p>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {categories.map((c) => {
+              const actif = (settings.fefoCategories ?? []).includes(c.name)
+              return (
+                <button
+                  key={c.name}
+                  type="button"
+                  onClick={() => {
+                    const cur = settings.fefoCategories ?? []
+                    const next = actif ? cur.filter((x) => x !== c.name) : [...cur, c.name]
+                    saveSettings({ ...settings, fefoCategories: next })
+                  }}
+                  className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                    actif
+                      ? 'bg-amber-500 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-600 hover:bg-amber-100 hover:text-amber-800 dark:bg-white/10 dark:text-zinc-300'
+                  }`}
+                >
+                  {c.name}
+                </button>
+              )
+            })}
+            {categories.length === 0 && (
+              <p className="text-xs text-gray-400 dark:text-zinc-500">—</p>
+            )}
+          </div>
+        </div>
       </motion.div>
 
       {/* Résultat d'approbation */}

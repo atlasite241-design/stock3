@@ -569,6 +569,53 @@ export interface StockMovement {
   user?: string
 }
 
+/**
+ * LOT : une entrée de stock datée, consommée en FIFO ou FEFO.
+ *
+ * Le stock de la fiche reste l'AUTORITÉ (une seule unité, comme partout) ;
+ * les lots sont la couche de traçabilité en dessous : d'où vient chaque
+ * quantité, depuis quand, avec quelle DLC. La somme des restants d'un
+ * produit doit suivre son stock — l'inventaire réconcilie les dérives.
+ */
+export interface Lot {
+  id: string
+  productId: string
+  productName: string
+  /** Quantité entrée, en unités de base. */
+  qty: number
+  /** Quantité restante — décrémentée par les sorties, dans l'ordre FIFO/FEFO. */
+  remaining: number
+  /** Coût d'une unité de base à l'entrée. */
+  cost: number
+  /** Date d'entrée (ISO). */
+  date: string
+  /** DLC (AAAA-MM-JJ) — le moteur FEFO s'appuie dessus. */
+  expiryDate?: string
+  /** Provenance : réf BC/BR, « Stock initial », « Retour vente … », note. */
+  ref: string
+  /** Lot créé pour tracer un stock ANTÉRIEUR au suivi par lots. */
+  ouverture?: boolean
+  storeId?: string
+  depotId?: string
+}
+
+/**
+ * Ordre de consommation des lots.
+ * FEFO : la DLC la plus proche d'abord, les lots sans DLC en dernier.
+ * FIFO : l'entrée la plus ancienne d'abord.
+ * Les lots d'ouverture passent avant à égalité : ils représentent le stock
+ * le plus ancien, même si leur date de création est récente.
+ */
+export function ordreConsommation(a: Lot, b: Lot, fefo: boolean): number {
+  if (fefo) {
+    if (a.expiryDate && b.expiryDate && a.expiryDate !== b.expiryDate) return a.expiryDate < b.expiryDate ? -1 : 1
+    if (a.expiryDate && !b.expiryDate) return -1
+    if (!a.expiryDate && b.expiryDate) return 1
+  }
+  if (!!a.ouverture !== !!b.ouverture) return a.ouverture ? -1 : 1
+  return a.date.localeCompare(b.date)
+}
+
 export interface PurchaseItem {
   productId: string
   name: string
@@ -821,6 +868,11 @@ export interface Settings {
    * négatif — l'anomalie reste VISIBLE au lieu d'être rognée en silence.
    */
   allowNegativeStock?: boolean
+  /**
+   * Catégories consommées en FEFO (DLC la plus proche d'abord) : ce qui
+   * périme — colles, peintures, silicones… Les autres suivent FIFO.
+   */
+  fefoCategories?: string[]
 }
 
 export interface Expense {
@@ -971,6 +1023,7 @@ const K = {
   emplacements: 'dp_emplacements',
   activeStore: 'dp_active_store',
   transfers: 'dp_transfers',
+  lots: 'dp_lots',
 }
 
 /** Storage keys whose records carry a storeId and must be filtered per active store. */
@@ -978,6 +1031,7 @@ const SCOPED_KEYS: string[] = [
   K.products,
   K.sales,
   K.movements,
+  K.lots,
   K.purchases,
   K.quotes,
   K.returns,
@@ -1183,7 +1237,7 @@ export const DEMO_DATA = process.env.NEXT_PUBLIC_DEMO_DATA === '1'
 const EMPTY_ON_FIRST_RUN = [
   'sales', 'clients', 'clientPayments', 'credits', 'loyalty', 'suppliers',
   'supplierPayments', 'expenses', 'purchases', 'movements', 'quotes',
-  'returns', 'transfers', 'activity', 'sessions',
+  'returns', 'transfers', 'activity', 'sessions', 'lots',
 ] as const
 
 export function ensureSeeded() {
@@ -1685,6 +1739,7 @@ export function useDroguerieState() {
   const [clients, setClients] = useState<Client[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [movements, setMovements] = useState<StockMovement[]>([])
+  const [lots, setLots] = useState<Lot[]>([])
   const [purchases, setPurchases] = useState<Purchase[]>([])
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [returns, setReturns] = useState<SaleReturn[]>([])
@@ -1742,6 +1797,7 @@ export function useDroguerieState() {
       setClients(load<Client[]>(K.clients, []).map(normClient))
       setSuppliers(load(K.suppliers, []))
       if (wants('movements')) setMovements(load(K.movements, []))
+      if (wants('lots')) setLots(load(K.lots, []))
       setPurchases(load(K.purchases, []))
       setQuotes(load(K.quotes, []))
       setReturns(load(K.returns, []))
@@ -1897,6 +1953,7 @@ export function useDroguerieState() {
   const persistClients = useCallback(makePersist<Client[]>(K.clients, setClients), [])
   const persistSuppliers = useCallback(makePersist<Supplier[]>(K.suppliers, setSuppliers), [])
   const persistMovements = useCallback(makeScopedPersist<StockMovement>(K.movements, setMovements), [])
+  const persistLots = useCallback(makeScopedPersist<Lot>(K.lots, setLots), [])
   const persistPurchases = useCallback(makeScopedPersist<Purchase>(K.purchases, setPurchases), [])
   const persistQuotes = useCallback(makeScopedPersist<Quote>(K.quotes, setQuotes), [])
   const persistReturns = useCallback(makeScopedPersist<SaleReturn>(K.returns, setReturns), [])
@@ -2249,6 +2306,68 @@ export function useDroguerieState() {
   const debiterStock = (stock: number, qtyBase: number) =>
     settings.allowNegativeStock ? roundQty(stock - qtyBase) : roundQty(Math.max(0, stock - qtyBase))
 
+  // ---- Moteur de lots (FIFO/FEFO) ----
+
+  /** FEFO pour les catégories cochées dans Paramètres → Administration, FIFO sinon. */
+  const estFefo = (category: string) => (settings.fefoCategories ?? []).includes(category)
+
+  /**
+   * LOT D'OUVERTURE PARESSEUX. Le stock existant n'a pas de lots : plutôt que
+   * d'en créer 19 000 d'un coup (et pousser 19 000 lignes vers Turso), on
+   * trace un produit la PREMIÈRE fois qu'il bouge — son stock d'avant devient
+   * un lot d'ouverture, consommé en premier puisqu'il est le plus ancien.
+   */
+  const garantirOuverture = (cur: Lot[], p: Product): Lot[] => {
+    if (p.stock <= 0) return cur
+    if (cur.some((l) => l.productId === p.id && l.remaining > 0)) return cur
+    return [{
+      id: uid(), productId: p.id, productName: p.name, qty: p.stock, remaining: p.stock,
+      cost: p.cost, date: new Date().toISOString(), expiryDate: p.expiryDate || undefined,
+      ref: 'Lot d’ouverture', ouverture: true, storeId: p.storeId ?? activeStoreRef.current,
+    }, ...cur]
+  }
+
+  /** Entrée : un lot par arrivage. `p.stock` doit être le stock AVANT l'opération. */
+  const entreeLot = (cur: Lot[], p: Product, qtyBase: number, extra: { cost?: number; expiryDate?: string; ref: string; depotId?: string }): Lot[] => {
+    if (qtyBase <= 0) return cur
+    return [{
+      id: uid(), productId: p.id, productName: p.name, qty: qtyBase, remaining: qtyBase,
+      cost: extra.cost ?? p.cost, date: new Date().toISOString(), expiryDate: extra.expiryDate || undefined,
+      ref: extra.ref, storeId: p.storeId ?? activeStoreRef.current, depotId: extra.depotId || undefined,
+    }, ...garantirOuverture(cur, p)]
+  }
+
+  /**
+   * Sortie : consomme les lots ouverts dans l'ordre FIFO/FEFO de la catégorie.
+   * `prefRef` fait passer d'abord les lots d'une provenance donnée (retour
+   * fournisseur → les lots de CE bon de commande). Si les lots ne couvrent
+   * pas tout (dérive), on consomme ce qui existe — l'inventaire réconciliera.
+   */
+  const sortieLots = (cur: Lot[], p: Product, qtyBase: number, prefRef?: string): Lot[] => {
+    if (qtyBase <= 0) return cur
+    const base = garantirOuverture(cur, p)
+    const fefo = estFefo(p.category)
+    const ouverts = base
+      .filter((l) => l.productId === p.id && l.remaining > 0)
+      .sort((a, b) => {
+        if (prefRef) {
+          const pa = a.ref.startsWith(prefRef)
+          const pb = b.ref.startsWith(prefRef)
+          if (pa !== pb) return pa ? -1 : 1
+        }
+        return ordreConsommation(a, b, fefo)
+      })
+    let reste = qtyBase
+    const conso = new Map<string, number>()
+    for (const l of ouverts) {
+      if (reste <= 0) break
+      const prend = Math.min(l.remaining, reste)
+      conso.set(l.id, prend)
+      reste = roundQty(reste - prend)
+    }
+    return conso.size ? base.map((l) => (conso.has(l.id) ? { ...l, remaining: roundQty(l.remaining - (conso.get(l.id) ?? 0)) } : l)) : base
+  }
+
   const addMovement = (
     productId: string,
     type: StockMovement['type'],
@@ -2265,6 +2384,11 @@ export function useDroguerieState() {
       x.id === productId ? { ...x, stock: qty < 0 ? debiterStock(x.stock, -qty) : roundQty(x.stock + qty) } : x
     )
     persistProducts(nextProducts)
+    // Traçabilité par lots : une entrée crée un lot, une sortie en consomme.
+    const nextLots = qty > 0
+      ? entreeLot(lots, p, qty, { ref: note || MOVEMENT_META[type].label, depotId })
+      : qty < 0 ? sortieLots(lots, p, -qty) : lots
+    if (nextLots !== lots) persistLots(nextLots)
     const mv: StockMovement = {
       id: uid(),
       date: new Date().toISOString(),
@@ -2295,11 +2419,16 @@ export function useDroguerieState() {
   const applyInventory = (counts: { productId: string; counted: number }[]) => {
     let curProducts = products
     let curMovements = movements
+    let curLots = lots
     counts.forEach(({ productId, counted }) => {
       const p = curProducts.find((x) => x.id === productId)
       if (!p || p.stock === counted) return
       const delta = counted - p.stock
       curProducts = curProducts.map((x) => (x.id === productId ? { ...x, stock: counted } : x))
+      // Les lots suivent la réconciliation : surplus = lot d'écart, manque = consommation.
+      curLots = delta > 0
+        ? entreeLot(curLots, p, delta, { ref: `Inventaire (écart +${delta})` })
+        : sortieLots(curLots, p, -delta)
       curMovements = [
         {
           id: uid(),
@@ -2316,6 +2445,7 @@ export function useDroguerieState() {
     })
     persistProducts(curProducts)
     persistMovements(curMovements)
+    if (curLots !== lots) persistLots(curLots)
     logActivity('Inventaire physique validé')
   }
 
@@ -2331,14 +2461,19 @@ export function useDroguerieState() {
     if (qtyMap.size === 0) return { ok: false as const, error: 'empty' as const }
     const nowIso = new Date().toISOString()
     const newMovements: StockMovement[] = []
+    const newLots: Lot[] = []
     const nextProducts = products.map((p) => {
       const q = qtyMap.get(p.id)
       if (q === undefined || p.storeId !== sid) return p
       newMovements.push({ id: uid(), date: nowIso, productId: p.id, productName: p.name, type: 'stock_initial', qty: q, note: 'Initialisation du stock', storeId: sid, depotId: depotId || undefined, user: mvUser() })
+      newLots.push({ id: uid(), productId: p.id, productName: p.name, qty: q, remaining: q, cost: p.cost, date: nowIso, expiryDate: p.expiryDate || undefined, ref: 'Stock initial', storeId: sid, depotId: depotId || undefined })
       return { ...p, stock: q }
     })
     persistProducts(nextProducts)
     persistMovements([...newMovements, ...movements])
+    // Le stock initial POSE le stock : les anciens lots de ces produits ne
+    // décrivent plus rien — remplacés, pas cumulés.
+    persistLots([...newLots, ...lots.filter((l) => !(qtyMap.has(l.productId) && (l.storeId ?? sid) === sid))])
     logActivity('Initialisation du stock', { target: stores.find((s) => s.id === sid)?.name, newValue: `${qtyMap.size} produit(s)` })
     return { ok: true as const, count: qtyMap.size }
   }
@@ -2376,6 +2511,18 @@ export function useDroguerieState() {
         return qty ? { ...p, stock: debiterStock(p.stock, qty) } : p
       })
     )
+    {
+      // Consommation des lots, produit par produit (FIFO, ou FEFO si la
+      // catégorie est cochée) — la traçabilité suit la vente sans geste.
+      const parProduit = new Map<string, number>()
+      items.forEach((i) => parProduit.set(i.productId, roundQty((parProduit.get(i.productId) ?? 0) + baseQty(i))))
+      let nextLots = lots
+      parProduit.forEach((q, pid) => {
+        const p = products.find((x) => x.id === pid)
+        if (p) nextLots = sortieLots(nextLots, p, q)
+      })
+      if (nextLots !== lots) persistLots(nextLots)
+    }
     persistMovements([
       ...items.map((i) => ({
         id: uid() + i.productId,
@@ -2538,6 +2685,18 @@ export function useDroguerieState() {
         return qty ? { ...p, stock: roundQty(p.stock + qty) } : p
       })
     )
+    {
+      // Un retour rentre en stock comme un nouveau lot : sa fraîcheur est
+      // inconnue, seul l'inventaire pourrait dire mieux.
+      const parProduit = new Map<string, number>()
+      items.forEach((i) => parProduit.set(i.productId, roundQty((parProduit.get(i.productId) ?? 0) + baseQty(i))))
+      let nextLots = lots
+      parProduit.forEach((q, pid) => {
+        const p = products.find((x) => x.id === pid)
+        if (p) nextLots = entreeLot(nextLots, p, q, { ref: `Retour vente ${sale.id.slice(-5)}` })
+      })
+      if (nextLots !== lots) persistLots(nextLots)
+    }
     persistMovements([
       ...items.map((i) => ({
         id: uid() + i.productId,
@@ -2838,7 +2997,7 @@ export function useDroguerieState() {
 
   const validateReception = (
     id: string,
-    received: { productId: string; receivedQty: number; state: PurchaseItem['receptionState']; note?: string }[],
+    received: { productId: string; receivedQty: number; state: PurchaseItem['receptionState']; note?: string; expiryDate?: string }[],
     meta?: { employee?: string; depot?: string; depotId?: string }
   ) => {
     const po = purchases.find((p) => p.id === id)
@@ -2846,6 +3005,7 @@ export function useDroguerieState() {
     const brRef = po.brRef ?? docNumber('BR', stores.find((s) => s.id === po.storeId) ?? null, purchases.filter((p) => p.brRef && p.storeId === po.storeId).length + 1)
     let curProducts = products
     let curMovements = movements
+    let curLots = lots
     let receivedValue = 0
     received.forEach((r) => {
       if (r.receivedQty <= 0) return
@@ -2859,6 +3019,9 @@ export function useDroguerieState() {
       const qBase = roundQty(r.receivedQty * f)
       const coutBase = Math.round((i.cost / f) * 10000) / 10000
       receivedValue += r.receivedQty * i.cost
+      // Chaque ligne reçue devient un LOT : date d'entrée, DLC saisie à la
+      // réception, coût ramené à l'unité de base, provenance BC/BR.
+      curLots = entreeLot(curLots, p, qBase, { cost: coutBase, expiryDate: r.expiryDate, ref: `${po.ref} / ${brRef}`, depotId: meta?.depotId })
       curProducts = curProducts.map((x) => (x.id === r.productId ? { ...x, stock: roundQty(x.stock + qBase), cost: coutBase } : x))
       curMovements = [
         { id: uid() + r.productId, date: new Date().toISOString(), productId: r.productId, productName: i.name, type: 'entree' as const, qty: qBase, note: `${po.ref} / ${brRef}`, storeId: po.storeId, depotId: meta?.depotId || undefined, user: meta?.employee || mvUser() },
@@ -2867,6 +3030,7 @@ export function useDroguerieState() {
     })
     persistProducts(curProducts)
     persistMovements(curMovements)
+    if (curLots !== lots) persistLots(curLots)
 
     const nextItems = po.items.map((i) => {
       const r = received.find((x) => x.productId === i.productId)
@@ -2929,6 +3093,7 @@ export function useDroguerieState() {
     if (!po || po.status !== 'recue') return
     let curProducts = products
     let curMovements = movements
+    let curLots = lots
     po.items.forEach((i) => {
       /*
        * EN UNITÉS DE BASE, comme partout. La version précédente déduisait
@@ -2938,6 +3103,10 @@ export function useDroguerieState() {
        * par le facteur d'achat — le symétrique exact de validateReception.
        */
       const qBase = roundQty((i.receivedQty ?? i.qty) * purchaseFactor(i))
+      // Les lots de CE bon de commande partent en premier : on rend au
+      // fournisseur sa propre marchandise avant d'entamer le reste.
+      const prod = curProducts.find((x) => x.id === i.productId)
+      if (prod) curLots = sortieLots(curLots, prod, qBase, po.ref)
       curProducts = curProducts.map((x) =>
         x.id === i.productId ? { ...x, stock: debiterStock(x.stock, qBase) } : x
       )
@@ -2948,6 +3117,7 @@ export function useDroguerieState() {
     })
     persistProducts(curProducts)
     persistMovements(curMovements)
+    if (curLots !== lots) persistLots(curLots)
     persistPurchases(purchases.map((p) => (p.id === id ? { ...p, status: 'retournee' } : p)))
     // Cancels the full order value: the unpaid portion is removed from what we owe,
     // and any portion already paid becomes a credit (avoir) — balance may go negative,
@@ -3487,8 +3657,12 @@ export function useDroguerieState() {
     const tr = transfers.find((x) => x.id === id)
     if (!tr || tr.status !== 'valide') return { ok: false, error: 'status' }
     let curProducts = products
+    let curLots = lots
     const newMovements: StockMovement[] = []
     for (const it of tr.items) {
+      // L'expédition consomme les lots de la source (FIFO/FEFO), comme une vente.
+      const prod = curProducts.find((p) => p.id === it.productId)
+      if (prod) curLots = sortieLots(curLots, prod, it.requestedQty)
       curProducts = curProducts.map((p) =>
         p.id === it.productId
           ? { ...p, stock: Math.max(0, p.stock - it.requestedQty), reserved: Math.max(0, (p.reserved ?? 0) - it.requestedQty) }
@@ -3509,6 +3683,7 @@ export function useDroguerieState() {
     }
     persistProducts(curProducts)
     persistMovements([...newMovements, ...movements])
+    if (curLots !== lots) persistLots(curLots)
     persistTransfers(
       transfers.map((x) =>
         x.id === id
@@ -3531,6 +3706,7 @@ export function useDroguerieState() {
     const tr = transfers.find((x) => x.id === id)
     if (!tr || tr.status !== 'expedie') return { ok: false, error: 'status' }
     let curProducts = products
+    let curLots = lots
     const newMovements: StockMovement[] = []
     tr.items.forEach((it) => {
       const rq = received.find((r) => r.productId === it.productId)?.receivedQty ?? 0
@@ -3540,27 +3716,35 @@ export function useDroguerieState() {
         (p) => p.storeId === tr.destStoreId && ((it.barcode && p.barcode === it.barcode) || p.name === it.name)
       )
       if (existing) {
+        // Le lot naît à destination — `existing` porte encore le stock d'AVANT,
+        // comme l'exige entreeLot pour tracer l'antériorité.
+        curLots = entreeLot(curLots, existing, rq, { cost: it.cost, ref: `Transfert ${tr.ref}` })
         curProducts = curProducts.map((p) => (p.id === existing.id ? { ...p, stock: p.stock + rq } : p))
       } else {
-        curProducts = [
-          {
-            id: uid(),
-            name: it.name,
-            barcode: it.barcode,
-            category: 'Divers',
-            brand: '',
-            unit: 'Pièce',
-            price: it.cost,
-            cost: it.cost,
-            stock: rq,
-            minStock: 0,
-            reserved: 0,
-            lot: it.lot,
-            serial: it.serial,
-            storeId: tr.destStoreId,
-          },
-          ...curProducts,
-        ]
+        const cree: Product = {
+          id: uid(),
+          name: it.name,
+          barcode: it.barcode,
+          category: 'Divers',
+          brand: '',
+          unit: 'Pièce',
+          price: it.cost,
+          cost: it.cost,
+          stock: rq,
+          minStock: 0,
+          reserved: 0,
+          lot: it.lot,
+          serial: it.serial,
+          storeId: tr.destStoreId,
+        }
+        curProducts = [cree, ...curProducts]
+        // Fiche neuve : son premier lot est le transfert lui-même (stock
+        // antérieur nul, donc pas de lot d'ouverture à tracer).
+        curLots = [{
+          id: uid(), productId: cree.id, productName: cree.name, qty: rq, remaining: rq,
+          cost: it.cost, date: new Date().toISOString(), ref: `Transfert ${tr.ref}`,
+          storeId: tr.destStoreId, depotId: tr.destDepotId || undefined,
+        }, ...curLots]
       }
       newMovements.push({
         id: uid() + it.productId,
@@ -3577,6 +3761,7 @@ export function useDroguerieState() {
     })
     persistProducts(curProducts)
     persistMovements([...newMovements, ...movements])
+    if (curLots !== lots) persistLots(curLots)
 
     const nextItems = tr.items.map((it) => ({
       ...it,
@@ -3606,6 +3791,7 @@ export function useDroguerieState() {
     products: scopedProducts,
     sales: scoped(sales),
     movements: scoped(movements),
+    lots: scoped(lots),
     purchases: scoped(purchases),
     quotes: scoped(quotes),
     returns: scoped(returns),
@@ -3631,6 +3817,7 @@ export function useDroguerieState() {
     allProducts: products,
     allSales: sales,
     allMovements: movements,
+    allLots: lots,
     allPurchases: purchases,
     allCredits: credits,
     allCash: cash,

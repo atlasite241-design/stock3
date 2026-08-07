@@ -26,6 +26,8 @@ const READ_PERM: Record<string, string | string[] | null> = {
   suppliers: 'supp.view',
   purchases: 'purch.order',
   movements: 'stock.movements',
+  // La traçabilité par lots suit la même règle que le journal des mouvements.
+  lots: 'stock.movements',
   transfers: 'stock.transfer',
   cash: 'cash.journal',
   sessions: 'cash.journal',
@@ -72,7 +74,10 @@ const WRITE_PERM: Record<string, string | string[]> = {
   loyalty: 'client.loyalty_view',
   suppliers: 'supp.add',
   purchases: 'purch.order',
-  movements: 'stock.movements',
+  // Vendre ÉCRIT aussi des mouvements et des lots : la session de caisse doit
+  // pouvoir les pousser, comme le magasinier qui reçoit ou inventorie.
+  movements: ['stock.movements', 'sale.create'],
+  lots: ['stock.movements', 'sale.create'],
   transfers: 'stock.transfer',
   cash: 'cash.journal',
   sessions: 'cash.journal',

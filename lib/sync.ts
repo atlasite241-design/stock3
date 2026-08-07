@@ -25,6 +25,7 @@ export const COLLECTIONS: Collection[] = [
   { collection: 'clients', key: 'dp_clients' },
   { collection: 'suppliers', key: 'dp_suppliers' },
   { collection: 'movements', key: 'dp_movements' },
+  { collection: 'lots', key: 'dp_lots' },
   { collection: 'purchases', key: 'dp_purchases' },
   { collection: 'quotes', key: 'dp_quotes' },
   { collection: 'returns', key: 'dp_returns' },

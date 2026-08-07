@@ -24,7 +24,7 @@ function Content() {
   const [query, setQuery] = useState('')
   const [detail, setDetail] = useState<Purchase | null>(null)
   const [receiveTarget, setReceiveTarget] = useState<Purchase | null>(null)
-  const [rows, setRows] = useState<Record<string, { qty: string; state: PurchaseItem['receptionState']; note: string }>>({})
+  const [rows, setRows] = useState<Record<string, { qty: string; state: PurchaseItem['receptionState']; note: string; dlc: string }>>({})
   const [employee, setEmployee] = useState('')
   const [depot, setDepot] = useState('')
   // Réf. fournisseur + remise globale : renseignées à la réception (à partir du
@@ -51,10 +51,10 @@ function Content() {
     setDepot('')
     setSupplierRef(p.supplierRef ?? '')
     setGlobalDiscount(String(p.globalDiscount ?? 0))
-    const init: Record<string, { qty: string; state: PurchaseItem['receptionState']; note: string }> = {}
+    const init: Record<string, { qty: string; state: PurchaseItem['receptionState']; note: string; dlc: string }> = {}
     p.items.forEach((i) => {
       const remaining = Math.max(0, i.qty - (i.receivedQty ?? 0))
-      init[i.productId] = { qty: String(remaining), state: 'conforme', note: '' }
+      init[i.productId] = { qty: String(remaining), state: 'conforme', note: '', dlc: '' }
     })
     setRows(init)
   }
@@ -62,7 +62,8 @@ function Content() {
   const confirmReceive = () => {
     if (!receiveTarget) return
     const received = Object.entries(rows)
-      .map(([productId, r]) => ({ productId, receivedQty: Math.max(0, Math.round(parseFloat(r.qty.replace(',', '.')) || 0)), state: r.state, note: r.note }))
+      // La DLC saisie part sur le LOT créé par la réception — moteur FEFO.
+      .map(([productId, r]) => ({ productId, receivedQty: Math.max(0, Math.round(parseFloat(r.qty.replace(',', '.')) || 0)), state: r.state, note: r.note, expiryDate: r.dlc || undefined }))
       .filter((r) => r.receivedQty > 0)
     if (received.length === 0) {
       toast(t('recep_nothing_to_receive'), 'error')
@@ -209,12 +210,13 @@ function Content() {
                     <th className="px-3 py-2.5 text-center">{t('recep_col_received_so_far')}</th>
                     <th className="px-3 py-2.5 text-center">{t('recep_col_receive_now')}</th>
                     <th className="px-3 py-2.5">{t('recep_col_state')}</th>
+                    <th className="px-3 py-2.5">{t('recep_col_dlc')}</th>
                     <th className="px-3 py-2.5">{t('recep_col_note')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {receiveTarget.items.map((i) => {
-                    const row = rows[i.productId] ?? { qty: '0', state: 'conforme' as const, note: '' }
+                    const row = rows[i.productId] ?? { qty: '0', state: 'conforme' as const, note: '', dlc: '' }
                     const remaining = Math.max(0, i.qty - (i.receivedQty ?? 0))
                     return (
                       <tr key={i.productId} className="border-b border-gray-50 dark:border-white/5">
@@ -242,6 +244,16 @@ function Content() {
                             onChange={(v) => setRows({ ...rows, [i.productId]: { ...row, state: v as PurchaseItem['receptionState'] } })}
                             options={STATE_OPTIONS.map((o) => ({ value: o.key as string, label: t(o.labelKey) }))}
                             className="!h-9 min-w-[120px]"
+                          />
+                        </td>
+                        <td className="px-3 py-2.5">
+                          {/* Facultative — elle date le LOT créé par cette réception,
+                              et nourrit le FEFO pour les catégories qui périment. */}
+                          <input
+                            type="date"
+                            value={row.dlc}
+                            onChange={(e) => setRows({ ...rows, [i.productId]: { ...row, dlc: e.target.value } })}
+                            className="input-field !h-9 w-36"
                           />
                         </td>
                         <td className="min-w-[160px] px-3 py-2.5">
