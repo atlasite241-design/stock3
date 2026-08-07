@@ -13,7 +13,7 @@ import AppShell from '@/components/AppShell'
 import DangerConfirm from '@/components/DangerConfirm'
 import Loader from '@/components/Loader'
 import { useToast } from '@/components/Toast'
-import { appliquer, planifierConversions, type Conversion } from '@/lib/conversion-lots'
+import { appliquer, candidatsSansFacteur, conversionManuelle, planifierConversions, type Conversion } from '@/lib/conversion-lots'
 import { createBackup, fmtDH, uid, useDroguerie } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
@@ -25,6 +25,9 @@ function Content() {
   const toast = useToast()
 
   const [plan, setPlan] = useState<Conversion[] | null>(null)
+  // Fiches en Boite/Carton sans nombre dans le nom : facteur saisi a la main.
+  const [manuels, setManuels] = useState<typeof products | null>(null)
+  const [facteurs, setFacteurs] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [query, setQuery] = useState('')
@@ -40,6 +43,8 @@ function Content() {
       try {
         const p = planifierConversions(products)
         setPlan(p)
+        setManuels(candidatsSansFacteur(products))
+        setFacteurs({})
         // Tout est coché : la détection exige déjà un mot-clé explicite.
         // C'est le décochage qui devient l'acte de vigilance.
         setPicked(new Set(p.map((c) => c.id)))
@@ -56,7 +61,10 @@ function Content() {
     return !q || c.nomActuel.toLowerCase().includes(q)
   })
 
-  const selection = (plan ?? []).filter((c) => picked.has(c.id))
+  const manuelles = (manuels ?? [])
+    .map((p) => conversionManuelle(p, Number(facteurs[p.id] ?? '')))
+    .filter((c): c is Conversion => c !== null)
+  const selection = [...(plan ?? []).filter((c) => picked.has(c.id)), ...manuelles]
   const valeurSelection = selection.reduce((s, c) => s + c.valeurAvant, 0)
 
   const toggle = (id: string) =>
@@ -76,6 +84,8 @@ function Content() {
     setDone(r)
     setPlan(null)
     setPicked(new Set())
+    setManuels(null)
+    setFacteurs({})
     toast(`✓ ${r.converties.toLocaleString('fr-FR')} ${t('cv_done')}`)
   }
 
@@ -142,7 +152,7 @@ function Content() {
             ))}
           </div>
 
-          {plan.length === 0 ? (
+          {plan.length === 0 && (manuels?.length ?? 0) === 0 ? (
             <p className="glass-card p-12 text-center text-sm text-emerald-600 dark:text-emerald-400">{t('cv_none')}</p>
           ) : (
             <>
@@ -219,6 +229,63 @@ function Content() {
                   <button onClick={() => setShown((n) => n + PAGE * 3)} className="btn-secondary">
                     {shown.toLocaleString('fr-FR')} / {rows.length.toLocaleString('fr-FR')} — {t('rpst_more')}
                   </button>
+                </div>
+              )}
+
+              {manuels && manuels.length > 0 && (
+                <div className="glass-card overflow-hidden">
+                  <div className="border-b border-gray-100 p-4 dark:border-white/10">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                      {t('cv_man_title')} · <span className="tabular-nums">{manuels.length.toLocaleString('fr-FR')}</span>
+                    </p>
+                    <p className="mt-1 max-w-3xl text-[11px] leading-relaxed text-gray-500 dark:text-zinc-400">{t('cv_man_hint')}</p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[760px] text-sm">
+                      <tbody>
+                        {manuels
+                          .filter((p) => {
+                            const q = query.trim().toLowerCase()
+                            return !q || p.name.toLowerCase().includes(q)
+                          })
+                          .slice(0, 100)
+                          .map((p) => {
+                            const c = conversionManuelle(p, Number(facteurs[p.id] ?? ''))
+                            return (
+                              <tr key={p.id} className={`border-b border-gray-50 last:border-0 dark:border-white/5 ${c ? '' : 'opacity-60'}`}>
+                                <td className="px-3 py-2 font-semibold text-gray-900 dark:text-white">{p.name}</td>
+                                <td className="px-3 py-2">
+                                  <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-bold text-gray-600 dark:bg-white/10 dark:text-zinc-400">
+                                    {p.stock.toLocaleString('fr-FR')} {p.unit}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="number" min={2} step={1}
+                                    value={facteurs[p.id] ?? ''}
+                                    onChange={(e) => setFacteurs((f) => ({ ...f, [p.id]: e.target.value }))}
+                                    placeholder={t('cv_man_factor')}
+                                    className="input-field !h-8 w-28 text-center text-sm tabular-nums"
+                                  />
+                                </td>
+                                <td className="px-3 py-2 text-right tabular-nums">
+                                  {c && (
+                                    <>
+                                      <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[11px] font-bold text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
+                                        {c.conditionnement} ×{c.facteur}
+                                      </span>
+                                      <span className="mx-1 text-gray-300">→</span>
+                                      <b className="text-gray-900 dark:text-white">{c.stockApres.toLocaleString('fr-FR')}</b>
+                                      <span className="ml-1 text-gray-400">× {c.prixApres} DH</span>
+                                    </>
+                                  )}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
 

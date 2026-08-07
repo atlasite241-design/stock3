@@ -118,6 +118,57 @@ export function planifierConversions(products: Product[]): Conversion[] {
   return out.sort((a, b) => b.valeurAvant - a.valeurAvant)
 }
 
+/**
+ * Unités qui désignent un CONTENANT. Une fiche tenue dans l'une d'elles sans
+ * nombre dans le nom (« Vis à bois Ingco 4×40 », unité « Boîte ») échappe à la
+ * détection automatique : le contenu n'est écrit nulle part. Ces fiches sont
+ * proposées à la conversion manuelle — l'humain saisit le facteur.
+ */
+const UNITES_LOT = /^(bo[iî]tes?|cartons?|sachets?|lots?|paquets?|packs?|coffrets?|jeux?|sets?|blisters?)$/i
+
+export function estUniteLot(unit: string): boolean {
+  return UNITES_LOT.test((unit || '').trim())
+}
+
+/** Fiches en contenant dont le nom ne dit pas le contenu, triées par valeur de
+ *  stock décroissante — les plus lourdes d'abord, comme le plan automatique. */
+export function candidatsSansFacteur(products: Product[]): Product[] {
+  return products
+    .filter((p) => (!p.saleUnits || p.saleUnits.length === 0) && estUniteLot(p.unit) && !detecterLot(p.name))
+    .sort((a, b) => b.stock * b.cost - a.stock * a.cost)
+}
+
+/**
+ * Conversion bâtie depuis un facteur saisi à la main — même arithmétique que
+ * la détection, mais le nom ne change pas : il n'y a rien à en retirer.
+ */
+export function conversionManuelle(p: Product, facteur: number): Conversion | null {
+  const n = Math.round(facteur)
+  if (!Number.isFinite(n) || n < FACTEUR_MIN || n > FACTEUR_MAX) return null
+
+  const contenant = (p.unit || 'Boîte').trim()
+  const label = contenant.charAt(0).toUpperCase() + contenant.slice(1).toLowerCase() + ` de ${n}`
+  const stockApres = round4(p.stock * n)
+  const coutApres = round4(p.cost / n)
+  const prixApres = round2(p.price / n)
+
+  return {
+    id: p.id,
+    nomActuel: p.name,
+    nomPropose: p.name,
+    conditionnement: label,
+    facteur: n,
+    stockAvant: p.stock,
+    stockApres,
+    coutAvant: p.cost,
+    coutApres,
+    prixAvant: p.price,
+    prixApres,
+    valeurAvant: round2(p.stock * p.cost),
+    valeurApres: round2(stockApres * coutApres),
+  }
+}
+
 /** Applique une conversion à une fiche. Le code-barres actuel est celui du
  *  conditionnement : il est reporté dessus, et conservé sur la fiche pour que
  *  la recherche par code continue de fonctionner. */
