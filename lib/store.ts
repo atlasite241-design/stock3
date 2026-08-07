@@ -2115,6 +2115,8 @@ export function useDroguerieState() {
     const byId = new Map(products.map((p) => [p.id, p]))
     const aSupprimer = new Set<string>()
     const fusionnees = new Map<string, Product>()
+    // Fiche absorbée → fiche survivante : les lots suivent la fusion.
+    const versQui = new Map<string, string>()
     let groupes = 0
 
     for (const ids of groups) {
@@ -2151,6 +2153,7 @@ export function useDroguerieState() {
         if (!(merged.cost > 0) && p.cost > 0) merged.cost = p.cost
         if (!merged.image && p.image) merged.image = p.image
         aSupprimer.add(p.id)
+        versQui.set(p.id, keep.id)
       }
       repris.delete(merged.barcode)
       if (repris.size) merged.altBarcodes = [...repris]
@@ -2166,6 +2169,18 @@ export function useDroguerieState() {
     const stockApres = next.reduce((s, p) => s + (Number(p.stock) || 0), 0)
 
     persistProducts(next)
+    // Les lots des fiches absorbées suivent la survivante : sans ça, leur
+    // traçabilité pointerait vers des fiches qui n'existent plus.
+    if (versQui.size) {
+      let touche = false
+      const nextLots = lots.map((l) => {
+        const cible = versQui.get(l.productId)
+        if (!cible) return l
+        touche = true
+        return { ...l, productId: cible, productName: fusionnees.get(cible)?.name ?? l.productName }
+      })
+      if (touche) persistLots(nextLots)
+    }
     logActivity(`Fusion des doublons : ${groupes} groupes, ${aSupprimer.size} fiches absorbées`)
     return { groupes, supprimees: aSupprimer.size, stockAvant, stockApres }
   }
@@ -2179,7 +2194,7 @@ export function useDroguerieState() {
    * deux reste constant.
    */
   const applyLotConversions = (
-    transform: { id: string; apply: (p: Product) => Product }[]
+    transform: { id: string; facteur?: number; apply: (p: Product) => Product }[]
   ): { converties: number; valeurAvant: number; valeurApres: number } => {
     if (transform.length === 0) return { converties: 0, valeurAvant: 0, valeurApres: 0 }
     const byId = new Map(transform.map((t) => [t.id, t.apply]))
@@ -2190,6 +2205,27 @@ export function useDroguerieState() {
     })
     const valeurApres = Math.round(next.reduce((s, p) => s + p.stock * p.cost, 0) * 100) / 100
     persistProducts(next)
+    /*
+     * Les lots CHANGENT D'ÉCHELLE avec la fiche : une fiche passée de la boîte
+     * à la pièce (×100) a des lots comptés en boîtes — quantités ×100, coût
+     * ÷100, même invariant de valeur que la fiche elle-même.
+     */
+    const facteurs = new Map(transform.filter((t) => t.facteur && t.facteur > 1).map((t) => [t.id, t.facteur as number]))
+    if (facteurs.size) {
+      let touche = false
+      const nextLots = lots.map((l) => {
+        const f = facteurs.get(l.productId)
+        if (!f) return l
+        touche = true
+        return {
+          ...l,
+          qty: roundQty(l.qty * f),
+          remaining: roundQty(l.remaining * f),
+          cost: Math.round((l.cost / f) * 10000) / 10000,
+        }
+      })
+      if (touche) persistLots(nextLots)
+    }
     logActivity(`Conversion en conditionnements : ${transform.length} fiches`)
     return { converties: transform.length, valeurAvant, valeurApres }
   }
@@ -2201,6 +2237,10 @@ export function useDroguerieState() {
     const removed = products.length - next.length
     if (removed === 0) return 0
     persistProducts(next)
+    // Pas de lots orphelins : la traçabilité d'une fiche part avec elle.
+    if (lots.some((l) => set.has(l.productId))) {
+      persistLots(lots.filter((l) => !set.has(l.productId)))
+    }
     logActivity(`Nettoyage du catalogue : ${removed} fiches supprimées`)
     return removed
   }

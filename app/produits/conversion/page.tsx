@@ -78,7 +78,9 @@ function Content() {
   const apply = () => {
     try { createBackup(`Avant conversion en conditionnements — ${new Date().toLocaleString('fr-FR')}`) } catch {}
     const r = applyLotConversions(
-      selection.map((c) => ({ id: c.id, apply: (p: typeof products[number]) => appliquer(p, c, uid()) }))
+      // Le facteur accompagne chaque fiche : les lots de traçabilité changent
+      // d'échelle avec elle (quantités ×f, coût ÷f).
+      selection.map((c) => ({ id: c.id, facteur: c.facteur, apply: (p: typeof products[number]) => appliquer(p, c, uid()) }))
     )
     setConfirm(false)
     setDone(r)
