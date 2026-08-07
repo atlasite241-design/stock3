@@ -11,6 +11,21 @@ import { nextMatricule, type EmployeeView, type NewEmployee } from '@/lib/hr-emp
 import { USER_ROLES, type AppUser } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
+/*
+ * Field vit au niveau module, PAS dans le composant : defini a l'interieur,
+ * il changeait d'identite a chaque frappe (l'etat du formulaire re-rend le
+ * parent), React demontait donc tous les champs et le focus se perdait apres
+ * un caractere — c'est le bogue que signalait static-components.
+ */
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-zinc-500">{label}</span>
+      {children}
+    </label>
+  )
+}
+
 export default function EmployeeForm({
   initial,
   existing,
@@ -46,13 +61,6 @@ export default function EmployeeForm({
 
   const set = <K extends keyof NewEmployee>(k: K, v: NewEmployee[K]) => setF((p) => ({ ...p, [k]: v }))
   const valid = f.name.trim().length > 1 && f.poste.trim().length > 0
-
-  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <label className="block">
-      <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-zinc-500">{label}</span>
-      {children}
-    </label>
-  )
 
   return (
     <div className="space-y-5">

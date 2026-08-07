@@ -208,20 +208,6 @@ function ClientsContent() {
 
   const profileSales = profileTarget ? sales.filter((s) => s.clientId === profileTarget.id).slice(-8).reverse() : []
 
-  const SortHeader = ({ label, sortField }: { label: string; sortField: SortKey }) => (
-    <button
-      onClick={() => toggleSort(sortField)}
-      className="flex items-center gap-1 transition hover:text-gray-700 dark:hover:text-zinc-200"
-    >
-      {label}
-      {sortKey === sortField ? (
-        sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-      ) : (
-        <ArrowUpDown className="h-3 w-3 opacity-40" />
-      )}
-    </button>
-  )
-
   return (
     <>
       <motion.div
@@ -325,13 +311,13 @@ function ClientsContent() {
           <table className="w-full min-w-[900px]">
             <thead>
               <tr className="border-b border-gray-100 dark:border-white/10 text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500">
-                <th className="px-5 py-3.5"><SortHeader label={t('cli_col_client')} sortField="name" /></th>
-                <th className="px-5 py-3.5"><SortHeader label={t('cli_col_city')} sortField="city" /></th>
+                <th className="px-5 py-3.5"><SortHeader label={t('cli_col_client')} sortField="name" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /></th>
+                <th className="px-5 py-3.5"><SortHeader label={t('cli_col_city')} sortField="city" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /></th>
                 <th className="px-5 py-3.5">{t('cli_col_segment')}</th>
                 <th className="px-5 py-3.5">{t('cli_col_last_visit')}</th>
-                <th className="px-5 py-3.5"><SortHeader label={t('cli_col_total_spent')} sortField="totalSpent" /></th>
+                <th className="px-5 py-3.5"><SortHeader label={t('cli_col_total_spent')} sortField="totalSpent" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /></th>
                 <th className="px-5 py-3.5">{t('cli_col_points')}</th>
-                <th className="px-5 py-3.5"><SortHeader label={t('cli_col_credit')} sortField="credit" /></th>
+                <th className="px-5 py-3.5"><SortHeader label={t('cli_col_credit')} sortField="credit" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /></th>
                 <th className="px-5 py-3.5 text-right">{t('cli_col_actions')}</th>
               </tr>
             </thead>
@@ -717,6 +703,33 @@ function ClientsContent() {
         )}
       </Modal>
     </>
+  )
+}
+
+/*
+ * Defini au niveau module et non dans la page : un composant recree a chaque
+ * rendu change d'identite pour React, qui demonte son sous-arbre a chaque
+ * clic de tri (meme bogue que le formulaire employe, ou il coutait le focus).
+ */
+function SortHeader({ label, sortField, sortKey, sortDir, onToggle }: {
+  label: string
+  sortField: SortKey
+  sortKey: SortKey
+  sortDir: 'asc' | 'desc'
+  onToggle: (k: SortKey) => void
+}) {
+  return (
+    <button
+      onClick={() => onToggle(sortField)}
+      className="flex items-center gap-1 transition hover:text-gray-700 dark:hover:text-zinc-200"
+    >
+      {label}
+      {sortKey === sortField ? (
+        sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+      ) : (
+        <ArrowUpDown className="h-3 w-3 opacity-40" />
+      )}
+    </button>
   )
 }
 
