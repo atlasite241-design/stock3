@@ -553,7 +553,12 @@ function CaisseContent() {
                     </span>
                   )}
                   {prod?.decimalQty && (
-                    <span className="text-[11px] text-gray-400 dark:text-zinc-500">{prod.unit}</span>
+                    /* L'étiquette suit la LIGNE, pas la fiche : sur une ligne
+                       « Boîte de 100 », un 2 compte des boîtes — afficher
+                       « Pièce » à côté ferait croire à 2 pièces à 251 DH. */
+                    <span className="text-[11px] text-gray-400 dark:text-zinc-500">
+                      {i.unitFactor && i.unitFactor > 1 ? i.unitName : prod.unit}
+                    </span>
                   )}
                   <button
                     onClick={() => changeQty(key, 1)}

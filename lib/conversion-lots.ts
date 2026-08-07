@@ -190,6 +190,9 @@ export function appliquer(p: Product, c: Conversion, unitId: string): Product {
     // réglée sur 5 boîtes se déclencherait à 5 pièces.
     minStock: Math.round(p.minStock * c.facteur),
     unit: 'Pièce',
+    // Une pièce se compte entière : la quantité fractionnée héritée de
+    // l'époque « tenu en boîtes » laisserait vendre 2,5 vis.
+    decimalQty: undefined,
     saleUnits: [unit],
   }
 }
