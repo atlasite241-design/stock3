@@ -22,7 +22,7 @@ import { fmtDH, useDroguerie } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 function Content() {
-  const { ready, cash, sales, clientPayments, sessions, currentSession, expectedCash, openSession, closeSession, addCashEntry } =
+  const { ready, cash, sales, clientPayments, sessions, currentSession, expectedCash, openSession, closeSession, addCashEntry, settings } =
     useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
@@ -142,7 +142,16 @@ function Content() {
     setTransferDirection('sortie')
   }
 
-  const closedSessions = sessions.filter((s) => s.closedAt)
+  /*
+   * Le « point zéro » de Paramètres → Réinitialisation vaut aussi ici : le
+   * tableau de bord recompte depuis cette date, le journal doit faire pareil.
+   * Rien n'est supprimé — les écritures antérieures restent en base, dans les
+   * exports et la synchro ; elles n'encombrent simplement plus l'écran.
+   */
+  const depuisReset = settings.statsResetAt ?? ''
+  const journal = depuisReset ? cash.filter((c) => c.date >= depuisReset) : cash
+
+  const closedSessions = sessions.filter((s) => s.closedAt && (!depuisReset || s.openedAt >= depuisReset))
 
   return (
     <>
@@ -240,7 +249,7 @@ function Content() {
               </tr>
             </thead>
             <tbody>
-              {cash.slice(0, 30).map((c) => (
+              {journal.slice(0, 30).map((c) => (
                 <tr key={c.id} className="border-b border-gray-50">
                   <td className="px-5 py-3 text-sm text-gray-600 dark:text-zinc-400">
                     {new Date(c.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}{' '}
@@ -274,7 +283,7 @@ function Content() {
                   </td>
                 </tr>
               ))}
-              {cash.length === 0 && (
+              {journal.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-5 py-8 text-center text-sm text-gray-400 dark:text-zinc-500">
                     {t('cj_no_movement')}
