@@ -15,6 +15,8 @@ const STATE_OPTIONS: { key: PurchaseItem['receptionState']; labelKey: TKey }[] =
   { key: 'conforme', labelKey: 'recep_state_conforme' },
   { key: 'manquant', labelKey: 'recep_state_manquant' },
   { key: 'endommage', labelKey: 'recep_state_endommage' },
+  // Reçu mais pas ce qui était commandé (autre référence, autre modèle).
+  { key: 'different', labelKey: 'recep_state_different' },
 ]
 
 function Content() {

@@ -638,7 +638,7 @@ export interface PurchaseItem {
   tva?: number
   deliveredQty?: number
   receivedQty?: number
-  receptionState?: 'conforme' | 'manquant' | 'endommage'
+  receptionState?: 'conforme' | 'manquant' | 'endommage' | 'different'
   receptionNote?: string
 }
 
