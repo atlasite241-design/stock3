@@ -126,8 +126,10 @@ const NAV_ALL: NavItem[] = [
       {
         sectionKey: 'nav_stock_sec_init',
         items: [
+          // Un seul lien vers le stock initial : les quatre modes de saisie
+          // (dont l'import Excel) sont des onglets DE la page — une seconde
+          // entrée de menu vers le même écran ne se comprenait pas.
           { href: '/stock/stock-initial', labelKey: 'nav_stock_initial' },
-          { href: '/stock/stock-initial?mode=import', labelKey: 'nav_stock_import' },
           { href: '/stock/ajustement', labelKey: 'nav_stock_adjust' },
         ],
       },

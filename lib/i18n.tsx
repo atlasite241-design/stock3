@@ -1122,7 +1122,6 @@ const DICT = {
   nav_stock_rep_history: { fr: 'Historique du stock', ar: 'سجل المخزون' },
   nav_stock_rep_state: { fr: 'État du stock', ar: 'حالة المخزون' },
   nav_stock_rep_export: { fr: 'Export Excel / PDF', ar: 'تصدير Excel / PDF' },
-  nav_stock_import: { fr: 'Import du stock', ar: 'استيراد المخزون' },
   nav_stock_inv_zone: { fr: 'Inventaire par zone', ar: 'الجرد حسب المنطقة' },
   nav_stock_inv_loc: { fr: 'Inventaire par emplacement', ar: 'الجرد حسب الموقع' },
   nav_stock_quickcount: { fr: 'Comptage rapide', ar: 'إحصاء سريع' },
