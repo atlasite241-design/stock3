@@ -509,6 +509,10 @@ const NAV_ALL: NavItem[] = [
     icon: Settings,
     children: [
       { href: '/parametres/societe', labelKey: 'nav_settings_company' },
+      // TVA et Devise étaient des écrans FONCTIONNELS sans aucun lien de menu :
+      // on ne pouvait changer son taux de TVA qu'en tapant l'URL à la main.
+      { href: '/parametres/tva', labelKey: 'nav_settings_tva' },
+      { href: '/parametres/devise', labelKey: 'nav_settings_currency' },
       { href: '/parametres/impression', labelKey: 'nav_settings_print' },
       { href: '/parametres/sauvegarde', labelKey: 'nav_settings_backup' },
       { href: '/parametres/theme', labelKey: 'nav_settings_theme' },

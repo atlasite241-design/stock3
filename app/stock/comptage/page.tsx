@@ -3,6 +3,12 @@
 // Comptage rapide : on scanne (ou saisit) un code-barres, on tape la quantité
 // comptée, et on passe au suivant. Les écarts sont accumulés et appliqués en
 // une seule validation — on ne modifie jamais le stock article par article.
+//
+// C'est un INVENTAIRE, pas une série d'ajustements : la validation passe par
+// `applyInventory`, comme la feuille d'inventaire complète. Auparavant elle
+// appelait `adjustStock`, ce qui produisait des mouvements de type
+// « ajustement » — les comptages n'apparaissaient donc PAS dans l'écran
+// Écarts d'inventaire, qui ne lit que les mouvements d'inventaire.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -11,13 +17,13 @@ import AppShell from '@/components/AppShell'
 import CameraScanner from '@/components/CameraScanner'
 import Loader from '@/components/Loader'
 import { useToast } from '@/components/Toast'
-import { availableStock, useDroguerie, type Product } from '@/lib/store'
+import { useDroguerie, type Product } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 interface Line { productId: string; name: string; theoretical: number; counted: number }
 
 function Content() {
-  const { ready, products, activeStoreId, adjustStock } = useDroguerie()
+  const { ready, products, activeStoreId, applyInventory } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
 
@@ -55,7 +61,13 @@ function Content() {
     if (!pending) return
     const counted = Math.max(0, Math.round(Number(qty.replace(',', '.')) || 0))
     setLines((l) => [
-      { productId: pending.id, name: pending.name, theoretical: availableStock(pending), counted },
+      /*
+       * Le théorique est le stock PHYSIQUE, pas le disponible : une quantité
+       * réservée par un transfert non expédié est toujours sur l'étagère, donc
+       * dans le comptage. Comparer au disponible créait un écart artificiel
+       * égal à la réservation, et gonflait le stock à la validation.
+       */
+      { productId: pending.id, name: pending.name, theoretical: pending.stock, counted },
       ...l.filter((x) => x.productId !== pending.id),
     ])
     setPending(null); setQty('')
@@ -69,12 +81,11 @@ function Content() {
   }, [lines])
 
   const validate = () => {
-    let n = 0
-    for (const l of lines) {
-      const delta = l.counted - l.theoretical
-      if (delta !== 0) { adjustStock(l.productId, delta, t('sk_cnt_title')); n++ }
-    }
-    toast(n > 0 ? `✓ ${n} ${t('sk_cnt_fixed')}` : t('sk_cnt_nothing'))
+    // Une seule écriture pour toutes les lignes, en mouvements d'inventaire :
+    // applyInventory ignore de lui-même les lignes sans écart.
+    const ecarts = lines.filter((l) => l.counted !== l.theoretical)
+    applyInventory(lines.map((l) => ({ productId: l.productId, counted: l.counted })))
+    toast(ecarts.length > 0 ? `✓ ${ecarts.length} ${t('sk_cnt_fixed')}` : t('sk_cnt_nothing'))
     setLines([])
   }
 
@@ -108,7 +119,7 @@ function Content() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-base font-bold text-gray-900 dark:text-white">{pending.name}</p>
                 <p className="text-xs text-gray-400">
-                  {t('sk_cnt_theoretical')} : <span className="font-bold tabular-nums">{availableStock(pending)}</span>
+                  {t('sk_cnt_theoretical')} : <span className="font-bold tabular-nums">{pending.stock}</span>
                 </p>
               </div>
               <div className="w-32">

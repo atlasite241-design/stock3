@@ -178,6 +178,10 @@ export const ROUTE_PERM: Record<string, string> = {
   '/rh/rapports/export': 'hr.reports',
   // Paramètres
   '/parametres/societe': 'set.company',
+  // set.tva existait au catalogue sans jamais servir : l'écran n'était pas
+  // au menu, donc jamais filtré par permission.
+  '/parametres/tva': 'set.tva',
+  '/parametres/devise': 'set.company',
   '/parametres/impression': 'set.print',
   '/parametres/sauvegarde': 'set.backup',
   '/parametres/reinitialisation': 'set.reset_stats',
