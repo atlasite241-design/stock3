@@ -25,6 +25,9 @@ const READ_PERM: Record<string, string | string[] | null> = {
   loyalty: 'client.loyalty_view',
   suppliers: 'supp.view',
   purchases: 'purch.order',
+  // La DA est le document du DEMANDEUR : lisible et écrivable par qui demande
+  // (purch.request) comme par qui approuve et commande (purch.order).
+  purchaseRequests: ['purch.request', 'purch.order'],
   movements: 'stock.movements',
   // La traçabilité par lots suit la même règle que le journal des mouvements.
   lots: 'stock.movements',
@@ -74,6 +77,7 @@ const WRITE_PERM: Record<string, string | string[]> = {
   loyalty: 'client.loyalty_view',
   suppliers: 'supp.add',
   purchases: 'purch.order',
+  purchaseRequests: ['purch.request', 'purch.order'],
   // Vendre ÉCRIT aussi des mouvements et des lots : la session de caisse doit
   // pouvoir les pousser, comme le magasinier qui reçoit ou inventorie.
   movements: ['stock.movements', 'sale.create'],

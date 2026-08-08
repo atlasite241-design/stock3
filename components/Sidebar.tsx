@@ -193,6 +193,7 @@ const NAV_ALL: NavItem[] = [
     labelKey: 'nav_purchases',
     icon: Truck,
     children: [
+      { href: '/achats/demandes', labelKey: 'nav_purchases_requests' },
       { href: '/achats', labelKey: 'nav_purchases_orders' },
       { href: '/achats/bon-livraison', labelKey: 'nav_purchases_delivery' },
       { href: '/achats/reception', labelKey: 'nav_purchases_reception' },

@@ -678,6 +678,57 @@ export interface Quote {
   storeId?: string
 }
 
+/* ------------------------------ Demandes d'achat --------------------------- */
+
+/**
+ * DEMANDE D'ACHAT (DA) : le document INTERNE en amont du bon de commande.
+ * Un utilisateur demande, un responsable approuve, la conversion fabrique un
+ * ou plusieurs BC (un par fournisseur) sans ressaisie.
+ *
+ *   brouillon -> soumise -> approuvee -> convertie -> cloturee
+ *                         \-> refusee
+ */
+export type PurchaseRequestStatus = 'brouillon' | 'soumise' | 'approuvee' | 'refusee' | 'convertie' | 'cloturee'
+
+export interface PurchaseRequestItem {
+  productId: string
+  name: string
+  barcode?: string
+  /** Quantite dans l'unite d'ACHAT choisie (3 cartons, pas 6000 pieces). */
+  qty: number
+  unitName?: string
+  unitFactor?: number
+  note?: string
+  /** Fournisseur suggere - pre-remplit la ventilation a la conversion. */
+  supplierId?: string
+}
+
+export interface PurchaseRequestEvent {
+  date: string
+  action: string
+  user: string
+  comment?: string
+}
+
+export interface PurchaseRequest {
+  id: string
+  ref: string
+  date: string
+  requesterId?: string
+  requesterName: string
+  /** Date a laquelle la marchandise est souhaitee. */
+  neededBy?: string
+  motif?: string
+  items: PurchaseRequestItem[]
+  status: PurchaseRequestStatus
+  history: PurchaseRequestEvent[]
+  /** Motif de la decision (approbation ou refus). */
+  decisionNote?: string
+  /** BC issus de la conversion. */
+  purchaseIds?: string[]
+  storeId?: string
+}
+
 export interface SaleReturn {
   id: string
   date: string
@@ -1024,6 +1075,7 @@ const K = {
   activeStore: 'dp_active_store',
   transfers: 'dp_transfers',
   lots: 'dp_lots',
+  purchaseRequests: 'dp_purchase_requests',
 }
 
 /** Storage keys whose records carry a storeId and must be filtered per active store. */
@@ -1033,6 +1085,7 @@ const SCOPED_KEYS: string[] = [
   K.movements,
   K.lots,
   K.purchases,
+  K.purchaseRequests,
   K.quotes,
   K.returns,
   K.cash,
@@ -1237,7 +1290,7 @@ export const DEMO_DATA = process.env.NEXT_PUBLIC_DEMO_DATA === '1'
 const EMPTY_ON_FIRST_RUN = [
   'sales', 'clients', 'clientPayments', 'credits', 'loyalty', 'suppliers',
   'supplierPayments', 'expenses', 'purchases', 'movements', 'quotes',
-  'returns', 'transfers', 'activity', 'sessions', 'lots',
+  'returns', 'transfers', 'activity', 'sessions', 'lots', 'purchaseRequests',
 ] as const
 
 export function ensureSeeded() {
@@ -1740,6 +1793,7 @@ export function useDroguerieState() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [movements, setMovements] = useState<StockMovement[]>([])
   const [lots, setLots] = useState<Lot[]>([])
+  const [purchaseRequests, setPurchaseRequests] = useState<PurchaseRequest[]>([])
   const [purchases, setPurchases] = useState<Purchase[]>([])
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [returns, setReturns] = useState<SaleReturn[]>([])
@@ -1798,6 +1852,7 @@ export function useDroguerieState() {
       setSuppliers(load(K.suppliers, []))
       if (wants('movements')) setMovements(load(K.movements, []))
       if (wants('lots')) setLots(load(K.lots, []))
+      if (wants('purchaseRequests')) setPurchaseRequests(load(K.purchaseRequests, []))
       setPurchases(load(K.purchases, []))
       setQuotes(load(K.quotes, []))
       setReturns(load(K.returns, []))
@@ -1954,6 +2009,7 @@ export function useDroguerieState() {
   const persistSuppliers = useCallback(makePersist<Supplier[]>(K.suppliers, setSuppliers), [])
   const persistMovements = useCallback(makeScopedPersist<StockMovement>(K.movements, setMovements), [])
   const persistLots = useCallback(makeScopedPersist<Lot>(K.lots, setLots), [])
+  const persistPurchaseRequests = useCallback(makeScopedPersist<PurchaseRequest>(K.purchaseRequests, setPurchaseRequests), [])
   const persistPurchases = useCallback(makeScopedPersist<Purchase>(K.purchases, setPurchases), [])
   const persistQuotes = useCallback(makeScopedPersist<Quote>(K.quotes, setQuotes), [])
   const persistReturns = useCallback(makeScopedPersist<SaleReturn>(K.returns, setReturns), [])
@@ -2989,6 +3045,126 @@ export function useDroguerieState() {
     return po
   }
 
+  // ---- Demandes d'achat (DA) ----
+
+  const daEvent = (action: string, comment?: string): PurchaseRequestEvent => ({
+    date: new Date().toISOString(),
+    action,
+    user: mvUser() ?? '-',
+    comment: comment || undefined,
+  })
+
+  const addPurchaseRequest = (data: { items: PurchaseRequestItem[]; neededBy?: string; motif?: string }) => {
+    const who = (() => { try { return getSession() } catch { return null } })()
+    const storeForDoc = stores.find((st) => st.id === activeStoreId) ?? null
+    const req: PurchaseRequest = {
+      id: uid(),
+      ref: docNumber('DA', storeForDoc, purchaseRequests.filter((r) => r.storeId === activeStoreId).length + 1, 4),
+      date: new Date().toISOString(),
+      requesterId: who?.userId,
+      requesterName: who?.name ?? '-',
+      neededBy: data.neededBy || undefined,
+      motif: data.motif || undefined,
+      items: data.items,
+      status: 'brouillon',
+      history: [daEvent('creation')],
+    }
+    persistPurchaseRequests([req, ...purchaseRequests])
+    logActivity(`Demande d'achat ${req.ref} creee`)
+    return req
+  }
+
+  /** Seul un BROUILLON se modifie : apres soumission, le document fait foi. */
+  const updatePurchaseRequest = (id: string, patch: Partial<Pick<PurchaseRequest, 'items' | 'neededBy' | 'motif'>>) => {
+    persistPurchaseRequests(purchaseRequests.map((r) =>
+      r.id === id && r.status === 'brouillon'
+        ? { ...r, ...patch, history: [daEvent('modification'), ...r.history] }
+        : r
+    ))
+  }
+
+  const deletePurchaseRequest = (id: string) => {
+    const r = purchaseRequests.find((x) => x.id === id)
+    if (!r || r.status !== 'brouillon') return
+    persistPurchaseRequests(purchaseRequests.filter((x) => x.id !== id))
+    logActivity(`Demande d'achat ${r.ref} supprimee`)
+  }
+
+  const submitPurchaseRequest = (id: string) => {
+    persistPurchaseRequests(purchaseRequests.map((r) =>
+      r.id === id && r.status === 'brouillon' && r.items.length > 0
+        ? { ...r, status: 'soumise', history: [daEvent('soumission'), ...r.history] }
+        : r
+    ))
+  }
+
+  /** Approbation ou refus - l'auteur de la decision et son motif restent sur le document. */
+  const decidePurchaseRequest = (id: string, approuvee: boolean, comment?: string) => {
+    const r = purchaseRequests.find((x) => x.id === id)
+    persistPurchaseRequests(purchaseRequests.map((x) =>
+      x.id === id && x.status === 'soumise'
+        ? {
+            ...x,
+            status: approuvee ? 'approuvee' : 'refusee',
+            decisionNote: comment || undefined,
+            history: [daEvent(approuvee ? 'approbation' : 'refus', comment), ...x.history],
+          }
+        : x
+    ))
+    if (r) logActivity(`Demande d'achat ${r.ref} ${approuvee ? 'approuvee' : 'refusee'}`)
+  }
+
+  /**
+   * CONVERSION EN BC - un bon de commande PAR FOURNISSEUR, sans ressaisie.
+   * Les BC sont crees d'un bloc (les creer un a un ecraserait la liste a
+   * chaque appel dans le meme rendu) et la DA garde leurs identifiants.
+   */
+  const convertPurchaseRequest = (id: string, parFournisseur: { supplierId: string; items: PurchaseItem[] }[]): Purchase[] | undefined => {
+    const req = purchaseRequests.find((r) => r.id === id)
+    if (!req || req.status !== 'approuvee') return
+    const valides = parFournisseur.filter((g) => g.items.length > 0 && suppliers.some((sp) => sp.id === g.supplierId))
+    if (valides.length === 0) return
+    const storeForDoc = stores.find((st) => st.id === activeStoreId) ?? null
+    const base = purchases.filter((p) => p.storeId === activeStoreId).length
+    const nowIso = new Date().toISOString()
+    const pos: Purchase[] = valides.map((g, k) => {
+      const supplier = suppliers.find((sp) => sp.id === g.supplierId)
+      return {
+        id: uid(),
+        ref: docNumber('BC', storeForDoc, base + k + 1),
+        date: nowIso,
+        supplierId: g.supplierId,
+        supplierName: supplier?.name ?? '-',
+        note: `DA ${req.ref}`,
+        items: g.items,
+        total: purchaseTotal(g.items),
+        paid: 0,
+        status: 'en_attente',
+      }
+    })
+    persistPurchases([...pos, ...purchases])
+    persistPurchaseRequests(purchaseRequests.map((r) =>
+      r.id === id
+        ? {
+            ...r,
+            status: 'convertie',
+            purchaseIds: pos.map((p) => p.id),
+            history: [daEvent('conversion', pos.map((p) => p.ref).join(', ')), ...r.history],
+          }
+        : r
+    ))
+    logActivity(`Demande d'achat ${req.ref} convertie : ${pos.length} BC (${pos.map((p) => p.ref).join(', ')})`)
+    return pos
+  }
+
+  const closePurchaseRequest = (id: string) => {
+    persistPurchaseRequests(purchaseRequests.map((r) =>
+      r.id === id && r.status === 'convertie'
+        ? { ...r, status: 'cloturee', history: [daEvent('cloture'), ...r.history] }
+        : r
+    ))
+  }
+
   const updatePurchase = (id: string, patch: Partial<Purchase>) => {
     persistPurchases(
       purchases.map((p) => {
@@ -3833,6 +4009,7 @@ export function useDroguerieState() {
     movements: scoped(movements),
     lots: scoped(lots),
     purchases: scoped(purchases),
+    purchaseRequests: scoped(purchaseRequests),
     quotes: scoped(quotes),
     returns: scoped(returns),
     cash: scoped(cash),
@@ -3859,6 +4036,13 @@ export function useDroguerieState() {
     allMovements: movements,
     allLots: lots,
     allPurchases: purchases,
+    addPurchaseRequest,
+    updatePurchaseRequest,
+    deletePurchaseRequest,
+    submitPurchaseRequest,
+    decidePurchaseRequest,
+    convertPurchaseRequest,
+    closePurchaseRequest,
     allCredits: credits,
     allCash: cash,
     allExpenses: expenses,

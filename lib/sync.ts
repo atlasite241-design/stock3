@@ -27,6 +27,7 @@ export const COLLECTIONS: Collection[] = [
   { collection: 'movements', key: 'dp_movements' },
   { collection: 'lots', key: 'dp_lots' },
   { collection: 'purchases', key: 'dp_purchases' },
+  { collection: 'purchaseRequests', key: 'dp_purchase_requests' },
   { collection: 'quotes', key: 'dp_quotes' },
   { collection: 'returns', key: 'dp_returns' },
   { collection: 'cash', key: 'dp_cash' },
