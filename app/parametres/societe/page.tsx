@@ -501,6 +501,7 @@ function Content() {
                     partyName={t('soc_preview_supplier_sample')}
                     partyAddress={t('soc_preview_supplier_address')}
                     settingsOverride={form}
+                    showAmountInWords={false}
                     infos={[
                       { label: t('po_supplier_ref_label'), value: 'BL-4471' },
                       { label: t('po_expected_date_label'), value: new Date(Date.now() + 7 * 86400000).toLocaleDateString('fr-FR') },
@@ -569,6 +570,27 @@ function Content() {
               </div>
             ) : (
               <div className="p-4">
+                {/*
+                  Message de bas de ticket, modifiable ICI : c'est le seul
+                  réglage du ticket dont on voit l'effet en direct juste en
+                  dessous. Il vit dans le même objet de réglages que le reste
+                  de la page — le bouton « Enregistrer » du haut le sauve.
+                */}
+                <div className="mb-4 rounded-xl border border-gray-100 p-3 dark:border-white/10">
+                  <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">{t('psub_ticket_section')}</p>
+                  <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-400">{t('psub_ticket_hint')}</p>
+                  <label className="mt-3 block">
+                    <span className="field-label">{t('set_ticket_message')}</span>
+                    <input
+                      type="text"
+                      value={form.ticketMessage}
+                      onChange={(e) => setForm({ ...form, ticketMessage: e.target.value })}
+                      placeholder={t('posr_thanks').replace(/\*\*/g, '')}
+                      className="input-field"
+                    />
+                  </label>
+                </div>
+
                 {/* Aperçu du ticket de caisse (reflète les réglages en direct) */}
                 <div className="flex justify-center rounded-xl bg-gray-100 p-4 dark:bg-white/5">
                   <div className="bg-white px-3 py-4 font-mono text-[11px] leading-tight text-black shadow-lg" style={{ width: `${ticketWidth}px` }}>

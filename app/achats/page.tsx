@@ -493,6 +493,7 @@ function Content() {
               partyLabel={t('fdoc_supplier')}
               partyName={printTarget.supplierName}
               partyAddress={suppliers.find((s) => s.id === printTarget.supplierId)?.address}
+              showAmountInWords={false}
               infos={[
                 { label: t('po_supplier_ref_label'), value: printTarget.supplierRef },
                 {

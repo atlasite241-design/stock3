@@ -78,6 +78,7 @@ export default function InvoiceDocument({
   showEmplacement = false,
   settingsOverride,
   infos,
+  showAmountInWords = true,
 }: {
   title: string
   number?: string
@@ -97,6 +98,12 @@ export default function InvoiceDocument({
    * reste rien — un document commercial ne montre pas de cases à trous.
    */
   infos?: { label: string; value?: string | null }[]
+  /**
+   * « Arrêté la présente facture à la somme de… » — mention légale des
+   * documents de VENTE. Un bon de commande n'arrête aucune facture : il
+   * demande une livraison. À `false` sur les documents d'achat.
+   */
+  showAmountInWords?: boolean
 }) {
   const { settings: storeSettings } = useDroguerie()
   // Les factures/documents utilisent TOUJOURS les coordonnées de la Société
@@ -234,8 +241,12 @@ export default function InvoiceDocument({
       {/* Totals */}
       <div className="mt-4 flex items-start justify-between gap-6">
         <div className="max-w-[50%] pt-1 text-[12px] leading-snug text-gray-700">
-          <p className="font-semibold">{t('fdoc_amount_words')}</p>
-          <p className="mt-1 font-bold text-gray-900">{montantEnLettres(totalTTC)}.</p>
+          {showAmountInWords && (
+            <>
+              <p className="font-semibold">{t('fdoc_amount_words')}</p>
+              <p className="mt-1 font-bold text-gray-900">{montantEnLettres(totalTTC)}.</p>
+            </>
+          )}
         </div>
         <div className="w-64 space-y-1 text-[12px]">
           <div className="flex justify-between text-gray-600">
