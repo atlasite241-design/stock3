@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { Eye, Gavel, Globe, Info, Mail, Phone, Printer, Receipt, Save, ScrollText, Store, Tag, UploadCloud } from 'lucide-react'
+import { Eye, Gavel, Globe, Info, Mail, Phone, Printer, Receipt, Save, ScrollText, Store, Tag, Truck, UploadCloud } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import InvoiceDocument from '@/components/InvoiceDocument'
 import EAN13 from '@/components/EAN13'
@@ -18,7 +18,7 @@ function Content() {
   const { t } = useLanguage()
   const toast = useToast()
   const [form, setForm] = useState(settings)
-  const [previewTab, setPreviewTab] = useState<'facture' | 'etiquette' | 'ticket'>('facture')
+  const [previewTab, setPreviewTab] = useState<'facture' | 'bc' | 'etiquette' | 'ticket'>('facture')
   const logoInputRef = useRef<HTMLInputElement>(null)
   const signatureInputRef = useRef<HTMLInputElement>(null)
 
@@ -418,33 +418,67 @@ function Content() {
               <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">{t('soc_preview_title')}</span>
             </div>
 
-            {/* Onglets Facture / Étiquette */}
-            <div className="flex gap-1 border-b border-gray-100 p-2 dark:border-white/10">
-              {([['facture', Receipt, t('soc_tab_invoice')], ['etiquette', Tag, t('soc_tab_label')], ['ticket', ScrollText, t('soc_tab_ticket')]] as const).map(([key, Icon, label]) => (
+            {/* Onglets d'aperçu — en grille 2×2 : « Bon de commande » ne tient
+                pas sur une ligne de quatre dans cette colonne. */}
+            <div className="grid grid-cols-2 gap-1 border-b border-gray-100 p-2 dark:border-white/10">
+              {([
+                ['facture', Receipt, t('soc_tab_invoice')],
+                ['bc', Truck, t('soc_tab_po')],
+                ['etiquette', Tag, t('soc_tab_label')],
+                ['ticket', ScrollText, t('soc_tab_ticket')],
+              ] as const).map(([key, Icon, label]) => (
                 <button
                   key={key}
                   onClick={() => setPreviewTab(key)}
-                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-semibold transition ${previewTab === key ? 'bg-amber-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100 dark:text-zinc-400 dark:hover:bg-white/10'}`}
+                  className={`flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-semibold transition ${previewTab === key ? 'bg-amber-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100 dark:text-zinc-400 dark:hover:bg-white/10'}`}
                 >
-                  <Icon className="h-4 w-4" />{label}
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{label}</span>
                 </button>
               ))}
             </div>
 
             {previewTab === 'facture' ? (
               <div className="p-4">
+                {/* Une facture de vente s'adresse à un CLIENT : l'aperçu
+                    annonçait « Fournisseur » au-dessus d'un nom de client. */}
                 <div className="rounded-xl border border-gray-100 shadow-lg" style={{ zoom: 0.55 } as React.CSSProperties}>
                   <InvoiceDocument
                     title={t('fdoc_invoice')}
                     docNumber={invoicePreviewNumber}
                     number="BC-000042"
                     date={new Date().toISOString()}
-                    partyLabel={t('fdoc_supplier')}
+                    partyLabel={t('fdoc_client')}
                     partyName={t('soc_preview_client_sample')}
                     settingsOverride={form}
                     lines={[{ label: t('soc_preview_sample_item'), qty: 2, puHT: 1200, tvaPct: form.tva }]}
                     paid={2400 * (1 + form.tva / 100)}
                     showBalance
+                  />
+                </div>
+                <p className="mt-3 text-center text-[11px] italic text-gray-400 dark:text-zinc-500">{t('soc_preview_note')}</p>
+              </div>
+            ) : previewTab === 'bc' ? (
+              <div className="p-4">
+                {/* Même document que l'impression réelle d'un bon de commande :
+                    ce qu'on voit ici est ce que recevra le fournisseur. */}
+                <div className="rounded-xl border border-gray-100 shadow-lg" style={{ zoom: 0.55 } as React.CSSProperties}>
+                  <InvoiceDocument
+                    title={t('po_doc_title')}
+                    number="BC-2026-0007"
+                    date={new Date().toISOString()}
+                    partyLabel={t('fdoc_supplier')}
+                    partyName={t('soc_preview_supplier_sample')}
+                    partyAddress={t('soc_preview_supplier_address')}
+                    settingsOverride={form}
+                    infos={[
+                      { label: t('po_supplier_ref_label'), value: 'BL-4471' },
+                      { label: t('po_expected_date_label'), value: new Date(Date.now() + 7 * 86400000).toLocaleDateString('fr-FR') },
+                    ]}
+                    lines={[
+                      { label: t('soc_preview_sample_item'), qty: 3, unit: 'Carton', puHT: 980, tvaPct: form.tva },
+                      { label: t('soc_preview_sample_item2'), qty: 12, puHT: 46.5, tvaPct: form.tva },
+                    ]}
                   />
                 </div>
                 <p className="mt-3 text-center text-[11px] italic text-gray-400 dark:text-zinc-500">{t('soc_preview_note')}</p>
