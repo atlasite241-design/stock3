@@ -576,10 +576,31 @@ function Content() {
                   dessous. Il vit dans le même objet de réglages que le reste
                   de la page — le bouton « Enregistrer » du haut le sauve.
                 */}
-                <div className="mb-4 rounded-xl border border-gray-100 p-3 dark:border-white/10">
-                  <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">{t('psub_ticket_section')}</p>
-                  <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-400">{t('psub_ticket_hint')}</p>
-                  <label className="mt-3 block">
+                <div className="mb-4 space-y-3 rounded-xl border border-gray-100 p-3 dark:border-white/10">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">{t('psub_ticket_section')}</p>
+                    <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-400">{t('psub_ticket_hint')}</p>
+                  </div>
+                  {/* La largeur du rouleau change l'aperçu juste en dessous. */}
+                  <div>
+                    <span className="field-label">{t('psub_print_format_label')}</span>
+                    <div className="grid grid-cols-2 gap-2">
+                      {([['ticket58', t('psub_print_ticket58')], ['ticket80', t('psub_print_ticket80')]] as const).map(([key, label]) => (
+                        <button
+                          key={key}
+                          onClick={() => setForm({ ...form, printFormat: key })}
+                          className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
+                            form.printFormat === key
+                              ? 'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-400'
+                              : 'border-gray-200 bg-white text-gray-600 hover:border-amber-300 dark:border-white/10 dark:bg-[#12121a] dark:text-zinc-400'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <label className="block">
                     <span className="field-label">{t('set_ticket_message')}</span>
                     <input
                       type="text"

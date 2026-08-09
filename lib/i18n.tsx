@@ -4173,7 +4173,6 @@ const DICT = {
   nav_settings_store: { fr: 'Magasin', ar: 'المتجر' },
   nav_settings_tva: { fr: 'TVA', ar: 'الضريبة' },
   nav_settings_currency: { fr: 'Devise', ar: 'العملة' },
-  nav_settings_print: { fr: 'Impression', ar: 'الطباعة' },
   nav_settings_backup: { fr: 'Sauvegarde', ar: 'النسخ الاحتياطي' },
   nav_settings_import: { fr: 'Import Excel', ar: 'استيراد Excel' },
   nav_settings_export: { fr: 'Export Excel', ar: 'تصدير Excel' },

@@ -513,7 +513,9 @@ const NAV_ALL: NavItem[] = [
       // on ne pouvait changer son taux de TVA qu'en tapant l'URL à la main.
       { href: '/parametres/tva', labelKey: 'nav_settings_tva' },
       { href: '/parametres/devise', labelKey: 'nav_settings_currency' },
-      { href: '/parametres/impression', labelKey: 'nav_settings_print' },
+      // « Impression » retiré : ses deux réglages (largeur du rouleau, message
+      // de bas de ticket) vivent dans Société › onglet Ticket, où l'aperçu en
+      // montre l'effet immédiatement — un réglage se juge sur son rendu.
       { href: '/parametres/sauvegarde', labelKey: 'nav_settings_backup' },
       { href: '/parametres/theme', labelKey: 'nav_settings_theme' },
       { href: '/parametres/reinitialisation', labelKey: 'nav_settings_reset' },
