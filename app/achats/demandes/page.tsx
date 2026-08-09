@@ -13,7 +13,7 @@
 import { useMemo, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { Check, ChevronDown, ChevronUp, ClipboardList, Plus, Search, Send, Trash2, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronRight, ChevronUp, ClipboardList, CornerDownRight, Plus, Search, Send, Trash2, X } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
 import Select from '@/components/Select'
@@ -218,15 +218,25 @@ function Content() {
 
   const dateFmt = (d: string) => new Date(d).toLocaleDateString(lang === 'ar' ? 'ar-MA' : 'fr-FR')
 
-  const filters: { key: 'toutes' | PurchaseRequestStatus; labelKey: TKey }[] = [
-    { key: 'toutes', labelKey: 'da_filter_all' },
-    { key: 'brouillon', labelKey: 'da_st_draft' },
-    { key: 'soumise', labelKey: 'da_st_submitted' },
-    { key: 'approuvee', labelKey: 'da_st_approved' },
-    { key: 'refusee', labelKey: 'da_st_refused' },
-    { key: 'convertie', labelKey: 'da_st_converted' },
-    { key: 'cloturee', labelKey: 'da_st_closed' },
-  ]
+  /*
+   * Les statuts dans l'ORDRE du circuit : la barre de filtres se lit comme le
+   * parcours d'une demande, pas comme une liste alphabétique. « Refusée » est
+   * une SORTIE de circuit, pas une étape — elle est donc mise à part.
+   */
+  const ETAPES: PurchaseRequestStatus[] = ['brouillon', 'soumise', 'approuvee', 'convertie', 'cloturee']
+  const combien = (k: PurchaseRequestStatus) => purchaseRequests.filter((r) => r.status === k).length
+
+  const puce = (actif: boolean) =>
+    `flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition ${
+      actif
+        ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-gray-900 shadow-lg shadow-amber-400/25'
+        : 'border border-gray-200 bg-white text-gray-600 hover:border-amber-300 hover:bg-amber-50 dark:border-white/10 dark:bg-[#12121a] dark:text-zinc-400'
+    }`
+
+  const compteur = (actif: boolean) =>
+    `rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
+      actif ? 'bg-gray-900/15 text-gray-900' : 'bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-zinc-400'
+    }`
 
   return (
     <>
@@ -243,18 +253,33 @@ function Content() {
         </button>
       </motion.div>
 
-      {/* Filtres */}
+      {/* Circuit de validation — chaque étape filtre la liste. */}
       <div className="flex flex-wrap items-center gap-2">
-        {filters.map((f) => (
-          <button key={f.key} onClick={() => setFilter(f.key)}
-            className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
-              filter === f.key
-                ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-gray-900 shadow-lg shadow-amber-400/25'
-                : 'border border-gray-200 dark:border-white/10 bg-white dark:bg-[#12121a] text-gray-600 dark:text-zinc-400 hover:border-amber-300 hover:bg-amber-50'
-            }`}>
-            {t(f.labelKey)}
-          </button>
+        <button onClick={() => setFilter('toutes')} className={puce(filter === 'toutes')}>
+          {t('da_filter_all')}
+          <span className={compteur(filter === 'toutes')}>{purchaseRequests.length}</span>
+        </button>
+
+        <span className="mx-1 h-6 w-px bg-gray-200 dark:bg-white/10" aria-hidden="true" />
+
+        {ETAPES.map((k, idx) => (
+          <div key={k} className="flex items-center gap-2">
+            {idx > 0 && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-gray-300 dark:text-zinc-600 rtl:rotate-180" aria-hidden="true" />}
+            <button onClick={() => setFilter(k)} className={puce(filter === k)}>
+              {t(STATUS_META[k].labelKey)}
+              <span className={compteur(filter === k)}>{combien(k)}</span>
+            </button>
+          </div>
         ))}
+
+        {/* Sortie de circuit : une demande refusée ne reprend pas la file. */}
+        <div className="flex items-center gap-2">
+          <CornerDownRight className="h-3.5 w-3.5 shrink-0 text-gray-300 dark:text-zinc-600 rtl:-scale-x-100" aria-hidden="true" />
+          <button onClick={() => setFilter('refusee')} className={puce(filter === 'refusee')}>
+            {t(STATUS_META.refusee.labelKey)}
+            <span className={compteur(filter === 'refusee')}>{combien('refusee')}</span>
+          </button>
+        </div>
         <div className="relative ml-auto min-w-[200px]">
           <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-zinc-500" />
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('da_search')} className="input-field pl-10" />
