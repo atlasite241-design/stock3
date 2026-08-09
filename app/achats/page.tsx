@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Eye, FileDown, Pencil, Plus, Printer, Search, Send, Trash2, Truck } from 'lucide-react'
 import AppShell from '@/components/AppShell'
+import InvoiceDocument from '@/components/InvoiceDocument'
 import Modal from '@/components/Modal'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
@@ -476,54 +477,47 @@ function Content() {
       </Modal>
 
       {/* Print / PDF / Send modal */}
-      <Modal open={!!printTarget} onClose={() => setPrintTarget(null)} title={`${t('po_order_prefix')} ${printTarget?.ref ?? ''}`} maxWidth="max-w-md">
+      <Modal open={!!printTarget} onClose={() => setPrintTarget(null)} title={`${t('po_order_prefix')} ${printTarget?.ref ?? ''}`} maxWidth="max-w-3xl">
         {printTarget && (
           <>
-            <div className="print-area rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#12121a] p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">{t('po_order_prefix')}</p>
-                  <p className="text-xs text-gray-500 dark:text-zinc-400">{printTarget.supplierName}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-base font-bold text-amber-600 dark:text-amber-400">{printTarget.ref}</p>
-                  <p className="text-xs text-gray-500 dark:text-zinc-400">{new Date(printTarget.date).toLocaleDateString('fr-FR')}</p>
-                </div>
-              </div>
-              {printTarget.supplierRef && (
-                <p className="mt-2 text-xs text-gray-500 dark:text-zinc-400">
-                  {t('po_supplier_ref_label')}: {printTarget.supplierRef}
-                </p>
-              )}
-              {printTarget.expectedDate && (
-                <p className="text-xs text-gray-500 dark:text-zinc-400">
-                  {t('po_expected_date_label')}: {new Date(printTarget.expectedDate).toLocaleDateString('fr-FR')}
-                </p>
-              )}
-              <table className="mt-3 w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-white/10 text-left text-[11px] font-bold uppercase text-gray-400 dark:text-zinc-500">
-                    <th className="py-2">{t('po_col_designation')}</th>
-                    <th className="py-2 text-right">{t('po_col_qty')}</th>
-                    <th className="py-2 text-right">{t('po_col_line_total')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {printTarget.items.map((i) => (
-                    <tr key={i.productId} className="border-b border-gray-100 dark:border-white/10">
-                      <td className="py-2 text-gray-800 dark:text-zinc-100">{i.name}</td>
-                      <td className="py-2 text-right font-semibold tabular-nums">{i.qty}</td>
-                      <td className="py-2 text-right font-semibold tabular-nums">{fmtDH(lineTotal(i))}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="mt-3 flex justify-between text-base font-bold text-gray-900 dark:text-white">
-                <span>{t('po_total_ttc')}</span>
-                <span className="tabular-nums">{fmtDH(printTarget.total)}</span>
-              </div>
-              {printTarget.note && <p className="mt-3 text-xs text-gray-500 dark:text-zinc-400">{printTarget.note}</p>}
-            </div>
+            {/*
+              Le bon de commande engage l'enseigne auprès d'un fournisseur : il
+              porte donc le MÊME document que les factures (en-tête société,
+              mentions légales, prix unitaires HT, TVA, montant en lettres)
+              plutôt qu'un résumé à trois colonnes.
+            */}
+            <InvoiceDocument
+              title={t('po_doc_title')}
+              number={printTarget.ref}
+              date={printTarget.date}
+              partyLabel={t('fdoc_supplier')}
+              partyName={printTarget.supplierName}
+              partyAddress={suppliers.find((s) => s.id === printTarget.supplierId)?.address}
+              infos={[
+                { label: t('po_supplier_ref_label'), value: printTarget.supplierRef },
+                {
+                  label: t('po_expected_date_label'),
+                  value: printTarget.expectedDate ? new Date(printTarget.expectedDate).toLocaleDateString('fr-FR') : undefined,
+                },
+                {
+                  label: t('po_global_discount'),
+                  value: printTarget.globalDiscount ? `${printTarget.globalDiscount} %` : undefined,
+                },
+              ]}
+              lines={printTarget.items.map((i) => ({
+                label: i.name,
+                qty: i.qty,
+                unit: i.unitName,
+                /*
+                 * Prix unitaire HT du conditionnement commandé, remises
+                 * comprises. La remise globale est répercutée ici pour que le
+                 * total imprimé soit exactement le total enregistré — deux
+                 * chiffres différents sur le même document seraient un litige.
+                 */
+                puHT: i.cost * (1 - (i.discount ?? 0) / 100) * (1 - (printTarget.globalDiscount ?? 0) / 100),
+                tvaPct: i.tva ?? 0,
+              }))}
+            />
             <div className="mt-4 grid grid-cols-3 gap-2">
               <button onClick={() => window.print()} className="btn-secondary">
                 <Printer className="h-4 w-4" />

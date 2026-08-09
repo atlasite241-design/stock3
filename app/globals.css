@@ -231,6 +231,20 @@ table [contenteditable='true'] {
     position: static;
     box-shadow: none;
   }
+  /*
+   * EXCEPTION à la règle d'encre ci-dessus, pour les documents commerciaux
+   * seulement : les bandeaux d'accent (en-tête de tableau, conditions) sont
+   * ce qui distingue un bon de commande envoyé à un fournisseur d'un listing
+   * imprimé. Ils restent colorés ; tout le reste du document suit la règle
+   * générale et sort en noir sur blanc.
+   */
+  .invoice-print .bg-amber-400,
+  .invoice-print .bg-amber-400 * {
+    background-color: #fbbf24 !important;
+    color: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
 
 /* Loader « égaliseur » animé (barres orange) — utilisé par <Loader /> */

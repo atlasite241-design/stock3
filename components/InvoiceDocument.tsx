@@ -77,6 +77,7 @@ export default function InvoiceDocument({
   showBalance = false,
   showEmplacement = false,
   settingsOverride,
+  infos,
 }: {
   title: string
   number?: string
@@ -90,6 +91,12 @@ export default function InvoiceDocument({
   showBalance?: boolean
   showEmplacement?: boolean
   settingsOverride?: Settings
+  /**
+   * Bandeau de conditions, sous le bloc destinataire : livraison, échéance,
+   * référence… Les valeurs vides sont ignorées, le bandeau disparaît s'il ne
+   * reste rien — un document commercial ne montre pas de cases à trous.
+   */
+  infos?: { label: string; value?: string | null }[]
 }) {
   const { settings: storeSettings } = useDroguerie()
   // Les factures/documents utilisent TOUJOURS les coordonnées de la Société
@@ -168,6 +175,22 @@ export default function InvoiceDocument({
         <p className="text-sm font-bold text-gray-900">{partyName}</p>
         {partyAddress && <p className="text-[11px] text-gray-600">{partyAddress}</p>}
       </div>
+
+      {/* Bandeau des conditions */}
+      {(() => {
+        const remplis = (infos ?? []).filter((i) => i.value)
+        if (remplis.length === 0) return null
+        return (
+          <div className="mt-4 grid overflow-hidden rounded-md border border-amber-400" style={{ gridTemplateColumns: `repeat(${remplis.length}, minmax(0, 1fr))` }}>
+            {remplis.map((i, idx) => (
+              <div key={idx} className={idx > 0 ? 'border-l border-amber-500' : ''}>
+                <p className="bg-amber-400 px-2 py-1 text-center text-[10px] font-bold uppercase tracking-wide text-white">{i.label}</p>
+                <p className="px-2 py-1.5 text-center text-[11px] font-semibold text-gray-800">{i.value}</p>
+              </div>
+            ))}
+          </div>
+        )
+      })()}
 
       {/* Table */}
       <table className="mt-4 w-full border-collapse text-[12px]">

@@ -2956,6 +2956,7 @@ const DICT = {
   po_cancel: { fr: 'Annuler', ar: 'إلغاء' },
   po_create_order: { fr: 'Créer la commande', ar: 'إنشاء الأمر' },
   po_order_prefix: { fr: 'Commande', ar: 'أمر' },
+  po_doc_title: { fr: 'Bon de Commande', ar: 'سند طلبية' },
   po_paid: { fr: 'Payé', ar: 'مدفوع' },
   po_toast_choose_product: { fr: 'Choisissez un produit', 'ar': 'اختر منتجاً' },
   po_toast_choose_supplier: { fr: 'Choisissez un fournisseur', ar: 'اختر مورداً' },
