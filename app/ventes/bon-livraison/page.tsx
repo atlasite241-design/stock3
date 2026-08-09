@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 import { PackageCheck, Printer, Search } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
-import { useDroguerie, type Sale } from '@/lib/store'
+import { deliveryNoteNumber, useDroguerie, type Sale } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 function Content() {
@@ -28,7 +28,9 @@ function Content() {
       return !q || s.id.toLowerCase().includes(q) || (s.clientName ?? '').toLowerCase().includes(q)
     })
 
-  const blNumber = (s: Sale) => `BL-${s.id.slice(-6).toUpperCase()}`
+  // Le BL reprend le rang de la facture de la même vente : « BL-2026-1000 »
+  // répond à « FAC-2026-1000 », ce qu'un numéro indépendant ne permettrait pas.
+  const blNumber = (s: Sale) => deliveryNoteNumber(s, sales, settings)
 
   return (
     <>

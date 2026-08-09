@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 import { FileMinus, Printer, Search, Wallet } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
-import { fmtDH, useDroguerie, type SaleReturn } from '@/lib/store'
+import { fmtDH, saleReturnNumber, useDroguerie, type SaleReturn } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 function Content() {
@@ -28,7 +28,8 @@ function Content() {
     })
 
   const totalAvoirs = avoirs.reduce((a, r) => a + r.total, 0)
-  const avoirNumber = (r: SaleReturn) => `AV-${r.id.slice(-6).toUpperCase()}`
+  // Numérotation séquentielle AV-AAAA-N, au lieu d'un découpage de l'identifiant.
+  const avoirNumber = (r: SaleReturn) => saleReturnNumber(r, returns, settings)
 
   return (
     <>

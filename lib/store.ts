@@ -739,6 +739,11 @@ export interface PurchaseRequest {
 }
 
 export interface SaleReturn {
+  /**
+   * Numéro d'avoir, posé à l'enregistrement du retour et jamais recalculé —
+   * même règle que le numéro de facture.
+   */
+  creditNo?: string
   id: string
   date: string
   saleId: string
@@ -1580,11 +1585,46 @@ export function setActiveStoreId(id: string) {
 export function saleInvoiceNumber(sale: Sale, allSales: Sale[], settings: Settings): string {
   if (sale.invoiceNo) return sale.invoiceNo
   const annee = new Date(sale.date).getFullYear()
-  const memeAnnee = allSales
-    .filter((s) => (s.storeId ?? '') === (sale.storeId ?? '') && new Date(s.date).getFullYear() === annee)
+  return `${settings.invoicePrefix}${annee}-${settings.invoiceStartNumber + rangAnnuel(sale, allSales)}`
+}
+
+/**
+ * Rang chronologique d'un document parmi ceux du même magasin et de la même
+ * année — la base commune des numérotations séquentielles.
+ */
+function rangAnnuel<R extends { id: string; date: string; storeId?: string }>(doc: R, tous: R[]): number {
+  const annee = new Date(doc.date).getFullYear()
+  const memeAnnee = tous
+    .filter((d) => (d.storeId ?? '') === (doc.storeId ?? '') && new Date(d.date).getFullYear() === annee)
     .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))
-  const rang = Math.max(0, memeAnnee.findIndex((s) => s.id === sale.id))
-  return `${settings.invoicePrefix}${annee}-${settings.invoiceStartNumber + rang}`
+  return Math.max(0, memeAnnee.findIndex((d) => d.id === doc.id))
+}
+
+/** « FAC-2026-1000 » → « BL-2026-1000 » : on ne change que le préfixe. */
+function changerPrefixe(numero: string, prefixe: string): string {
+  const suffixe = /(\d{4}-\d+)$/.exec(numero)?.[1]
+  return suffixe ? `${prefixe}${suffixe}` : `${prefixe}${numero}`
+}
+
+/**
+ * Numéro d'avoir : posé à l'enregistrement du retour, sinon déduit du rang.
+ */
+export function saleReturnNumber(ret: SaleReturn, allReturns: SaleReturn[], settings: Settings): string {
+  if (ret.creditNo) return ret.creditNo
+  const annee = new Date(ret.date).getFullYear()
+  return `AV-${annee}-${settings.invoiceStartNumber + rangAnnuel(ret, allReturns)}`
+}
+
+/**
+ * Numéro de bon de livraison.
+ *
+ * Il n'existe pas de document « BL » distinct : le bon se tire d'une vente au
+ * moment de l'imprimer. Son numéro reprend donc le RANG de la facture de
+ * cette vente, avec son propre préfixe — le BL et la facture d'une même vente
+ * se répondent, ce qu'un numéro indépendant ne permettrait pas.
+ */
+export function deliveryNoteNumber(sale: Sale, allSales: Sale[], settings: Settings): string {
+  return changerPrefixe(saleInvoiceNumber(sale, allSales, settings), 'BL-')
 }
 
 export function docNumber(base: string, store: Store | null | undefined, seq: number, pad = 6): string {
@@ -2807,9 +2847,18 @@ export function useDroguerieState() {
 
   const recordReturn = (sale: Sale, items: SaleItem[], method: SaleReturn['method']) => {
     const total = items.reduce((s, i) => s + i.price * i.qty, 0)
+    // Numéro d'avoir séquentiel, posé une fois pour toutes — même règle que
+    // la facture : un avoir remis à un client ne se renumérote jamais.
+    const retIso = new Date().toISOString()
+    const retAnnee = new Date(retIso).getFullYear()
+    const retSid = activeStoreRef.current
+    const dejaAvoirs = returns.filter(
+      (r) => (r.storeId ?? retSid) === retSid && new Date(r.date).getFullYear() === retAnnee
+    ).length
     const ret: SaleReturn = {
       id: uid(),
-      date: new Date().toISOString(),
+      date: retIso,
+      creditNo: `AV-${retAnnee}-${settings.invoiceStartNumber + dejaAvoirs}`,
       saleId: sale.id,
       clientName: sale.clientName ?? '',
       items,
