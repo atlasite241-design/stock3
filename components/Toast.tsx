@@ -2,10 +2,15 @@
 
 import React, { createContext, useCallback, useContext, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, XCircle } from 'lucide-react'
 import { playSound, type SoundType } from '@/lib/sound'
 
-type ToastType = 'success' | 'error'
+/**
+ * « warning » : l'opération A EU LIEU, mais elle mérite un regard — vendre
+ * au-delà du stock disponible quand l'enseigne l'autorise, par exemple. La
+ * distinguer de « error » évite d'annoncer un échec là où rien n'a échoué.
+ */
+type ToastType = 'success' | 'error' | 'warning'
 
 const ToastContext = createContext<(message: string, type?: ToastType) => void>(() => {})
 
@@ -17,7 +22,7 @@ const DELETE_RE = /supprim|deleted|حذف|réinitialis/i
 const CASH_RE = /paiement|règlement|reglement|encaiss|versé|verse|payé|paid|دفع|تحصيل|سُدّد|سدد/i
 
 function soundFor(message: string, type: ToastType): SoundType {
-  if (type === 'error') return 'error'
+  if (type === 'error' || type === 'warning') return 'error'
   if (DELETE_RE.test(message)) return 'delete'
   if (CASH_RE.test(message)) return 'cash'
   return 'success'
@@ -46,11 +51,17 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 24 }}
               className={`flex items-center gap-2.5 rounded-xl border bg-white dark:bg-[#12121a] px-4 py-3 shadow-xl ${
-                t.type === 'success' ? 'border-emerald-200 dark:border-emerald-500/20' : 'border-rose-200 dark:border-rose-500/20'
+                t.type === 'success'
+                  ? 'border-emerald-200 dark:border-emerald-500/20'
+                  : t.type === 'warning'
+                    ? 'border-amber-300 dark:border-amber-500/30'
+                    : 'border-rose-200 dark:border-rose-500/20'
               }`}
             >
               {t.type === 'success' ? (
                 <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500 dark:text-emerald-400" />
+              ) : t.type === 'warning' ? (
+                <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500 dark:text-amber-400" />
               ) : (
                 <XCircle className="h-5 w-5 shrink-0 text-rose-500 dark:text-rose-400" />
               )}

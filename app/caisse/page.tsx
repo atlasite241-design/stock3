@@ -185,6 +185,14 @@ function CaisseContent() {
       toast(`${t('pos_toast_insufficient_stock')} — ${p.name} (${avail} ${t('pos_toast_available')})`, 'error')
       return
     }
+    /*
+     * Plafond levé : la vente passe, mais elle ne passe pas EN SILENCE. Sans
+     * cet avertissement, dépasser le stock ne se remarque qu'à l'inventaire —
+     * bien trop tard pour se demander si c'était voulu.
+     */
+    if (!ventePlafonnee && inCartBase(p.id) + pas > avail) {
+      toast(`${t('pos_warn_over_stock')} — ${p.name} (${roundQty(inCartBase(p.id) + pas)} > ${avail})`, 'warning')
+    }
     const key = lineKey(p.id, unit?.name)
     setCart((c) => {
       const ex = c.find((i) => lineKey(i.productId, i.unitName) === key)
@@ -526,6 +534,17 @@ function CaisseContent() {
                     )
                   })}
                 </div>
+              )}
+
+              {/* Dépassement de stock : visible tant que la ligne est au panier,
+                  pas seulement une seconde au moment de l'ajout. */}
+              {prod && inCartBase(prod.id) > availableStock(prod) && (
+                <p className="mt-2 flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11px] font-semibold text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                  <span className="tabular-nums">
+                    {t('pos_warn_over_stock')} : {roundQty(inCartBase(prod.id))} &gt; {availableStock(prod)}
+                  </span>
+                </p>
               )}
 
               {/* Le reste après CE panier, ventilé en conditionnements : le
