@@ -8,7 +8,7 @@ import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
 import InvoiceDocument from '@/components/InvoiceDocument'
 import { printInvoicePdf } from '@/lib/invoicePdf'
-import { fmtDH, PAYMENT_META, useDroguerie, type Sale } from '@/lib/store'
+import { fmtDH, PAYMENT_META, saleInvoiceNumber, useDroguerie, type Sale } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 function Content() {
@@ -33,7 +33,13 @@ function Content() {
       )
     })
 
-  const invoiceNumber = (s: Sale) => `FCT-${s.id.slice(-6).toUpperCase()}`
+  /*
+   * Le numéro suit les réglages (Société › Documents & Facturation) au lieu
+   * d'être découpé dans l'identifiant technique : « FCT-MW34VZ » n'était ni
+   * séquentiel, ni conforme à une numérotation de facturation, ni reconnaissable
+   * par le client qui la présente au comptoir.
+   */
+  const invoiceNumber = (s: Sale) => saleInvoiceNumber(s, sales, settings)
 
   return (
     <>

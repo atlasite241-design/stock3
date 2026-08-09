@@ -437,6 +437,15 @@ export const baseQty = (i: Pick<SaleItem, 'qty' | 'unitFactor'>) =>
 export interface Sale {
   id: string
   date: string
+  /**
+   * Numéro de facture, POSÉ à l'encaissement et jamais recalculé.
+   *
+   * Il suit le format des réglages (préfixe + année + numéro de départ). Le
+   * conserver sur la vente est ce qui garantit qu'une facture déjà remise à
+   * un client ne change plus de numéro — supprimer une vente ne doit pas
+   * décaler la numérotation de toutes les précédentes.
+   */
+  invoiceNo?: string
   items: SaleItem[]
   total: number
   profit: number
@@ -1559,6 +1568,25 @@ export function setActiveStoreId(id: string) {
 }
 
 /** Build a store-prefixed document number, e.g. FAC-TNG-000012. */
+/**
+ * Numéro de facture d'une vente, au format des réglages : préfixe + année +
+ * numéro de départ incrémenté (« FAC-2026-1000 »).
+ *
+ * Les ventes encaissées AVANT l'existence du champ `invoiceNo` n'en portent
+ * pas : leur numéro est alors déduit de leur rang chronologique dans l'année,
+ * ce qui donne la même suite lisible. C'est un repli, pas la règle — toute
+ * vente nouvelle porte son numéro définitif.
+ */
+export function saleInvoiceNumber(sale: Sale, allSales: Sale[], settings: Settings): string {
+  if (sale.invoiceNo) return sale.invoiceNo
+  const annee = new Date(sale.date).getFullYear()
+  const memeAnnee = allSales
+    .filter((s) => (s.storeId ?? '') === (sale.storeId ?? '') && new Date(s.date).getFullYear() === annee)
+    .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))
+  const rang = Math.max(0, memeAnnee.findIndex((s) => s.id === sale.id))
+  return `${settings.invoicePrefix}${annee}-${settings.invoiceStartNumber + rang}`
+}
+
 export function docNumber(base: string, store: Store | null | undefined, seq: number, pad = 6): string {
   const code = (store?.docPrefix || store?.code || '').trim().toUpperCase()
   const num = String(seq).padStart(pad, '0')
@@ -2587,9 +2615,23 @@ export function useDroguerieState() {
     // Le vendeur est repris de la session : sans lui, aucun rapport par
     // vendeur n'est possible — et on ne peut pas le reconstituer après coup.
     const who = (() => { try { return getSession() } catch { return null } })()
+    /*
+     * Le numéro suit les réglages (préfixe + année + départ) et se pose une
+     * fois pour toutes. Le rang est compté sur les ventes du MÊME magasin et
+     * de la MÊME année : deux magasins numérotent leurs factures chacun de
+     * leur côté, et la suite repart au 1er janvier.
+     */
+    const nowIso = new Date().toISOString()
+    const annee = new Date(nowIso).getFullYear()
+    const sid = activeStoreRef.current
+    const dejaCetteAnnee = sales.filter(
+      (s) => (s.storeId ?? sid) === sid && new Date(s.date).getFullYear() === annee
+    ).length
+
     const sale: Sale = {
       id: uid(),
-      date: new Date().toISOString(),
+      date: nowIso,
+      invoiceNo: `${settings.invoicePrefix}${annee}-${settings.invoiceStartNumber + dejaCetteAnnee}`,
       items,
       total,
       profit,
@@ -2676,7 +2718,9 @@ export function useDroguerieState() {
           clientId: client.id,
           clientName: client.name,
           saleId: sale.id,
-          invoiceRef: `FCT-${sale.id.slice(-6).toUpperCase()}`,
+          // Le crédit référence la facture par son VRAI numéro : c'est celui
+          // que le client a en main quand il vient régler.
+          invoiceRef: sale.invoiceNo ?? sale.id.slice(-6).toUpperCase(),
           items,
           amount: total,
           paid: 0,
