@@ -4028,7 +4028,8 @@ const DICT = {
   soc_preview_supplier_sample: { fr: 'Quincaillerie Al Amal', ar: 'خردوات الأمل' },
   soc_preview_supplier_address: { fr: 'Zone industrielle Sidi Bernoussi, Casablanca', ar: 'المنطقة الصناعية سيدي البرنوصي، الدار البيضاء' },
   soc_preview_sample_item2: { fr: 'Disque à ébarber 125 mm', ar: 'قرص جلخ 125 ملم' },
-  soc_tab_label: { fr: 'Étiquette', ar: 'الملصق' },
+  soc_tab_label: { fr: 'Étiquette produits', ar: 'ملصق المنتجات' },
+  soc_tab_label_client: { fr: 'Étiquette clients', ar: 'ملصق العملاء' },
   soc_tab_ticket: { fr: 'Ticket', ar: 'التذكرة' },
   soc_ticket_sale: { fr: 'VENTE', ar: 'بيع' },
   soc_ticket_note: { fr: 'Aperçu du ticket de caisse (58/80 mm, message et TVA selon vos réglages).', ar: 'معاينة تذكرة الصندوق (58/80 مم، الرسالة والضريبة حسب إعداداتك).' },
@@ -4037,6 +4038,7 @@ const DICT = {
   soc_label_height: { fr: 'Hauteur (mm)', ar: 'الارتفاع (مم)' },
   soc_label_print_test: { fr: 'Imprimer une étiquette test', ar: 'طباعة ملصق تجريبي' },
   soc_label_note: { fr: 'Ces dimensions sont utilisées par l’impression Zebra. N’oubliez pas d’enregistrer.', ar: 'تُستخدم هذه الأبعاد في طباعة Zebra. لا تنسَ الحفظ.' },
+  soc_label_client_note: { fr: 'Même support et mêmes dimensions que l’étiquette produit. Le code client est alphanumérique (CODE 128) : les étiquettes en série se génèrent depuis Caisse › Vente rapide.', ar: 'نفس الحامل ونفس أبعاد ملصق المنتج. رمز العميل أبجدي رقمي (CODE 128): تُنشأ الملصقات بالجملة من الصندوق ← بيع سريع.' },
   soc_legal_reminder_title: { fr: 'Rappel légal', ar: 'تذكير قانوني' },
   soc_legal_reminder_desc: {
     fr: "Conformément à la loi marocaine, l'ICE doit obligatoirement figurer sur toutes vos factures et documents commerciaux.",

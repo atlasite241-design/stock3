@@ -3,9 +3,11 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { Eye, Gavel, Globe, Info, Mail, Phone, Printer, Receipt, Save, ScrollText, Store, Tag, Truck, UploadCloud } from 'lucide-react'
+import JsBarcode from 'jsbarcode'
+import { CreditCard, Eye, Gavel, Globe, Info, Mail, Phone, Printer, Receipt, Save, ScrollText, Store, Tag, Truck, UploadCloud } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import InvoiceDocument from '@/components/InvoiceDocument'
+import Barcode128 from '@/components/Barcode128'
 import EAN13 from '@/components/EAN13'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
@@ -18,12 +20,15 @@ function Content() {
   const { t } = useLanguage()
   const toast = useToast()
   const [form, setForm] = useState(settings)
-  const [previewTab, setPreviewTab] = useState<'facture' | 'bc' | 'etiquette' | 'ticket'>('facture')
+  const [previewTab, setPreviewTab] = useState<'facture' | 'bc' | 'etiquette' | 'etiquette_client' | 'ticket'>('facture')
   const logoInputRef = useRef<HTMLInputElement>(null)
   const signatureInputRef = useRef<HTMLInputElement>(null)
 
   // Produit d'exemple pour prévisualiser l'étiquette Zebra.
   const sampleLabel = { name: 'Peinture blanche 5L', price: 185, barcode: '6111234500017' }
+  // Client d'exemple : le code « CLT-… » est alphanumérique, donc CODE128 et
+  // non EAN-13. Ces étiquettes se génèrent en série depuis Caisse › Vente rapide.
+  const sampleClient = { name: 'Billa', code: 'CLT-00001' }
   const labelW = Math.max(10, form.labelWidthMm ?? 40)
   const labelH = Math.max(10, form.labelHeightMm ?? 30)
 
@@ -83,19 +88,43 @@ function Content() {
     }
   }
 
+  /*
+   * Code-barres CODE128 en balisage brut. Le composant Barcode128 dessine dans
+   * un effet React : rendu hors du navigateur (impression), il ne produirait
+   * qu'un <svg> vide. On appelle donc JsBarcode sur un élément détaché.
+   */
+  const code128Markup = (value: string, height: number): string => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    try {
+      JsBarcode(svg, value, {
+        format: 'CODE128', height, width: 1.4, fontSize: 11,
+        displayValue: true, margin: 0, background: '#ffffff', lineColor: '#000000',
+      })
+    } catch {
+      return ''
+    }
+    return svg.outerHTML
+  }
+
   // Impression d'une étiquette de test (iframe isolé, mêmes réglages que la Zebra).
-  const printLabel = async () => {
+  const printLabel = async (kind: 'produit' | 'client' = 'produit') => {
     const w = labelW, h = labelH
     const bcH = Math.min(60, Math.round(h * 1.5))
     const { renderToStaticMarkup } = await import('react-dom/server')
-    const body = renderToStaticMarkup(
-      <div className="zlabel">
-        <div style={{ fontSize: '6pt', fontWeight: 700, textTransform: 'uppercase', lineHeight: 1 }}>{form.storeName}</div>
-        <div className="zname" style={{ fontSize: '7pt', fontWeight: 600, lineHeight: 1.05 }}>{sampleLabel.name}</div>
-        <EAN13 code={sampleLabel.barcode} height={bcH} moduleWidth={1.1} />
-        <div style={{ fontSize: '10pt', fontWeight: 800, lineHeight: 1 }}>{fmtDH(sampleLabel.price)}</div>
-      </div>
-    )
+    const body = kind === 'client'
+      ? `<div class="zlabel">
+           <div style="font-size:6pt;font-weight:700;text-transform:uppercase;line-height:1">${form.storeName}</div>
+           <div class="zname" style="font-size:8pt;font-weight:700;line-height:1.05">${sampleClient.name}</div>
+           ${code128Markup(sampleClient.code, bcH)}
+         </div>`
+      : renderToStaticMarkup(
+        <div className="zlabel">
+          <div style={{ fontSize: '6pt', fontWeight: 700, textTransform: 'uppercase', lineHeight: 1 }}>{form.storeName}</div>
+          <div className="zname" style={{ fontSize: '7pt', fontWeight: 600, lineHeight: 1.05 }}>{sampleLabel.name}</div>
+          <EAN13 code={sampleLabel.barcode} height={bcH} moduleWidth={1.1} />
+          <div style={{ fontSize: '10pt', fontWeight: 800, lineHeight: 1 }}>{fmtDH(sampleLabel.price)}</div>
+        </div>
+      )
     const doc = `<!doctype html><html><head><meta charset="utf-8"><style>
       @page { size: ${w}mm ${h}mm; margin: 0; }
       * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -422,15 +451,16 @@ function Content() {
                 pas sur une ligne de quatre dans cette colonne. */}
             <div className="grid grid-cols-2 gap-1 border-b border-gray-100 p-2 dark:border-white/10">
               {([
-                ['facture', Receipt, t('soc_tab_invoice')],
-                ['bc', Truck, t('soc_tab_po')],
-                ['etiquette', Tag, t('soc_tab_label')],
-                ['ticket', ScrollText, t('soc_tab_ticket')],
-              ] as const).map(([key, Icon, label]) => (
+                ['facture', Receipt, t('soc_tab_invoice'), false],
+                ['bc', Truck, t('soc_tab_po'), false],
+                ['etiquette', Tag, t('soc_tab_label'), false],
+                ['etiquette_client', CreditCard, t('soc_tab_label_client'), false],
+                ['ticket', ScrollText, t('soc_tab_ticket'), true],
+              ] as const).map(([key, Icon, label, pleineLargeur]) => (
                 <button
                   key={key}
                   onClick={() => setPreviewTab(key)}
-                  className={`flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-semibold transition ${previewTab === key ? 'bg-amber-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100 dark:text-zinc-400 dark:hover:bg-white/10'}`}
+                  className={`flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-semibold transition ${pleineLargeur ? 'col-span-2' : ''} ${previewTab === key ? 'bg-amber-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100 dark:text-zinc-400 dark:hover:bg-white/10'}`}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
                   <span className="truncate">{label}</span>
@@ -510,10 +540,32 @@ function Content() {
                   </div>
                 </div>
 
-                <button onClick={printLabel} className="btn-secondary mt-4 w-full">
+                <button onClick={() => printLabel('produit')} className="btn-secondary mt-4 w-full">
                   <Printer className="h-4 w-4" />{t('soc_label_print_test')}
                 </button>
                 <p className="mt-3 text-center text-[11px] italic text-gray-400 dark:text-zinc-500">{t('soc_label_note')}</p>
+              </div>
+            ) : previewTab === 'etiquette_client' ? (
+              <div className="p-4">
+                {/* Même support physique que l'étiquette produit : les
+                    dimensions sont partagées, c'est la même imprimante. */}
+                <div className="flex justify-center rounded-xl bg-gray-100 p-4 dark:bg-white/5">
+                  <div
+                    className="flex flex-col items-center justify-center gap-1 overflow-hidden rounded border border-dashed border-gray-400 bg-white p-2 text-center text-black dark:border-white/30"
+                    style={{ width: `${labelW * 3.4}px`, height: `${labelH * 3.4}px` }}
+                  >
+                    <div className="w-full truncate text-[9px] font-bold uppercase leading-none">{form.storeName}</div>
+                    <div className="w-full truncate text-[11px] font-bold leading-tight">{sampleClient.name}</div>
+                    <Barcode128 value={sampleClient.code} height={Math.min(40, labelH * 1.2)} width={1.3} fontSize={11} />
+                  </div>
+                </div>
+
+                <button onClick={() => printLabel('client')} className="btn-secondary mt-4 w-full">
+                  <Printer className="h-4 w-4" />{t('soc_label_print_test')}
+                </button>
+                <p className="mt-3 text-center text-[11px] italic leading-relaxed text-gray-400 dark:text-zinc-500">
+                  {t('soc_label_client_note')}
+                </p>
               </div>
             ) : (
               <div className="p-4">
