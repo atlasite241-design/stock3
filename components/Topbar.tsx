@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AlertTriangle, Bell, Languages, LogOut, Menu, Moon, Search, Sun, Volume2, VolumeX, Wifi, WifiOff } from 'lucide-react'
-import { getActiveStoreId, loadProducts, type Product } from '@/lib/store'
+import { useDroguerie } from '@/lib/store'
 import type { Theme } from '@/lib/theme'
 import { playSound, setSoundEnabled, soundEnabled } from '@/lib/sound'
 import { useLanguage } from '@/lib/i18n'
@@ -46,18 +46,26 @@ export default function Topbar({
   }, [])
   const [query, setQuery] = useState('')
   const [bellOpen, setBellOpen] = useState(false)
-  const [lowStock, setLowStock] = useState<Product[]>([])
   const [sound, setSound] = useState(true)
 
+  /*
+   * Les produits viennent du CONTEXTE (déjà en mémoire, déjà filtrés au
+   * magasin actif) — plus de loadProducts() au montage : la Topbar remonte à
+   * CHAQUE navigation, et ce raccourci re-parsait ~15 Mo de JSON et
+   * reconstruisait 19 000 objets à chaque clic de menu. C'était le « retard
+   * de dialogue entre les menus ».
+   *
+   * « stock <= minStock » sans seuil renseigné compterait tout article à
+   * zéro : 0 <= 0 est vrai. Sans seuil, l'article n'est pas piloté — pas
+   * d'alerte.
+   */
+  const { products } = useDroguerie()
+  const lowStock = useMemo(
+    () => products.filter((p) => p.minStock > 0 && p.stock <= p.minStock),
+    [products]
+  )
+
   useEffect(() => {
-    const sid = getActiveStoreId()
-    // « stock <= minStock » comptait TOUT article a zero sans seuil : 0 <= 0
-    // est vrai. Le badge annoncait donc 14 596 alertes sur 14 601 articles, ce
-    // qui n'appelle aucune action. Sans seuil renseigne, il n'y a rien a quoi
-    // comparer le stock : l'article n'est pas en alerte, il n'est pas pilote.
-    setLowStock(
-      loadProducts().filter((p) => (!sid || p.storeId === sid) && p.minStock > 0 && p.stock <= p.minStock)
-    )
     setSound(soundEnabled())
   }, [])
 
