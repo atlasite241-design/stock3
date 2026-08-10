@@ -46,7 +46,7 @@ const SEGMENT_CHIP: Record<string, string> = {
 }
 
 function ClientsContent() {
-  const { ready, clients, sales, credits, updateClient, deleteClient, settleCredit } = useDroguerie()
+  const { ready, clients, sales, credits, updateClient, deleteClient, settleCredit, clientNameTaken, mergeDuplicateClients } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
   const segmentLabel = (s: Segment) => (s === 'VIP' ? t('cli_segment_vip') : s === 'Nouveau' ? t('cli_segment_new') : t('cli_segment_regular'))
@@ -55,6 +55,7 @@ function ClientsContent() {
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [form, setForm] = useState({ name: '', phone: '', creditAllowed: 'oui', creditLimit: '0', paymentTermDays: '30' })
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null)
+  const [mergeOpen, setMergeOpen] = useState(false)
   const [settleTarget, setSettleTarget] = useState<Client | null>(null)
   const [settleAmount, setSettleAmount] = useState('')
   const [profileTarget, setProfileTarget] = useState<Client | null>(null)
@@ -87,6 +88,20 @@ function ClientsContent() {
   const totalCredit = clients.reduce((a, c) => a + c.credit, 0)
   const best = [...clients].sort((a, b) => b.totalSpent - a.totalSpent)[0]
   const overdueCount = clients.filter(isLate).length
+
+  // Doublons hérités d'avant le verrou « un nom = une fiche » : combien de
+  // fiches disparaîtraient en fusionnant les homonymes.
+  const normName = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
+  const nameCounts = new Map<string, number>()
+  clients.forEach((c) => nameCounts.set(normName(c.name), (nameCounts.get(normName(c.name)) ?? 0) + 1))
+  let dupCount = 0
+  nameCounts.forEach((n) => { if (n > 1) dupCount += n - 1 })
+
+  const confirmMerge = () => {
+    const res = mergeDuplicateClients()
+    setMergeOpen(false)
+    toast(`✓ ${res.supprimees} ${t('cli_dup_done')}`)
+  }
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -131,6 +146,12 @@ function ClientsContent() {
     if (!editingId) return
     if (!form.name.trim()) {
       toast(t('cli_toast_name_required'), 'error')
+      return
+    }
+    // Même règle qu'à la création : pas deux fiches sous le même nom.
+    const doublon = clientNameTaken(form.name, editingId)
+    if (doublon) {
+      toast(`${t('clin_toast_duplicate')} (${doublon.code ?? doublon.phone ?? ''})`, 'error')
       return
     }
     updateClient(editingId, {
@@ -252,6 +273,22 @@ function ClientsContent() {
           </motion.div>
         ))}
       </div>
+
+      {/* Doublons : bannière de rattrapage, visible seulement s'il en reste. */}
+      {dupCount > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-500/30 dark:bg-amber-500/10">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
+            <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+              {dupCount} {t('cli_dup_banner')}
+            </p>
+          </div>
+          <button onClick={() => setMergeOpen(true)} className="btn-secondary">
+            <Users className="h-4 w-4" />
+            {t('cli_dup_merge')}
+          </button>
+        </div>
+      )}
 
       {/* Segment filters */}
       <div className="flex flex-wrap gap-2">
@@ -558,6 +595,20 @@ function ClientsContent() {
           <button onClick={confirmSettle} className="btn-primary">
             <HandCoins className="h-4 w-4" />
             {t('cli_collect')}
+          </button>
+        </div>
+      </Modal>
+
+      {/* Merge duplicates confirm */}
+      <Modal open={mergeOpen} onClose={() => setMergeOpen(false)} title={t('cli_dup_confirm_title')} maxWidth="max-w-sm">
+        <p className="text-sm text-gray-600 dark:text-zinc-300">{t('cli_dup_confirm_desc')}</p>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <button onClick={() => setMergeOpen(false)} className="btn-secondary">
+            {t('cli_cancel')}
+          </button>
+          <button onClick={confirmMerge} className="btn-primary">
+            <Users className="h-4 w-4" />
+            {t('cli_dup_merge')}
           </button>
         </div>
       </Modal>

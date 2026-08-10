@@ -94,6 +94,12 @@ function Content() {
   const save = (andNew: boolean) => {
     if (!validate()) return
     const client = addClient(buildPayload())
+    // Nom déjà pris : une fiche par personne, sinon crédits et points se
+    // répartissent au hasard entre les doublons.
+    if ('error' in client) {
+      toast(`${t('clin_toast_duplicate')} (${client.existing.code ?? client.existing.phone ?? ''})`, 'error')
+      return
+    }
     toast(`✓ ${client.name} ${t('clin_toast_added')}`)
     if (andNew) {
       setForm(EMPTY_FORM)

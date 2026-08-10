@@ -2914,12 +2914,26 @@ export function useDroguerieState() {
   }
 
   // ---- Clients ----
+  /*
+   * UN NOM DE CLIENT = UNE FICHE. Deux fiches « Billa » finissent par se
+   * partager crédits et points au hasard des saisies — constaté avec trois
+   * doublons. La comparaison ignore casse et espaces superflus. Un vrai
+   * homonyme se distingue en ajoutant un prénom, la ville ou le téléphone
+   * dans le nom.
+   */
+  const clientNameTaken = (name: string, saufId?: string): Client | undefined => {
+    const n = name.trim().toLowerCase().replace(/\s+/g, ' ')
+    return clients.find((c) => c.id !== saufId && c.name.trim().toLowerCase().replace(/\s+/g, ' ') === n)
+  }
+
   const addClient = (
     data: Partial<Omit<Client, 'id' | 'credit' | 'totalSpent' | 'points' | 'discountBalance'>> & {
       name: string
       phone: string
     }
-  ) => {
+  ): Client | { error: 'duplicate'; existing: Client } => {
+    const doublon = clientNameTaken(data.name)
+    if (doublon) return { error: 'duplicate', existing: doublon }
     const client: Client = {
       id: uid(),
       code: data.code?.trim() || undefined,
@@ -2951,6 +2965,98 @@ export function useDroguerieState() {
 
   const deleteClient = (id: string) => {
     persistClients(clients.filter((c) => c.id !== id))
+  }
+
+  /**
+   * FUSIONNE les fiches clients homonymes (rattrapage des doublons créés
+   * avant le verrou « un nom = une fiche »). Supprimer les doublons perdrait
+   * leurs crédits, points et historique : ici tout est versé sur la fiche la
+   * plus active, et les ventes, règlements, crédits et mouvements de fidélité
+   * des fiches absorbées sont re-pointés vers la survivante — sinon leur
+   * historique deviendrait orphelin.
+   *
+   * Une écriture par collection, et seulement si elle contient des références
+   * à re-pointer (quota Turso).
+   */
+  const mergeDuplicateClients = (): { groupes: number; supprimees: number } => {
+    const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
+    const parNom = new Map<string, Client[]>()
+    for (const c of clients) {
+      const n = norm(c.name)
+      const list = parNom.get(n)
+      if (list) list.push(c)
+      else parNom.set(n, [c])
+    }
+
+    const aSupprimer = new Set<string>()
+    const fusionnees = new Map<string, Client>()
+    // Fiche absorbée → fiche survivante : l'historique suit la fusion.
+    const versQui = new Map<string, Client>()
+    let groupes = 0
+
+    for (const list of parNom.values()) {
+      if (list.length < 2) continue
+      groupes++
+
+      // On garde la fiche la plus active (achats, puis points, puis crédit),
+      // puis on lui verse les soldes des autres et on comble ses champs vides.
+      const keep = list.reduce((a, b) =>
+        (b.totalSpent * 1000 + b.points * 10 + b.credit) > (a.totalSpent * 1000 + a.points * 10 + a.credit) ? b : a
+      )
+      const merged: Client = { ...keep }
+      for (const c of list) {
+        if (c.id === keep.id) continue
+        merged.credit += Number(c.credit) || 0
+        merged.totalSpent += Number(c.totalSpent) || 0
+        merged.points += Number(c.points) || 0
+        merged.discountBalance = (Number(merged.discountBalance) || 0) + (Number(c.discountBalance) || 0)
+        merged.creditLimit = Math.max(Number(merged.creditLimit) || 0, Number(c.creditLimit) || 0)
+        if (c.creditAllowed) merged.creditAllowed = true
+        if (!merged.code && c.code) merged.code = c.code
+        if (!merged.phone && c.phone) merged.phone = c.phone
+        if (!merged.email && c.email) merged.email = c.email
+        if (!merged.address && c.address) merged.address = c.address
+        if (!merged.city && c.city) merged.city = c.city
+        if (!merged.cin && c.cin) merged.cin = c.cin
+        if (!merged.notes && c.notes) merged.notes = c.notes
+        if (!merged.image && c.image) merged.image = c.image
+        if (!merged.creditDueDate && c.creditDueDate) merged.creditDueDate = c.creditDueDate
+        if (!merged.paymentTermDays && c.paymentTermDays) merged.paymentTermDays = c.paymentTermDays
+        aSupprimer.add(c.id)
+        versQui.set(c.id, keep)
+      }
+      fusionnees.set(keep.id, merged)
+    }
+
+    if (groupes === 0) return { groupes: 0, supprimees: 0 }
+
+    persistClients(
+      clients.filter((c) => !aSupprimer.has(c.id)).map((c) => fusionnees.get(c.id) ?? c)
+    )
+
+    // Re-pointage de l'historique — tous magasins confondus (les états sont
+    // les collections complètes, le filtrage par magasin est fait à la lecture).
+    const repointe = <R extends { clientId?: string; clientName?: string }>(rows: R[]): { rows: R[]; touche: boolean } => {
+      let touche = false
+      const next = rows.map((r) => {
+        const cible = r.clientId ? versQui.get(r.clientId) : undefined
+        if (!cible) return r
+        touche = true
+        return { ...r, clientId: cible.id, clientName: cible.name }
+      })
+      return { rows: next, touche }
+    }
+    const ventes = repointe(sales)
+    if (ventes.touche) persistSales(ventes.rows)
+    const reglements = repointe(clientPayments)
+    if (reglements.touche) persistClientPayments(reglements.rows)
+    const credz = repointe(credits)
+    if (credz.touche) persistCredits(credz.rows)
+    const fidelite = repointe(loyaltyMovements)
+    if (fidelite.touche) persistLoyalty(fidelite.rows)
+
+    logActivity(`Fusion de ${aSupprimer.size} fiche(s) client en double (${groupes} nom(s))`)
+    return { groupes, supprimees: aSupprimer.size }
   }
 
   const settleCredit = (id: string, amount: number, method: ClientPayment['method'] = 'especes') => {
@@ -4192,8 +4298,10 @@ export function useDroguerieState() {
     recordSale,
     recordReturn,
     addClient,
+    clientNameTaken,
     updateClient,
     deleteClient,
+    mergeDuplicateClients,
     settleCredit,
     payCredit,
     addManualCredit,
