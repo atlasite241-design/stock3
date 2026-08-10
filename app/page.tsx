@@ -176,17 +176,23 @@ export default function DashboardPage() {
 
   const pct = (t: number, y: number) => (y > 0 ? ((t - y) / y) * 100 : null)
 
-  const lowStock = products
-    .filter((p) => p.stock <= p.minStock)
-    .sort((a, b) => a.stock - b.stock)
-
   /*
-   * Stock CRITIQUE : la définition de l'écran Stock → Stock critique — sous
-   * le seuil ET piloté (minStock > 0). Sans ce garde, tout article à zéro
-   * sans seuil compterait (0 <= 0), et la carte annoncerait le catalogue
-   * entier. Distinct de « Stock faible » qui, lui, inclut les non pilotés.
+   * Deux états DISJOINTS — sinon les deux cartes comptent le même ensemble
+   * (constaté : 14 589 des deux côtés, l'import ayant posé un seuil sur
+   * toutes les fiches et le stock initial n'étant pas fait) :
+   *
+   *   CRITIQUE : plus rien à vendre (disponible ≤ 0). Le produit est tombé.
+   *   FAIBLE   : encore en stock, mais au niveau ou sous le seuil — c'est la
+   *              fenêtre où l'on commande AVANT la rupture. Un produit à zéro
+   *              n'est pas « faible » : il est déjà critique.
    */
-  const stockCritique = products.filter((p) => p.minStock > 0 && availableStock(p) <= p.minStock)
+  const stockCritique = products.filter((p) => availableStock(p) <= 0)
+  const lowStock = products
+    .filter((p) => {
+      const a = availableStock(p)
+      return a > 0 && p.minStock > 0 && a <= p.minStock
+    })
+    .sort((a, b) => a.stock - b.stock)
 
   /*
    * Le PROFIT est réservé aux rôles Administrateur et Gérant : la marge de
