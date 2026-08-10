@@ -15,7 +15,7 @@
 import { useCallback, useMemo } from 'react'
 import { useHrList } from './hr-store'
 import { useDroguerie, type AppUser } from './store'
-import type { Employee } from './hr'
+import { todayISO, type Employee } from './hr'
 
 /** Employé enrichi des informations du compte : c'est CE type que les écrans manipulent. */
 export interface EmployeeView extends Employee {
@@ -150,5 +150,41 @@ export function useEmployees() {
     [patch]
   )
 
-  return { employees, active, all: list.all, byId, nameOf, create, patch, archive, remove: list.remove }
+  /*
+   * LE TROU DU MODÈLE « une personne = une fiche » : créer depuis la RH crée
+   * compte + fiche, mais un compte né AILLEURS (inscription approuvée, écran
+   * Utilisateurs) n'a jamais de fiche — la personne ne peut ni pointer, ni
+   * être payée. Ces comptes orphelins sont détectés ici, et une fiche
+   * minimale se crée en un clic : matricule auto, poste = rôle du compte,
+   * embauche = aujourd'hui, salaire à compléter.
+   */
+  const sansFiche = useMemo(() => {
+    const avecFiche = new Set(list.all.map((e) => e.userId))
+    return users.filter((u) => u.active && !u.pendingApproval && !avecFiche.has(u.id))
+  }, [users, list.all])
+
+  const creerFichesManquantes = useCallback((): number => {
+    let n = 0
+    const dejaLa = new Set(list.all.map((e) => e.userId))
+    for (const u of users) {
+      if (!u.active || u.pendingApproval || dejaLa.has(u.id)) continue
+      list.add({
+        userId: u.id,
+        matricule: nextMatricule(list.all),
+        name: u.name,
+        poste: u.role,
+        hireDate: todayISO(),
+        contract: 'cdi',
+        baseSalary: 0,
+        phone: u.phone,
+        email: u.email,
+        active: true,
+      })
+      dejaLa.add(u.id)
+      n++
+    }
+    return n
+  }, [users, list])
+
+  return { employees, active, all: list.all, byId, nameOf, create, patch, archive, remove: list.remove, sansFiche, creerFichesManquantes }
 }

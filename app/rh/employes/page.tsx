@@ -15,7 +15,7 @@ import { useLanguage } from '@/lib/i18n'
 import { usePermissions } from '@/lib/access'
 
 export default function Page() {
-  const { employees, all, create } = useEmployees()
+  const { employees, all, create, sansFiche, creerFichesManquantes } = useEmployees()
   const { t, lang } = useLanguage()
   const { can } = usePermissions()
   const toast = useToast()
@@ -84,6 +84,34 @@ export default function Page() {
         </>
       }
     >
+      {/*
+        Comptes SANS fiche employé : nés hors de la RH (inscription approuvée,
+        écran Utilisateurs), ils ne peuvent ni pointer ni être payés tant que
+        la fiche n'existe pas. On les montre, on les crée en un clic.
+      */}
+      {can('hr.edit') && sansFiche.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3 dark:border-amber-500/20 dark:bg-amber-500/10">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              {sansFiche.length} {t('hr_orphan_accounts')}
+            </p>
+            <p className="mt-0.5 text-xs text-amber-700/80 dark:text-amber-400/80">
+              {sansFiche.map((u) => u.name).join(' · ')} — {t('hr_orphan_hint')}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              const n = creerFichesManquantes()
+              toast(`✓ ${n} ${t('hr_orphan_created')}`)
+            }}
+            className="btn-primary !h-9 text-xs"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {t('hr_orphan_create')}
+          </button>
+        </div>
+      )}
+
       <HrTable
         rows={rows}
         columns={columns}
