@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { forwardRef, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
@@ -26,12 +26,46 @@ import {
   UserCog,
   Users,
   UsersRound,
-  Wallet,
   X,
 } from 'lucide-react'
 import type { RegisterSession } from '@/lib/store'
 import { useLanguage, type TKey } from '@/lib/i18n'
 import { ROUTE_PERM, usePermissions } from '@/lib/access'
+
+/*
+ * Icône « caisse enregistreuse » (machine à clavier), dessinée localement :
+ * la version installée de lucide-react (0.400) ne l'a pas encore. Mêmes
+ * conventions que les autres icônes — trait 2, coins et extrémités ronds —
+ * pour qu'elle soit indiscernable de ses voisines dans le menu.
+ */
+const CashRegister = forwardRef<SVGSVGElement, React.SVGProps<SVGSVGElement>>(
+  function CashRegister(props, ref) {
+    return (
+      <svg
+        ref={ref}
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        {...props}
+      >
+        <path d="M7 9V5a1 1 0 0 1 1-1h6l3 3v2" />
+        <rect x="3" y="9" width="18" height="11" rx="2" />
+        <path d="M8 13.5h.01" />
+        <path d="M12 13.5h.01" />
+        <path d="M16 13.5h.01" />
+        <path d="M8 16.5h.01" />
+        <path d="M12 16.5h.01" />
+        <path d="M16 16.5h.01" />
+      </svg>
+    )
+  }
+) as unknown as LucideIcon
 
 interface NavChild {
   href: string
@@ -82,7 +116,9 @@ const NAV_ALL: NavItem[] = [
   },
   {
     labelKey: 'nav_caisse',
-    icon: Wallet,
+    // La caisse enregistreuse (l'icône « machine à clavier »), pas le
+    // portefeuille : le portefeuille, c'est l'argent ; la caisse, l'appareil.
+    icon: CashRegister,
     children: [
       { href: '/caisse-journal?action=open', labelKey: 'nav_caisse_open' },
       { href: '/caisse-journal?action=close', labelKey: 'nav_caisse_close' },

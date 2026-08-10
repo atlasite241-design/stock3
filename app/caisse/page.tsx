@@ -857,6 +857,41 @@ function CaisseContent() {
                       <MapPin className="h-2.5 w-2.5 shrink-0" />{p.emplacementComplet}
                     </p>
                   )}
+                  {/*
+                    Stock temps réel : barre + statut, recalculés à chaque vente.
+                    Optimal/Faible suivent le SEUIL de la fiche ; la barre est
+                    pleine à 3× le seuil. Un produit sans seuil n'est pas jugé :
+                    il est « En stock » ou « Rupture », sans plus.
+                  */}
+                  {(() => {
+                    const avail = availableStock(p)
+                    const pilote = p.minStock > 0
+                    const statut = avail <= 0 ? 'rupture' : pilote && avail <= p.minStock ? 'faible' : 'ok'
+                    const cible = pilote ? p.minStock * 3 : Math.max(avail, 1)
+                    const part = Math.max(0, Math.min(1, avail / cible))
+                    const teinte = statut === 'rupture'
+                      ? { bar: 'bg-rose-500', txt: 'text-rose-500 dark:text-rose-400', label: t('pos_rt_out') }
+                      : statut === 'faible'
+                        ? { bar: 'bg-amber-500', txt: 'text-amber-600 dark:text-amber-400', label: t('pos_rt_low') }
+                        : { bar: 'bg-emerald-500', txt: 'text-emerald-600 dark:text-emerald-400', label: pilote ? t('pos_rt_ok') : t('pos_rt_instock') }
+                    return (
+                      <div className="mt-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[9px] font-bold uppercase tracking-wide text-gray-400 dark:text-zinc-500">{t('pos_rt_stock')}</span>
+                          <span className={`flex items-center gap-1 text-[10px] font-bold ${teinte.txt}`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${teinte.bar}`} aria-hidden="true" />
+                            {teinte.label}
+                          </span>
+                        </div>
+                        <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
+                          <div className={`h-full rounded-full ${teinte.bar}`} style={{ width: `${part * 100}%` }} />
+                        </div>
+                        <p className="mt-0.5 text-[10px] tabular-nums text-gray-400 dark:text-zinc-500">
+                          {avail}{pilote ? ` / ${cible}` : ''} {t('pos_rt_units')}
+                        </p>
+                      </div>
+                    )
+                  })()}
                   <div className="mt-1 flex items-end justify-between gap-2">
                     <p className="text-base font-bold text-amber-600 dark:text-amber-400 tabular-nums">{fmtDH(p.price)}</p>
                     {p.barcode && <span className="shrink-0 truncate text-[10px] text-gray-400 dark:text-zinc-500">{p.barcode.slice(-8)}</span>}
