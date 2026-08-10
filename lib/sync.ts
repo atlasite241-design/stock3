@@ -45,6 +45,7 @@ export const COLLECTIONS: Collection[] = [
   { collection: 'expenses', key: 'dp_expenses' },
   { collection: 'revenues', key: 'dp_revenues' },
   { collection: 'moneyTransfers', key: 'dp_money_transfers' },
+  { collection: 'inventories', key: 'dp_inventories' },
   { collection: 'stores', key: 'dp_stores' },
   { collection: 'depots', key: 'dp_depots' },
   { collection: 'zones', key: 'dp_zones' },

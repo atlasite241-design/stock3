@@ -165,16 +165,20 @@ const NAV_ALL: NavItem[] = [
           // (dont l'import Excel) sont des onglets DE la page — une seconde
           // entrée de menu vers le même écran ne se comprenait pas.
           { href: '/stock/stock-initial', labelKey: 'nav_stock_initial' },
-          { href: '/stock/ajustement', labelKey: 'nav_stock_adjust' },
         ],
       },
       {
         sectionKey: 'nav_stock_sec_inventory',
         items: [
-          { href: '/stock/inventaire', labelKey: 'nav_stock_inventory' },
+          { href: '/stock/inventaires', labelKey: 'nav_stock_inv_dash' },
+          { href: '/stock/inventaires/physique', labelKey: 'nav_stock_inventory' },
+          { href: '/stock/inventaires/tournant', labelKey: 'nav_stock_inv_cycle' },
           { href: '/stock/inventaire?scope=emplacement', labelKey: 'nav_stock_inv_loc' },
           { href: '/stock/comptage', labelKey: 'nav_stock_quickcount' },
+          { href: '/stock/inventaires/historique', labelKey: 'nav_stock_inv_history' },
           { href: '/stock/ecarts', labelKey: 'nav_stock_variances' },
+          // Ajustements : déplacé ici — c'est le pendant « correction » de l'inventaire.
+          { href: '/stock/ajustement', labelKey: 'nav_stock_adjust' },
         ],
       },
       {

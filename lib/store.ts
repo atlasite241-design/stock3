@@ -1047,6 +1047,95 @@ export const TRANSFER_META: Record<TransferStatus, { chip: string }> = {
 }
 
 // ------------------------------------------------------------------
+// Inventaires (physique + tournant)
+// ------------------------------------------------------------------
+
+export type InventoryKind = 'physique' | 'tournant'
+/**
+ * Workflow imposé : brouillon (création + comptage) → controle (comptage clos,
+ * en attente de validation) → valide (écarts appliqués au stock, IMMUABLE).
+ * `annule` est une sortie de secours avant validation — un inventaire validé
+ * ne se supprime ni ne s'annule jamais : c'est lui qui justifie les mouvements.
+ */
+export type InventoryStatus = 'brouillon' | 'controle' | 'valide' | 'annule'
+
+export interface InventoryLine {
+  productId: string
+  /** Dénormalisé : l'historique doit rester lisible même si la fiche disparaît. */
+  productName: string
+  barcode?: string
+  category?: string
+  /** Stock théorique FIGÉ au moment du comptage — pas recalculé ensuite. */
+  theoretical: number
+  counted: number
+  /** Motif de l'écart (clé i18n des motifs d'ajustement, ou texte libre). */
+  reason?: string
+  countedAt?: string
+  countedBy?: string
+}
+
+export interface InventoryScope {
+  categories?: string[]
+  subcategories?: string[]
+  brands?: string[]
+  /** Préfixe d'emplacement (« Z01 », « Z01-A02 »…), comme l'inventaire par emplacement. */
+  emplacementPrefix?: string
+  /** Liste d'articles choisis un à un. */
+  productIds?: string[]
+  /** Priorité par rotation (unités vendues 90 j) ou par valeur de stock (qté × coût). */
+  priority?: 'rotation' | 'valeur'
+  /** Nombre maximum d'articles générés pour un tournant. */
+  limit?: number
+}
+
+export type InventoryFrequency = 'quotidien' | 'hebdomadaire' | 'mensuel' | 'personnalise'
+
+export interface Inventory {
+  id: string
+  ref: string
+  kind: InventoryKind
+  status: InventoryStatus
+  date: string
+  depotId?: string
+  scope?: InventoryScope
+  frequency?: InventoryFrequency
+  /** Fréquence en jours (dérivée ou personnalisée) — sert aussi de fenêtre « déjà compté récemment ». */
+  frequencyDays?: number
+  /**
+   * Seules les lignes RÉELLEMENT comptées sont stockées : un inventaire
+   * physique affiche tout le catalogue mais n'écrit qu'un document, jamais
+   * une ligne par référence (quota Turso).
+   */
+  lines: InventoryLine[]
+  note?: string
+  createdBy?: string
+  updatedBy?: string
+  submittedBy?: string
+  submittedAt?: string
+  validatedBy?: string
+  validatedAt?: string
+  cancelledBy?: string
+  cancelledAt?: string
+  storeId?: string
+}
+
+export const INVENTORY_META: Record<InventoryStatus, { chip: string }> = {
+  brouillon: { chip: 'border-gray-200 bg-gray-50 text-gray-600 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300' },
+  controle: { chip: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400' },
+  valide: { chip: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400' },
+  annule: { chip: 'border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400' },
+}
+
+export const INVENTORY_FREQUENCY_DAYS: Record<Exclude<InventoryFrequency, 'personnalise'>, number> = {
+  quotidien: 1,
+  hebdomadaire: 7,
+  mensuel: 30,
+}
+
+/** Écarts d'un inventaire : uniquement les lignes comptées dont compté ≠ théorique. */
+export const inventoryDiffs = (inv: Inventory) => inv.lines.filter((l) => l.counted !== l.theoretical)
+
+// ------------------------------------------------------------------
 // Storage keys / helpers
 // ------------------------------------------------------------------
 
@@ -1090,6 +1179,7 @@ const K = {
   transfers: 'dp_transfers',
   lots: 'dp_lots',
   purchaseRequests: 'dp_purchase_requests',
+  inventories: 'dp_inventories',
 }
 
 /** Storage keys whose records carry a storeId and must be filtered per active store. */
@@ -1112,6 +1202,7 @@ const SCOPED_KEYS: string[] = [
   K.revenues,
   K.moneyTransfers,
   K.users,
+  K.inventories,
 ]
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -1891,6 +1982,7 @@ export function useDroguerieState() {
   const [positions, setPositions] = useState<Position[]>([])
   const [emplacements, setEmplacements] = useState<Emplacement[]>([])
   const [transfers, setTransfers] = useState<Transfer[]>([])
+  const [inventories, setInventories] = useState<Inventory[]>([])
   const [activeStoreId, setActiveStoreIdState] = useState<string>('')
   const [ready, setReady] = useState(false)
   // Étape de démarrage affichée sous le loader plein écran (diagnostic + confort).
@@ -1953,6 +2045,7 @@ export function useDroguerieState() {
       setPositions(load(K.positions, []))
       setEmplacements(load(K.emplacements, []))
       setTransfers(load(K.transfers, []))
+      if (wants('inventories')) setInventories(load(K.inventories, []))
       setActiveStoreIdState(getActiveStoreId())
       setSettings({ ...DEFAULT_SETTINGS, ...load<Partial<Settings>>(K.settings, {}) })
       setReady(true)
@@ -2106,6 +2199,7 @@ export function useDroguerieState() {
   const persistPositions = useCallback(makePersist<Position[]>(K.positions, setPositions), [])
   const persistEmplacements = useCallback(makePersist<Emplacement[]>(K.emplacements, setEmplacements), [])
   const persistTransfers = useCallback(makePersist<Transfer[]>(K.transfers, setTransfers), [])
+  const persistInventories = useCallback(makeScopedPersist<Inventory>(K.inventories, setInventories), [])
   /* eslint-enable react-hooks/exhaustive-deps */
 
   const saveSettings = useCallback((next: Settings) => {
@@ -2580,10 +2674,11 @@ export function useDroguerieState() {
     addMovement(id, 'reappro', qty, note || 'Réapprovisionnement', undefined, undefined, depotId)
   }
 
-  const applyInventory = (counts: { productId: string; counted: number }[]) => {
+  const applyInventory = (counts: { productId: string; counted: number }[], opts?: { depotId?: string; ref?: string }) => {
     let curProducts = products
     let curMovements = movements
     let curLots = lots
+    const label = opts?.ref ? `Inventaire ${opts.ref}` : 'Inventaire physique'
     counts.forEach(({ productId, counted }) => {
       const p = curProducts.find((x) => x.id === productId)
       if (!p || p.stock === counted) return
@@ -2591,7 +2686,7 @@ export function useDroguerieState() {
       curProducts = curProducts.map((x) => (x.id === productId ? { ...x, stock: counted } : x))
       // Les lots suivent la réconciliation : surplus = lot d'écart, manque = consommation.
       curLots = delta > 0
-        ? entreeLot(curLots, p, delta, { ref: `Inventaire (écart +${delta})` })
+        ? entreeLot(curLots, p, delta, { ref: `${label} (écart +${delta})` })
         : sortieLots(curLots, p, -delta)
       curMovements = [
         {
@@ -2601,7 +2696,12 @@ export function useDroguerieState() {
           productName: p.name,
           type: 'inventaire' as const,
           qty: delta,
-          note: `Inventaire physique (écart ${delta > 0 ? '+' : ''}${delta})`,
+          note: `${label} (écart ${delta > 0 ? '+' : ''}${delta})`,
+          // Sans storeId/depotId explicites, les écarts d'inventaire restaient
+          // invisibles dans « Stock par dépôt » (le solde y est reconstitué
+          // depuis le journal, filtré par dépôt).
+          storeId: p.storeId ?? (activeStoreRef.current || undefined),
+          depotId: opts?.depotId || undefined,
           user: mvUser(),
         },
         ...curMovements,
@@ -2610,7 +2710,89 @@ export function useDroguerieState() {
     persistProducts(curProducts)
     persistMovements(curMovements)
     if (curLots !== lots) persistLots(curLots)
-    logActivity('Inventaire physique validé')
+    logActivity(`${label} validé`)
+  }
+
+  // ---- Inventaires (physique + tournant) ----
+
+  const invUser = () => {
+    try { return getSession()?.name || undefined } catch { return undefined }
+  }
+
+  const addInventory = (
+    kind: InventoryKind,
+    init?: Partial<Pick<Inventory, 'depotId' | 'scope' | 'frequency' | 'frequencyDays' | 'note' | 'lines'>>
+  ): Inventory => {
+    const base = kind === 'physique' ? 'INV' : 'TRN'
+    const seq = inventories.filter((i) => i.kind === kind && i.storeId === activeStoreId).length + 1
+    const inv: Inventory = {
+      id: uid(),
+      ref: docNumber(base, stores.find((s) => s.id === activeStoreId) ?? null, seq, 4),
+      kind,
+      status: 'brouillon',
+      date: new Date().toISOString(),
+      lines: [],
+      createdBy: invUser(),
+      ...init,
+    }
+    persistInventories([inv, ...inventories])
+    logActivity(`Inventaire ${inv.ref} créé (${kind})`, { target: inv.ref })
+    return inv
+  }
+
+  /** Un inventaire validé est IMMUABLE : il justifie des mouvements de stock. */
+  const updateInventory = (id: string, patch: Partial<Inventory>) => {
+    persistInventories(
+      inventories.map((i) =>
+        i.id === id && i.status !== 'valide' ? { ...i, ...patch, updatedBy: invUser() } : i
+      )
+    )
+  }
+
+  /** Comptage terminé → étape de contrôle (en attente de validation). */
+  const submitInventory = (id: string) => {
+    const inv = inventories.find((i) => i.id === id)
+    if (!inv || inv.status !== 'brouillon') return
+    updateInventory(id, { status: 'controle', submittedBy: invUser(), submittedAt: new Date().toISOString() })
+    logActivity(`Inventaire ${inv.ref} envoyé au contrôle`, { target: inv.ref })
+  }
+
+  /** Retour au comptage depuis le contrôle (écart suspect à recompter). */
+  const reopenInventory = (id: string) => {
+    const inv = inventories.find((i) => i.id === id)
+    if (!inv || inv.status !== 'controle') return
+    updateInventory(id, { status: 'brouillon' })
+    logActivity(`Inventaire ${inv.ref} rouvert pour recomptage`, { target: inv.ref })
+  }
+
+  /**
+   * VALIDATION : applique les écarts au stock (mouvements type « inventaire »,
+   * lots réconciliés, dépôt ventilé) puis fige l'inventaire. Le théorique de
+   * référence est celui FIGÉ sur chaque ligne au comptage — si le stock a bougé
+   * entre-temps (une vente), le compté reste la vérité posée par l'inventaire.
+   */
+  const validateInventory = (id: string) => {
+    const inv = inventories.find((i) => i.id === id)
+    if (!inv || inv.status !== 'controle') return { ok: false as const }
+    const diffs = inventoryDiffs(inv)
+    if (diffs.length) {
+      applyInventory(diffs.map((l) => ({ productId: l.productId, counted: l.counted })), { depotId: inv.depotId, ref: inv.ref })
+    }
+    persistInventories(
+      inventories.map((i) =>
+        i.id === id ? { ...i, status: 'valide' as const, validatedBy: invUser(), validatedAt: new Date().toISOString() } : i
+      )
+    )
+    logActivity(`Inventaire ${inv.ref} validé (${diffs.length} écart(s))`, { target: inv.ref })
+    return { ok: true as const, adjusted: diffs.length }
+  }
+
+  /** Annulation douce avant validation — le document reste dans l'historique. */
+  const cancelInventory = (id: string) => {
+    const inv = inventories.find((i) => i.id === id)
+    if (!inv || inv.status === 'valide' || inv.status === 'annule') return
+    updateInventory(id, { status: 'annule', cancelledBy: invUser(), cancelledAt: new Date().toISOString() })
+    logActivity(`Inventaire ${inv.ref} annulé`, { target: inv.ref })
   }
 
   // ---- Stock initial (mise en service d'un magasin) ----
@@ -4295,6 +4477,15 @@ export function useDroguerieState() {
     adjustStock,
     restockProduct,
     applyInventory,
+    // Inventaires (physique + tournant) — vues scopées magasin + workflow complet.
+    inventories: scoped(inventories),
+    allInventories: inventories,
+    addInventory,
+    updateInventory,
+    submitInventory,
+    reopenInventory,
+    validateInventory,
+    cancelInventory,
     recordSale,
     recordReturn,
     addClient,
