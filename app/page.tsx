@@ -34,7 +34,8 @@ import {
 } from 'recharts'
 import AppShell from '@/components/AppShell'
 import Select from '@/components/Select'
-import { exportSalesCSV, fmtDH, PAYMENT_META, useDroguerie } from '@/lib/store'
+import { availableStock, exportSalesCSV, fmtDH, PAYMENT_META, useDroguerie } from '@/lib/store'
+import { useAuth } from '@/lib/auth-context'
 import { useLanguage, type TKey } from '@/lib/i18n'
 
 const DAY_KEYS: TKey[] = ['day_sun', 'day_mon', 'day_tue', 'day_wed', 'day_thu', 'day_fri', 'day_sat']
@@ -91,6 +92,7 @@ function TrendChip({ pct }: { pct: number | null }) {
 
 export default function DashboardPage() {
   const { ready, products: scopedProducts, sales: scopedSales, allProducts, allSales, stores, activeStore, settings } = useDroguerie()
+  const { session } = useAuth()
   const { t, lang } = useLanguage()
   const [dateStr, setDateStr] = useState('')
   const [scope, setScope] = useState('active')
@@ -151,6 +153,22 @@ export default function DashboardPage() {
     .filter((p) => p.stock <= p.minStock)
     .sort((a, b) => a.stock - b.stock)
 
+  /*
+   * Stock CRITIQUE : la définition de l'écran Stock → Stock critique — sous
+   * le seuil ET piloté (minStock > 0). Sans ce garde, tout article à zéro
+   * sans seuil compterait (0 <= 0), et la carte annoncerait le catalogue
+   * entier. Distinct de « Stock faible » qui, lui, inclut les non pilotés.
+   */
+  const stockCritique = products.filter((p) => p.minStock > 0 && availableStock(p) <= p.minStock)
+
+  /*
+   * Le PROFIT est réservé aux rôles Administrateur et Gérant : la marge de
+   * l'enseigne n'est pas une information de comptoir. Pour les autres rôles,
+   * « Stock critique » prend EXACTEMENT sa place (même position, même carte) ;
+   * pour les dirigeants, elle s'ajoute en quatrième position.
+   */
+  const voitLeProfit = session?.role === 'Administrateur' || session?.role === 'Gérant'
+
   const kpis = [
     {
       label: t('dash_kpi_ca_today'),
@@ -166,18 +184,29 @@ export default function DashboardPage() {
       iconClass: 'bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
       trend: pct(todaySales.length, yesterdaySales.length),
     },
+    ...(voitLeProfit
+      ? [{
+          label: t('dash_kpi_profit_today'),
+          value: fmtDH(profitToday),
+          icon: TrendingUp,
+          iconClass: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 dark:text-emerald-400',
+          trend: pct(profitToday, profitYesterday),
+        }]
+      : []),
     {
-      label: t('dash_kpi_profit_today'),
-      value: fmtDH(profitToday),
-      icon: TrendingUp,
-      iconClass: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 dark:text-emerald-400',
-      trend: pct(profitToday, profitYesterday),
+      label: t('dash_kpi_stock_critical'),
+      value: String(stockCritique.length),
+      icon: AlertTriangle,
+      iconClass: stockCritique.length > 0 ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-400' : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 dark:text-emerald-400',
+      trend: null,
     },
     {
       label: t('dash_kpi_low_stock'),
       value: String(lowStock.length),
-      icon: AlertTriangle,
-      iconClass: lowStock.length > 0 ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-400' : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 dark:text-emerald-400',
+      // Boxes et non AlertTriangle : deux cartes voisines avec la même icône
+      // d'alerte se liraient comme un doublon.
+      icon: Boxes,
+      iconClass: lowStock.length > 0 ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-500 dark:text-orange-400' : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 dark:text-emerald-400',
       trend: null,
     },
   ]
@@ -277,8 +306,9 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
-      {/* KPI cards */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* KPI cards — 5 colonnes pour les dirigeants (le profit s'ajoute),
+          4 pour les autres : la grille suit le nombre de cartes. */}
+      <div className={`grid gap-4 sm:grid-cols-2 ${kpis.length === 5 ? 'xl:grid-cols-5' : 'xl:grid-cols-4'}`}>
         {kpis.map((k, i) => (
           <motion.div
             key={k.label}

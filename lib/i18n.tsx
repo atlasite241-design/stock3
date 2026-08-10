@@ -2525,6 +2525,7 @@ const DICT = {
   dash_kpi_sales_today: { fr: "Ventes aujourd'hui", ar: 'المبيعات اليوم' },
   dash_kpi_profit_today: { fr: "Profit aujourd'hui", ar: 'الربح اليوم' },
   dash_kpi_low_stock: { fr: 'Stock faible', ar: 'مخزون منخفض' },
+  dash_kpi_stock_critical: { fr: 'Stock critique', ar: 'مخزون حرج' },
   dash_revenue_title: { fr: "Chiffre d'affaires", ar: 'رقم الأعمال' },
   dash_revenue_period: { fr: '7 derniers jours', ar: 'آخر 7 أيام' },
   dash_view_sales: { fr: 'Voir les ventes', ar: 'عرض المبيعات' },
