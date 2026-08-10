@@ -271,6 +271,29 @@ export default function DashboardPage() {
     .sort((a, b) => b.value - a.value)
   const catTotal = catData.reduce((a, c) => a + c.value, 0)
 
+  // --- Heures de pointe (jour x heure) ---
+  // Chaque vente compte 1 dans sa case : la carte montre QUAND le magasin
+  // travaille, pas combien il encaisse — une grosse vente ne doit pas faire
+  // croire a une heure de pointe.
+  const heat = new Map<string, number>()
+  let heatMax = 0
+  let hMin = 8
+  let hMax = 19
+  sales.forEach((s0) => {
+    const d = new Date(s0.date)
+    const h = d.getHours()
+    if (h < hMin) hMin = h
+    if (h > hMax) hMax = h
+    const k = `${d.getDay()}-${h}`
+    const v = (heat.get(k) ?? 0) + 1
+    heat.set(k, v)
+    if (v > heatMax) heatMax = v
+  })
+  const heatHours: number[] = []
+  for (let h = hMin; h <= hMax; h++) heatHours.push(h)
+  // Semaine commencant lundi (getDay : 0 = dimanche).
+  const DOW_ORDER = [1, 2, 3, 4, 5, 6, 0]
+
   // --- Top products ---
   const prodMap = new Map<string, { name: string; qty: number; revenue: number }>()
   sales.forEach((s) =>
@@ -478,6 +501,65 @@ export default function DashboardPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* Heures de pointe */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.18, duration: 0.4 }}
+        className="glass-card p-6"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">{t('dash_heat_title')}</h2>
+            <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-400">{t('dash_heat_sub')}</p>
+          </div>
+          {/* Legende : moins -> plus, la meme rampe que les cases. */}
+          <div className="flex items-center gap-1.5 text-[10px] text-gray-400 dark:text-zinc-500">
+            {t('dash_heat_less')}
+            {[0.15, 0.35, 0.55, 0.75, 1].map((a) => (
+              <span key={a} className="h-3 w-3 rounded-[3px]" style={{ backgroundColor: `rgb(var(--c-amber-500) / ${a})` }} />
+            ))}
+            {t('dash_heat_more')}
+          </div>
+        </div>
+
+        {heatMax === 0 ? (
+          <p className="py-8 text-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_no_sales_yet')}</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <div className="min-w-[520px]">
+              {/* En-tete des jours */}
+              <div className="grid gap-1" style={{ gridTemplateColumns: '2.75rem repeat(7, 1fr)' }}>
+                <span />
+                {DOW_ORDER.map((dow) => (
+                  <span key={dow} className="text-center text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-zinc-500">
+                    {t(DAY_KEYS[dow])}
+                  </span>
+                ))}
+              </div>
+              {/* Une ligne par heure d'activite */}
+              {heatHours.map((h) => (
+                <div key={h} className="mt-1 grid gap-1" style={{ gridTemplateColumns: '2.75rem repeat(7, 1fr)' }}>
+                  <span className="self-center text-right text-[10px] tabular-nums text-gray-400 dark:text-zinc-500 pr-1">{String(h).padStart(2, '0')}h</span>
+                  {DOW_ORDER.map((dow) => {
+                    const v = heat.get(`${dow}-${h}`) ?? 0
+                    const a = v / heatMax
+                    return (
+                      <div
+                        key={dow}
+                        title={`${t(DAY_KEYS[dow])} ${String(h).padStart(2, '0')}h — ${v} ${t('dash_heat_sales')}`}
+                        className={`h-5 rounded-[4px] transition-transform hover:scale-110 ${v === 0 ? 'bg-gray-100 dark:bg-white/5' : ''}`}
+                        style={v > 0 ? { backgroundColor: `rgb(var(--c-amber-500) / ${0.15 + 0.85 * a})` } : undefined}
+                      />
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </motion.div>
 
       {/* Top products + recent sales */}
       <div className="grid gap-6 xl:grid-cols-3">
