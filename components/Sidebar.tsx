@@ -21,7 +21,6 @@ import {
   Settings,
   Sparkles,
   ShoppingCart,
-  Store,
   Truck,
   UserCog,
   Users,
@@ -750,16 +749,15 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
       >
         {/* Logo */}
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-gray-100 px-5 dark:border-white/10">
-          <Link href="/" className="flex items-center gap-3" onClick={onClose}>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 shadow-lg shadow-amber-400/30">
-              <Store className="h-4 w-4 text-gray-900" />
-            </div>
-            <span className="text-[15px] font-bold tracking-tight text-gray-900 dark:text-white">
-              Droguerie{' '}
-              <span className="bg-gradient-to-r from-amber-500 to-yellow-600 bg-clip-text text-transparent">
-                Pro
-              </span>
-            </span>
+          <Link href="/" className="flex items-center" onClick={onClose}>
+            {/*
+              Le logo AtlaSoft (l'éditeur) remplace l'icône boutique + le texte
+              « Droguerie Pro ». Son fond marine est OPAQUE : les coins
+              arrondis le font lire comme une pastille voulue, y compris sur
+              le thème clair où il tranche avec le fond blanc.
+            */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/atlasoft.png" alt="AtlaSoft" className="h-12 w-auto rounded-lg" />
           </Link>
           <button
             onClick={onClose}
