@@ -27,13 +27,16 @@ import {
   Pie,
   PieChart,
   ResponsiveContainer,
+  Scatter,
+  ScatterChart,
   Tooltip,
   XAxis,
   YAxis,
+  ZAxis,
 } from 'recharts'
 import AppShell from '@/components/AppShell'
 import Select from '@/components/Select'
-import { availableStock, exportSalesCSV, fmtDH, PAYMENT_META, useDroguerie } from '@/lib/store'
+import { availableStock, baseQty, exportSalesCSV, fmtDH, PAYMENT_META, useDroguerie } from '@/lib/store'
 import { useAuth } from '@/lib/auth-context'
 import { useLanguage, type TKey } from '@/lib/i18n'
 
@@ -96,6 +99,26 @@ function DonutTooltip({ active, payload }: TooltipProps) {
       <p className="text-xs text-gray-500 dark:text-zinc-400">{payload[0].name}</p>
       <p className="text-sm font-bold text-gray-900 dark:text-white tabular-nums">
         {fmtDH(Number(payload[0].value))}
+      </p>
+    </div>
+  )
+}
+
+interface RotationPoint {
+  name: string
+  rotation: number
+  marge: number
+  ca: number
+}
+
+function RotationTooltip({ active, payload }: { active?: boolean; payload?: { payload: RotationPoint }[] }) {
+  if (!active || !payload?.length) return null
+  const d = payload[0].payload
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-xl dark:border-white/10 dark:bg-[#12121a]">
+      <p className="max-w-[220px] text-xs font-semibold text-gray-900 dark:text-white">{d.name}</p>
+      <p className="mt-1 text-xs tabular-nums text-gray-500 dark:text-zinc-400">
+        {d.marge}% · {d.rotation} u. · {fmtDH(d.ca)}
       </p>
     </div>
   )
@@ -293,6 +316,39 @@ export default function DashboardPage() {
   for (let h = hMin; h <= hMax; h++) heatHours.push(h)
   // Semaine commencant lundi (getDay : 0 = dimanche).
   const DOW_ORDER = [1, 2, 3, 4, 5, 6, 0]
+
+  // --- Rentabilite vs rotation (90 jours) ---
+  // Reserve aux memes roles que le profit : le nuage expose les MARGES.
+  // Chaque point est un produit vendu sur la periode ; on plafonne aux 40
+  // plus gros chiffres d'affaires pour rester lisible.
+  const rotationData = (() => {
+    if (!voitLeProfit) return []
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - 90)
+    const cutIso = cutoff.toISOString()
+    const parProduit = new Map<string, { qty: number; ca: number }>()
+    sales.forEach((s0) => {
+      if (s0.date < cutIso) return
+      s0.items.forEach((i) => {
+        const cur = parProduit.get(i.productId) ?? { qty: 0, ca: 0 }
+        cur.qty += baseQty(i)
+        cur.ca += i.price * i.qty
+        parProduit.set(i.productId, cur)
+      })
+    })
+    const pts: { name: string; rotation: number; marge: number; ca: number }[] = []
+    for (const [pid, v] of parProduit) {
+      const p0 = prodById.get(pid)
+      if (!p0 || p0.price <= 0) continue
+      pts.push({
+        name: p0.name,
+        rotation: Math.round(v.qty * 10) / 10,
+        marge: Math.round(((p0.price - p0.cost) / p0.price) * 1000) / 10,
+        ca: Math.round(v.ca),
+      })
+    }
+    return pts.sort((a, b) => b.ca - a.ca).slice(0, 40)
+  })()
 
   // --- Top products ---
   const prodMap = new Map<string, { name: string; qty: number; revenue: number }>()
@@ -502,7 +558,8 @@ export default function DashboardPage() {
         </motion.div>
       </div>
 
-      {/* Heures de pointe */}
+      {/* Heures de pointe + rentabilite/rotation (dirigeants) */}
+      <div className={`grid gap-6 ${voitLeProfit ? 'xl:grid-cols-2' : ''}`}>
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -560,6 +617,51 @@ export default function DashboardPage() {
           </div>
         )}
       </motion.div>
+
+      {voitLeProfit && (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.22, duration: 0.4 }}
+          className="glass-card p-6"
+        >
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white">{t('dash_rot_title')}</h2>
+          <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-400">{t('dash_rot_sub')}</p>
+
+          {rotationData.length === 0 ? (
+            <p className="py-8 text-center text-sm text-gray-400 dark:text-zinc-500">{t('dash_no_sales_yet')}</p>
+          ) : (
+            <div className="mt-4 h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <ScatterChart margin={{ top: 8, right: 12, bottom: 4, left: -18 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#8884" />
+                  <XAxis
+                    type="number"
+                    dataKey="rotation"
+                    tick={{ fontSize: 10, fill: '#9ca3af' }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    type="number"
+                    dataKey="marge"
+                    unit="%"
+                    tick={{ fontSize: 10, fill: '#9ca3af' }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  {/* Taille du point : le poids en chiffre d'affaires. */}
+                  <ZAxis dataKey="ca" range={[40, 360]} />
+                  <Tooltip content={<RotationTooltip />} cursor={{ strokeDasharray: '3 3' }} />
+                  <Scatter data={rotationData} fill="#f59e0b" fillOpacity={0.65} stroke="#f59e0b" />
+                </ScatterChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          <p className="mt-2 text-center text-[10px] text-gray-400 dark:text-zinc-500">{t('dash_rot_axes')}</p>
+        </motion.div>
+      )}
+      </div>
 
       {/* Top products + recent sales */}
       <div className="grid gap-6 xl:grid-cols-3">
