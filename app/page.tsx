@@ -13,7 +13,6 @@ import {
   ChevronRight,
   Download,
   PackagePlus,
-  Plus,
   Receipt,
   ShoppingCart,
   TrendingUp,
@@ -39,6 +38,34 @@ import { useAuth } from '@/lib/auth-context'
 import { useLanguage, type TKey } from '@/lib/i18n'
 
 const DAY_KEYS: TKey[] = ['day_sun', 'day_mon', 'day_tue', 'day_wed', 'day_thu', 'day_fri', 'day_sat']
+
+/*
+ * « Panier + » (add_shopping_cart) : une vente s'AJOUTE, d'où le panier
+ * surmonté d'un plus — le « + » nu ne disait pas quoi. Dessinée localement
+ * aux conventions lucide (trait 2, extrémités rondes) : la version installée
+ * de la bibliothèque n'a pas ce glyphe.
+ */
+function CartPlus({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M12 3v6" />
+      <path d="M9 6h6" />
+      <circle cx="8" cy="21" r="1" />
+      <circle cx="19" cy="21" r="1" />
+      <path d="M2 7h2l2.3 9.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L21.9 11H6" />
+    </svg>
+  )
+}
 const DONUT_COLORS = ['#f59e0b', '#facc15', '#fb923c', '#0ea5e9', '#10b981', '#a78bfa', '#94a3b8']
 
 interface TooltipProps {
@@ -300,7 +327,7 @@ export default function DashboardPage() {
             {t('dash_export')}
           </button>
           <Link href="/caisse" className="btn-primary">
-            <Plus className="h-4 w-4" />
+            <CartPlus className="h-4 w-4" />
             {t('dash_new_sale')}
           </Link>
         </div>
