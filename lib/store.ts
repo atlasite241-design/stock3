@@ -2702,41 +2702,69 @@ export function useDroguerieState() {
     // tableau `activity` et le second écraserait le premier.
     opts?: { depotId?: string; ref?: string; skipLog?: boolean }
   ) => {
-    let curProducts = products
-    let curMovements = movements
-    let curLots = lots
     const label = opts?.ref ? `Inventaire ${opts.ref}` : 'Inventaire physique'
-    counts.forEach(({ productId, counted }) => {
-      const p = curProducts.find((x) => x.id === productId)
-      if (!p || p.stock === counted) return
-      const delta = counted - p.stock
-      curProducts = curProducts.map((x) => (x.id === productId ? { ...x, stock: counted } : x))
+    const nowIso = new Date().toISOString()
+    const who = mvUser()
+
+    /*
+     * UNE SEULE PASSE. La version précédente, pour CHAQUE écart, cherchait le
+     * produit dans tout le catalogue, en recopiait l'intégralité pour changer
+     * une quantité, et recopiait tout le journal des mouvements pour y ajouter
+     * une ligne. Sur une validation de masse — un inventaire physique complet
+     * peut produire des milliers d'écarts sur des dizaines de milliers de
+     * fiches et un journal de plus de 100 000 lignes — cela représentait des
+     * centaines de millions de copies : l'onglet gelait au pire moment, juste
+     * après des heures de comptage.
+     *
+     * Ici : un index, une accumulation, puis une seule recopie de chaque
+     * collection.
+     */
+    const byId = new Map(products.map((p) => [p.id, p]))
+    const stocksFixes = new Map<string, number>()
+    const nouveauxMouvements: StockMovement[] = []
+    let curLots = lots
+
+    for (const { productId, counted } of counts) {
+      const p = byId.get(productId)
+      if (!p) continue
+      // Stock effectif avant CETTE ligne : le moteur de lots exige le stock
+      // d'avant l'opération, et une même référence peut apparaître deux fois.
+      const stockAvant = stocksFixes.get(productId) ?? p.stock
+      if (stockAvant === counted) continue
+      const delta = counted - stockAvant
+      stocksFixes.set(productId, counted)
+      const pAvant = stockAvant === p.stock ? p : { ...p, stock: stockAvant }
       // Les lots suivent la réconciliation : surplus = lot d'écart, manque = consommation.
       curLots = delta > 0
-        ? entreeLot(curLots, p, delta, { ref: `${label} (écart +${delta})` })
-        : sortieLots(curLots, p, -delta)
-      curMovements = [
-        {
-          id: uid(),
-          date: new Date().toISOString(),
-          productId,
-          productName: p.name,
-          type: 'inventaire' as const,
-          qty: delta,
-          note: `${label} (écart ${delta > 0 ? '+' : ''}${delta})`,
-          // Sans storeId/depotId explicites, les écarts d'inventaire restaient
-          // invisibles dans « Stock par dépôt » (le solde y est reconstitué
-          // depuis le journal, filtré par dépôt).
-          storeId: p.storeId ?? (activeStoreRef.current || undefined),
-          depotId: opts?.depotId || undefined,
-          user: mvUser(),
-        },
-        ...curMovements,
-      ]
-    })
-    persistProducts(curProducts)
-    persistMovements(curMovements)
-    if (curLots !== lots) persistLots(curLots)
+        ? entreeLot(curLots, pAvant, delta, { ref: `${label} (écart +${delta})` })
+        : sortieLots(curLots, pAvant, -delta)
+      nouveauxMouvements.push({
+        id: uid(),
+        date: nowIso,
+        productId,
+        productName: p.name,
+        type: 'inventaire' as const,
+        qty: delta,
+        note: `${label} (écart ${delta > 0 ? '+' : ''}${delta})`,
+        // Sans storeId/depotId explicites, les écarts d'inventaire restaient
+        // invisibles dans « Stock par dépôt » (le solde y est reconstitué
+        // depuis le journal, filtré par dépôt).
+        storeId: p.storeId ?? (activeStoreRef.current || undefined),
+        depotId: opts?.depotId || undefined,
+        user: who,
+      })
+    }
+
+    // Aucun écart réel : ne rien réécrire. Persister à l'identique déclencherait
+    // un envoi vers Turso pour rien (quota).
+    if (stocksFixes.size > 0) {
+      persistProducts(products.map((p) => {
+        const q = stocksFixes.get(p.id)
+        return q === undefined ? p : { ...p, stock: q }
+      }))
+      persistMovements([...nouveauxMouvements, ...movements])
+      if (curLots !== lots) persistLots(curLots)
+    }
     if (!opts?.skipLog) logActivity(`${label} validé`)
   }
 
