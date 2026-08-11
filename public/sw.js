@@ -14,7 +14,21 @@
 // provoquait l'écran « This page couldn't load ») est rattrapée et on se rabat
 // sur le réseau direct.
 
-const CACHE = 'dp-cache-v3'
+const CACHE = 'dp-cache-v4'
+
+/*
+ * EN DÉVELOPPEMENT, LE SERVICE WORKER NE CACHE RIEN.
+ *
+ * La stratégie « cache d'abord » sur /_next/static repose sur une hypothèse
+ * vraie en production seulement : l'URL d'un fichier contient son hash, donc
+ * son contenu ne change jamais. En développement, Turbopack réutilise les
+ * MÊMES chemins à chaque recompilation. Le navigateur resservait donc
+ * éternellement la première version mise en cache — avec, à l'écran, des
+ * erreurs impossibles à comprendre : du code neuf appelant un module périmé
+ * (« Cannot read properties of undefined »), qui survivaient au redémarrage
+ * du serveur et à la suppression de .next.
+ */
+const EST_DEV = ['localhost', '127.0.0.1', '0.0.0.0'].includes(self.location.hostname)
 
 self.addEventListener('install', () => {
   self.skipWaiting()
@@ -47,6 +61,7 @@ async function safePut(cache, req, res) {
 }
 
 self.addEventListener('fetch', (event) => {
+  if (EST_DEV) return // développement : toujours le réseau, jamais le cache
   const req = event.request
   if (req.method !== 'GET') return
   let url

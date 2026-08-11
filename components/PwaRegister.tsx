@@ -8,6 +8,25 @@ export default function PwaRegister() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (!('serviceWorker' in navigator)) return
+
+    /*
+     * En DÉVELOPPEMENT, on désinstalle le service worker au lieu de l'installer,
+     * et on vide ses caches. Sa stratégie « cache d'abord » sur /_next/static
+     * suppose des URL immuables — vrai en production (hash dans le nom), faux
+     * en développement où les chemins sont réutilisés à chaque recompilation.
+     * Un navigateur ayant déjà installé le SW resservait du code périmé de
+     * façon permanente ; ce nettoyage répare aussi ces postes-là.
+     */
+    if (process.env.NODE_ENV !== 'production') {
+      navigator.serviceWorker.getRegistrations()
+        .then((regs) => Promise.all(regs.map((r) => r.unregister())))
+        .catch(() => {})
+      if (typeof caches !== 'undefined') {
+        caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).catch(() => {})
+      }
+      return
+    }
+
     const onLoad = () => {
       navigator.serviceWorker.register('/sw.js').catch(() => {
         // Échec silencieux : l'app fonctionne sans le SW, il n'est utile
