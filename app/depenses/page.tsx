@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   CalendarClock,
   CheckCircle2,
+  Pencil,
   Plus,
   Receipt,
   Search,
@@ -30,6 +31,7 @@ import Modal from '@/components/Modal'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
 import { EXPENSE_CATEGORIES, fmtDH, useDroguerie, type Expense } from '@/lib/store'
+import { usePermissions } from '@/lib/access'
 import { useLanguage, type TKey } from '@/lib/i18n'
 
 const STATUS_KEY: Record<Expense['status'], TKey> = {
@@ -55,7 +57,8 @@ const EMPTY_FORM = {
 }
 
 function Content() {
-  const { ready, expenses, settings, addExpense, markExpensePaid, deleteExpense } = useDroguerie()
+  const { ready, expenses, settings, saveSettings, addExpense, markExpensePaid, deleteExpense } = useDroguerie()
+  const { can } = usePermissions()
   const { t } = useLanguage()
   const toast = useToast()
 
@@ -65,6 +68,12 @@ function Content() {
   const [newOpen, setNewOpen] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
   const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null)
+  const [budgetOpen, setBudgetOpen] = useState(false)
+  const [budgetDraft, setBudgetDraft] = useState('')
+
+  // La page est consultable avec cash.journal (un caissier y a accès) : fixer
+  // le budget est une décision de gestion, réservée aux réglages du magasin.
+  const canEditBudget = can('set.store')
 
   const now = new Date()
   const monthKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}`
@@ -119,7 +128,16 @@ function Content() {
       icon: CalendarClock,
       cls: 'bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-400',
     },
-    { label: t('exp_kpi_budget_remaining'), value: fmtDH(remaining), icon: AlertTriangle, cls: 'bg-violet-50 dark:bg-violet-500/10 text-violet-500 dark:text-violet-400', bar: usedPct },
+    {
+      label: t('exp_kpi_budget_remaining'),
+      value: fmtDH(remaining),
+      icon: AlertTriangle,
+      cls: 'bg-violet-50 dark:bg-violet-500/10 text-violet-500 dark:text-violet-400',
+      bar: usedPct,
+      // Le budget mensuel n'était visible nulle part : impossible de savoir d'où
+      // sortait le « restant », ni qu'il venait d'un réglage modifiable.
+      budget: settings.opexBudget,
+    },
   ]
 
   const visible = expenses
@@ -130,6 +148,18 @@ function Content() {
       return !q || e.label.toLowerCase().includes(q) || e.category.toLowerCase().includes(q)
     })
     .sort((a, b) => b.date.localeCompare(a.date))
+
+  const saveBudget = () => {
+    const value = parseFloat(budgetDraft.replace(',', '.').replace(/\s/g, ''))
+    // 0 est légitime (pas de budget suivi) ; une saisie vide ou négative, non.
+    if (!Number.isFinite(value) || value < 0) {
+      toast(t('exp_toast_invalid_amount'), 'error')
+      return
+    }
+    saveSettings({ ...settings, opexBudget: value })
+    setBudgetOpen(false)
+    toast(`✓ ${t('exp_budget_saved')} ${fmtDH(value)}`)
+  }
 
   const submitExpense = () => {
     if (!form.label.trim()) {
@@ -204,6 +234,22 @@ function Content() {
                   className="h-full rounded-full bg-gradient-to-r from-violet-500 to-amber-400"
                   style={{ width: `${c.bar}%` }}
                 />
+              </div>
+            )}
+            {c.budget !== undefined && (
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="text-[11px] text-gray-400 dark:text-zinc-500">
+                  {t('exp_budget_of')} {fmtDH(c.budget)}
+                </span>
+                {canEditBudget && (
+                  <button
+                    onClick={() => { setBudgetDraft(String(settings.opexBudget)); setBudgetOpen(true) }}
+                    className="flex items-center gap-1 text-[11px] font-semibold text-amber-600 transition hover:text-amber-500 dark:text-amber-400"
+                  >
+                    <Pencil className="h-3 w-3" />
+                    {t('exp_budget_edit')}
+                  </button>
+                )}
               </div>
             )}
           </motion.div>
@@ -445,6 +491,27 @@ function Content() {
       </Modal>
 
       {/* Delete confirm */}
+      {/* Budget OPEX mensuel */}
+      <Modal open={budgetOpen} onClose={() => setBudgetOpen(false)} title={t('exp_budget_title')} maxWidth="max-w-sm">
+        <p className="text-sm text-gray-600 dark:text-zinc-400">{t('exp_budget_desc')}</p>
+        <div className="mt-4">
+          <label className="field-label">{t('exp_budget_label')}</label>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={budgetDraft}
+            onChange={(e) => setBudgetDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') saveBudget() }}
+            className="input-field tabular-nums"
+            autoFocus
+          />
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <button onClick={() => setBudgetOpen(false)} className="btn-secondary">{t('exp_cancel')}</button>
+          <button onClick={saveBudget} className="btn-primary">{t('exp_budget_save')}</button>
+        </div>
+      </Modal>
+
       <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={t('exp_delete_title')} maxWidth="max-w-sm">
         <p className="text-sm text-gray-600 dark:text-zinc-400">
           <span className="font-semibold text-gray-900 dark:text-white">{deleteTarget?.label}</span> {t('exp_delete_desc')}
