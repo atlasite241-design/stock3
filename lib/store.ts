@@ -2674,7 +2674,13 @@ export function useDroguerieState() {
     addMovement(id, 'reappro', qty, note || 'Réapprovisionnement', undefined, undefined, depotId)
   }
 
-  const applyInventory = (counts: { productId: string; counted: number }[], opts?: { depotId?: string; ref?: string }) => {
+  const applyInventory = (
+    counts: { productId: string; counted: number }[],
+    // `skipLog` : la validation d'une session d'inventaire journalise elle-même,
+    // avec le nombre d'écarts. Deux logActivity consécutifs lisent le même
+    // tableau `activity` et le second écraserait le premier.
+    opts?: { depotId?: string; ref?: string; skipLog?: boolean }
+  ) => {
     let curProducts = products
     let curMovements = movements
     let curLots = lots
@@ -2710,7 +2716,7 @@ export function useDroguerieState() {
     persistProducts(curProducts)
     persistMovements(curMovements)
     if (curLots !== lots) persistLots(curLots)
-    logActivity(`${label} validé`)
+    if (!opts?.skipLog) logActivity(`${label} validé`)
   }
 
   // ---- Inventaires (physique + tournant) ----
@@ -2776,7 +2782,7 @@ export function useDroguerieState() {
     if (!inv || inv.status !== 'controle') return { ok: false as const }
     const diffs = inventoryDiffs(inv)
     if (diffs.length) {
-      applyInventory(diffs.map((l) => ({ productId: l.productId, counted: l.counted })), { depotId: inv.depotId, ref: inv.ref })
+      applyInventory(diffs.map((l) => ({ productId: l.productId, counted: l.counted })), { depotId: inv.depotId, ref: inv.ref, skipLog: true })
     }
     persistInventories(
       inventories.map((i) =>

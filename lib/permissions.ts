@@ -236,6 +236,31 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<RoleName, string[]> = {
 // L'Administrateur conserve toujours ces permissions (anti-verrouillage).
 export const LOCKED_ADMIN_PERMISSIONS: string[] = ['set.users', 'set.roles', 'set.permissions']
 
+/**
+ * PERMISSIONS AJOUTÉES APRÈS COUP. Une configuration enregistrée avant
+ * l'arrivée d'une permission ne peut pas la contenir : sans rattrapage, un
+ * Gérant qui avait personnalisé ses droits perdrait silencieusement le droit
+ * de valider un inventaire le jour où la permission apparaît. On accorde donc
+ * les clés dérivées quand la clé parente est présente ET qu'AUCUNE des
+ * dérivées ne l'est — signe d'une configuration antérieure. Dès que
+ * l'utilisateur en configure une, son choix prime et rien n'est réinjecté.
+ */
+const DERIVED_PERMISSIONS: { parent: string; derived: string[] }[] = [
+  {
+    parent: 'stock.inventory',
+    derived: ['stock.inventory_create', 'stock.inventory_count', 'stock.inventory_validate', 'stock.inventory_cancel'],
+  },
+]
+
+function withDerived(set: Set<string>): Set<string> {
+  for (const { parent, derived } of DERIVED_PERMISSIONS) {
+    if (set.has(parent) && !derived.some((d) => set.has(d))) {
+      for (const d of derived) set.add(d)
+    }
+  }
+  return set
+}
+
 /** Permissions effectives d'un utilisateur : override individuel s'il existe (tableau, même vide), sinon défauts du rôle (éventuellement personnalisés en base). */
 export function effectivePermissions(
   userPermissions: string[] | undefined,
@@ -245,9 +270,9 @@ export function effectivePermissions(
   // L'Administrateur a TOUJOURS toutes les permissions (y compris celles ajoutées
   // après une personnalisation enregistrée) — il ne peut pas être verrouillé.
   if (role === 'Administrateur') return new Set(ALL_PERMISSION_KEYS)
-  if (Array.isArray(userPermissions)) return new Set(userPermissions)
+  if (Array.isArray(userPermissions)) return withDerived(new Set(userPermissions))
   const fromRole = rolePermissions?.[role] ?? ROLE_DEFAULT_PERMISSIONS[role] ?? []
-  return new Set(fromRole)
+  return withDerived(new Set(fromRole))
 }
 
 export function labelOf(key: string, lang: Lang): string {
