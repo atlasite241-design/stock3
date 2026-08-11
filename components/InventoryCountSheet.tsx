@@ -6,9 +6,11 @@
 // d'une ligne — une vente encaissée pendant le comptage ne fausse pas l'écart.
 
 import { useDeferredValue, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { Camera, ClipboardCheck, Save, ScanBarcode, Search } from 'lucide-react'
+import { Camera, ClipboardCheck, LogOut, Save, ScanBarcode, Search } from 'lucide-react'
 import CameraScanner from '@/components/CameraScanner'
+import Modal from '@/components/Modal'
 import Pagination from '@/components/Pagination'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
@@ -33,10 +35,12 @@ interface Row {
   cost: number
 }
 
-export default function InventoryCountSheet({ inventory, pool }: {
+export default function InventoryCountSheet({ inventory, pool, actionsSlot }: {
   inventory: Inventory
   /** Produits comptables : tout le catalogue actif (physique) ou la sélection générée (tournant). */
   pool: Product[]
+  /** Emplacement d'accueil des boutons d'action (en-tête de la page). */
+  actionsSlot?: HTMLElement | null
 }) {
   const { updateInventory, submitInventory } = useDroguerie()
   const { can } = usePermissions()
@@ -61,6 +65,9 @@ export default function InventoryCountSheet({ inventory, pool }: {
   const [page, setPage] = useState(1)
   const [onlyGaps, setOnlyGaps] = useState(false)
   const [cameraOpen, setCameraOpen] = useState(false)
+  // Comptage saisi mais pas encore enregistré : sortir le perdrait.
+  const [dirty, setDirty] = useState(false)
+  const [confirmExit, setConfirmExit] = useState(false)
   const barcodeRef = useRef<HTMLInputElement>(null)
 
   // Théorique figé : celui de la ligne enregistrée si elle existe, sinon le stock vivant.
@@ -169,6 +176,7 @@ export default function InventoryCountSheet({ inventory, pool }: {
       const cur = num(prev[r.productId])
       return { ...prev, [r.productId]: String(Number.isNaN(cur) ? 1 : cur + 1) }
     })
+    setDirty(true)
     toast(`✓ ${r.name}`)
   }
 
@@ -200,8 +208,17 @@ export default function InventoryCountSheet({ inventory, pool }: {
 
   const saveDraft = () => {
     updateInventory(inventory.id, { lines: buildLines() })
+    setDirty(false)
     toast(`✓ ${t('inv_draft_saved')}`)
   }
+
+  // Sortie du comptage : retour à la liste des inventaires du même type. Un
+  // comptage non enregistré serait perdu — d'où la confirmation.
+  const leave = () => {
+    setConfirmExit(false)
+    router.push(inventory.kind === 'physique' ? '/stock/inventaires/physique' : '/stock/inventaires/tournant')
+  }
+  const exitSheet = () => (dirty ? setConfirmExit(true) : leave())
 
   const sendToControl = () => {
     const lines = buildLines()
@@ -213,6 +230,23 @@ export default function InventoryCountSheet({ inventory, pool }: {
   }
 
   const readOnly = inventory.status !== 'brouillon' || !can('stock.inventory_count')
+
+  const actions = (
+    <>
+      <button onClick={exitSheet} className="btn-secondary">
+        <LogOut className="h-4 w-4" />
+        {t('inv_exit')}
+      </button>
+      <button onClick={saveDraft} className="btn-secondary">
+        <Save className="h-4 w-4" />
+        {t('inv_save_draft')}
+      </button>
+      <button onClick={sendToControl} className="btn-primary">
+        <ClipboardCheck className="h-4 w-4" />
+        {t('inv_send_control')}
+      </button>
+    </>
+  )
 
   return (
     <>
@@ -272,10 +306,12 @@ export default function InventoryCountSheet({ inventory, pool }: {
         </label>
       </div>
 
-      {/* Tableau de comptage */}
-      <div className="glass-card overflow-x-auto">
+      {/* Tableau de comptage — même cadre défilant que Produits et Lots :
+          l'en-tête reste visible pendant qu'on descend dans la liste. */}
+      <div className="glass-card overflow-hidden">
+        <div className="max-h-[70vh] overflow-auto">
         <table className="w-full min-w-[860px] text-sm">
-          <thead>
+          <thead className="thead-fixe">
             <tr className="border-b border-gray-100 text-left text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:border-white/10 dark:text-zinc-500">
               <th className="px-4 py-3">{t('inv_col_code')}</th>
               <th className="px-4 py-3">{t('inv_col_name')}</th>
@@ -302,7 +338,7 @@ export default function InventoryCountSheet({ inventory, pool }: {
                       inputMode="decimal"
                       value={counts[r.productId] ?? ''}
                       disabled={readOnly}
-                      onChange={(e) => setCounts((prev) => ({ ...prev, [r.productId]: e.target.value }))}
+                      onChange={(e) => { setCounts((prev) => ({ ...prev, [r.productId]: e.target.value })); setDirty(true) }}
                       className="input-field h-9 w-24 text-center tabular-nums"
                       placeholder="—"
                     />
@@ -322,7 +358,7 @@ export default function InventoryCountSheet({ inventory, pool }: {
                     {counted && gap !== 0 && !readOnly ? (
                       <Select
                         value={reasons[r.productId] ?? ''}
-                        onChange={(v) => setReasons((prev) => ({ ...prev, [r.productId]: v }))}
+                        onChange={(v) => { setReasons((prev) => ({ ...prev, [r.productId]: v })); setDirty(true) }}
                         options={[{ value: '', label: t('inv_reason_none') }, ...MOTIFS.map((m) => ({ value: m, label: t(m) }))]}
                         className="w-40"
                       />
@@ -342,22 +378,32 @@ export default function InventoryCountSheet({ inventory, pool }: {
             )}
           </tbody>
         </table>
+        </div>
       </div>
       <Pagination page={page} pageCount={pageCount} total={visible.length} onChange={setPage} />
 
-      {/* Actions */}
-      {!readOnly && (
-        <div className="flex flex-wrap justify-end gap-3">
-          <button onClick={saveDraft} className="btn-secondary">
+      {/*
+       * Les actions sont projetées dans l'en-tête de la page (portail) plutôt
+       * que rendues en pied : elles restent atteignables sans dérouler toute la
+       * liste. L'état du comptage n'a pas à remonter dans la page pour autant.
+       * Sans emplacement fourni, elles s'affichent au fil du document.
+       */}
+      {!readOnly && (actionsSlot ? createPortal(actions, actionsSlot) : <div className="flex flex-wrap justify-end gap-3">{actions}</div>)}
+
+      {/* Sortie avec un comptage non enregistré */}
+      <Modal open={confirmExit} onClose={() => setConfirmExit(false)} title={t('inv_exit_title')} maxWidth="max-w-sm">
+        <p className="text-sm text-gray-600 dark:text-zinc-300">{t('inv_exit_desc')}</p>
+        <div className="mt-5 grid gap-3">
+          <button onClick={() => { saveDraft(); leave() }} className="btn-primary">
             <Save className="h-4 w-4" />
-            {t('inv_save_draft')}
+            {t('inv_exit_save')}
           </button>
-          <button onClick={sendToControl} className="btn-primary">
-            <ClipboardCheck className="h-4 w-4" />
-            {t('inv_send_control')}
+          <button onClick={leave} className="btn-secondary">{t('inv_exit_discard')}</button>
+          <button onClick={() => setConfirmExit(false)} className="text-xs font-semibold text-gray-400 transition hover:text-amber-500">
+            {t('cli_cancel')}
           </button>
         </div>
-      )}
+      </Modal>
 
       <CameraScanner open={cameraOpen} onClose={() => setCameraOpen(false)} onDetect={handleScan} />
     </>

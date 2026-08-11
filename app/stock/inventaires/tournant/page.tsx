@@ -62,6 +62,9 @@ function Content() {
   const [depotId, setDepotId] = useState('')
   const [picked, setPicked] = useState<Product[]>([])
   const [pickQuery, setPickQuery] = useState('')
+  // Voir la page Inventaire physique : état, pas useRef, pour que le portail
+  // se rende dès que l'emplacement existe.
+  const [actionsSlot, setActionsSlot] = useState<HTMLDivElement | null>(null)
 
   const storeDepots = depots.filter((d) => d.storeId === activeStoreId)
   const open = inventories
@@ -180,17 +183,21 @@ function Content() {
             {t('inv_cy_sub')} — <span className="font-semibold text-amber-600 dark:text-amber-400">{activeStore?.name}</span>
           </p>
         </div>
-        {can('stock.inventory_create') && (
-          <button onClick={() => setCreateOpen(true)} className="btn-primary">
-            <Plus className="h-4 w-4" />
-            {t('inv_new_cycle')}
-          </button>
-        )}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {/* Accueille les actions du comptage, projetées par la feuille. */}
+          <div ref={setActionsSlot} className="flex flex-wrap items-center gap-2" />
+          {can('stock.inventory_create') && (
+            <button onClick={() => setCreateOpen(true)} className="btn-primary">
+              <Plus className="h-4 w-4" />
+              {t('inv_new_cycle')}
+            </button>
+          )}
+        </div>
       </motion.div>
 
       {current ? (
         current.status === 'brouillon' ? (
-          <InventoryCountSheet inventory={current} pool={pool} />
+          <InventoryCountSheet inventory={current} pool={pool} actionsSlot={actionsSlot} />
         ) : (
           <div className="glass-card flex flex-col items-center gap-3 p-10 text-center">
             <p className="text-sm text-gray-500 dark:text-zinc-400">

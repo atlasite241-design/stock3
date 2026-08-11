@@ -37,6 +37,9 @@ function Content() {
   const [createOpen, setCreateOpen] = useState(false)
   const [depotId, setDepotId] = useState('')
   const [note, setNote] = useState('')
+  // Ref d'état (et non useRef) : le portail doit se rendre dès que l'élément
+  // existe, ce qu'un useRef ne signale pas.
+  const [actionsSlot, setActionsSlot] = useState<HTMLDivElement | null>(null)
 
   const storeDepots = depots.filter((d) => d.storeId === activeStoreId)
   const open = inventories
@@ -83,29 +86,34 @@ function Content() {
             )}
           </p>
         </div>
-        {can('stock.inventory_create') && (
-          <div className="flex flex-col items-end gap-1.5">
-            <button
-              onClick={() => setCreateOpen(true)}
-              disabled={!!enCours}
-              title={enCours ? `${t('inv_already_open')} ${enCours.ref}` : undefined}
-              className="btn-primary disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Plus className="h-4 w-4" />
-              {t('inv_new_phys')}
-            </button>
-            {enCours && (
-              <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                {t('inv_already_open')} {enCours.ref}
-              </span>
+        <div className="flex flex-col items-end gap-1.5">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {/* Accueille les actions du comptage (Sortir, Brouillon, Contrôle),
+                projetées ici par la feuille de comptage. */}
+            <div ref={setActionsSlot} className="flex flex-wrap items-center gap-2" />
+            {can('stock.inventory_create') && (
+              <button
+                onClick={() => setCreateOpen(true)}
+                disabled={!!enCours}
+                title={enCours ? `${t('inv_already_open')} ${enCours.ref}` : undefined}
+                className="btn-primary disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Plus className="h-4 w-4" />
+                {t('inv_new_phys')}
+              </button>
             )}
           </div>
-        )}
+          {enCours && can('stock.inventory_create') && (
+            <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+              {t('inv_already_open')} {enCours.ref}
+            </span>
+          )}
+        </div>
       </motion.div>
 
       {current ? (
         current.status === 'brouillon' ? (
-          <InventoryCountSheet inventory={current} pool={products} />
+          <InventoryCountSheet inventory={current} pool={products} actionsSlot={actionsSlot} />
         ) : (
           // Comptage clos : rediriger la lecture vers l'écran de contrôle.
           <div className="glass-card flex flex-col items-center gap-3 p-10 text-center">
