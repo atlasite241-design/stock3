@@ -8,6 +8,7 @@ import {
   BarChart3,
   Boxes,
   Briefcase,
+  Calculator,
   CheckSquare,
   ClipboardList,
   MapPin,
@@ -40,6 +41,8 @@ import {
 const ROLE_LABEL_KEY: Record<RoleName, TKey> = {
   Administrateur: 'usr_role_admin',
   Gérant: 'usr_role_manager',
+  Comptable: 'usr_role_accountant',
+  Acheteur: 'usr_role_buyer',
   Magasinier: 'usr_role_stockman',
   Caissier: 'usr_role_cashier',
   Vendeur: 'usr_role_seller',
@@ -47,6 +50,8 @@ const ROLE_LABEL_KEY: Record<RoleName, TKey> = {
 const ROLE_DESC_KEY: Record<RoleName, TKey> = {
   Administrateur: 'perm_role_desc_admin',
   Gérant: 'perm_role_desc_manager',
+  Comptable: 'usr_role_accountant_desc',
+  Acheteur: 'usr_role_buyer_desc',
   Magasinier: 'perm_role_desc_stockman',
   Caissier: 'perm_role_desc_cashier',
   Vendeur: 'perm_role_desc_seller',
@@ -54,6 +59,8 @@ const ROLE_DESC_KEY: Record<RoleName, TKey> = {
 const ROLE_ICON: Record<RoleName, LucideIcon> = {
   Administrateur: ShieldCheck,
   Gérant: Briefcase,
+  Comptable: Calculator,
+  Acheteur: Truck,
   Magasinier: Boxes,
   Caissier: Wallet,
   Vendeur: ShoppingCart,

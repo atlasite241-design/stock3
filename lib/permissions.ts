@@ -197,8 +197,13 @@ export const PERMISSION_CATALOG: PermCategory[] = [
 
 export const ALL_PERMISSION_KEYS: string[] = PERMISSION_CATALOG.flatMap((c) => c.perms.map((p) => p.key))
 
-export type RoleName = 'Administrateur' | 'Gérant' | 'Magasinier' | 'Caissier' | 'Vendeur'
-export const ROLE_NAMES: RoleName[] = ['Administrateur', 'Gérant', 'Magasinier', 'Caissier', 'Vendeur']
+/*
+ * Comptable et Acheteur ont été ajoutés une fois les modules Finance et Achats
+ * complets : sans eux, ouvrir les budgets à quelqu'un obligeait à le nommer
+ * Gérant — donc à lui ouvrir aussi la paie de ses collègues et les réglages.
+ */
+export type RoleName = 'Administrateur' | 'Gérant' | 'Comptable' | 'Acheteur' | 'Magasinier' | 'Caissier' | 'Vendeur'
+export const ROLE_NAMES: RoleName[] = ['Administrateur', 'Gérant', 'Comptable', 'Acheteur', 'Magasinier', 'Caissier', 'Vendeur']
 
 // helper : toutes les clés d'une catégorie
 const cat = (k: string) => PERMISSION_CATALOG.find((c) => c.key === k)?.perms.map((p) => p.key) ?? []
@@ -212,6 +217,42 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<RoleName, string[]> = {
   Gérant: ALL_PERMISSION_KEYS.filter(
     (k) => !['set.users', 'set.roles', 'set.permissions', 'set.restore', 'set.reset_stats', 'set.sync'].includes(k)
   ),
+
+  /*
+   * Comptable : la finance de bout en bout (budgets, validation, comptabilité,
+   * exports) et la LECTURE partout ailleurs pour justifier ses écritures. Aucun
+   * accès aux utilisateurs ni aux paramètres, et il ne vend ni n'encaisse : il
+   * constate, il ne produit pas l'opération.
+   */
+  Comptable: [
+    ...cat('fin'),
+    'prod.view', 'prod.view_buy', 'prod.view_sell',
+    'sale.history', 'sale.print_invoice',
+    'cash.journal', 'cash.balance',
+    'client.view', 'client.credit_view',
+    'supp.view', 'supp.balances',
+    'purch.order', 'purch.invoice', 'purch.payment',
+    'stock.view',
+    ...cat('report'),
+    'hr.view', 'hr.payroll', 'hr.reports',
+    'set.tva', 'set.export',
+    'hr.clock',
+  ],
+
+  /*
+   * Acheteur : pilote le circuit d'achat et les fiches fournisseurs. Il voit le
+   * stock pour décider quoi commander, sans pouvoir le modifier — l'entrée en
+   * stock reste l'affaire du magasinier qui a la marchandise devant lui.
+   */
+  Acheteur: [
+    ...cat('purch'),
+    ...cat('supp'),
+    'prod.view', 'prod.add', 'prod.edit', 'prod.scan', 'prod.view_buy', 'prod.view_sell',
+    'stock.view', 'stock.critical', 'stock.entry', 'stock.reception',
+    'report.purchases', 'report.stock', 'report.suppliers', 'report.export_excel', 'report.export_pdf',
+    'fin.view',
+    'hr.clock',
+  ],
 
   // Magasinier : produits (sans prix), achats, stock/inventaire/ajust/mouvements/transferts, fournisseurs (lecture).
   Magasinier: [

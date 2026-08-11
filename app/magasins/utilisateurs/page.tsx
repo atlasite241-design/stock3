@@ -10,6 +10,8 @@ import { useLanguage, type TKey } from '@/lib/i18n'
 const ROLE_LABEL_KEY: Record<AppUser['role'], TKey> = {
   Administrateur: 'usr_role_admin',
   Gérant: 'usr_role_manager',
+  Comptable: 'usr_role_accountant',
+  Acheteur: 'usr_role_buyer',
   Magasinier: 'usr_role_stockman',
   Caissier: 'usr_role_cashier',
   Vendeur: 'usr_role_seller',

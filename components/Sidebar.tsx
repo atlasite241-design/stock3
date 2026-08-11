@@ -232,6 +232,7 @@ const NAV_ALL: NavItem[] = [
         sectionKey: 'nav_pur_sec_supply',
         items: [
           { href: '/achats/demandes', labelKey: 'nav_purchases_requests' },
+          { href: '/achats/demandes-prix', labelKey: 'nav_purchases_rfq' },
           { href: '/achats', labelKey: 'nav_purchases_orders' },
         ],
       },

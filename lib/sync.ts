@@ -49,6 +49,7 @@ export const COLLECTIONS: Collection[] = [
   { collection: 'exercices', key: 'dp_exercices' },
   { collection: 'budgets', key: 'dp_budgets' },
   { collection: 'investments', key: 'dp_investments' },
+  { collection: 'rfqs', key: 'dp_rfqs' },
   { collection: 'stores', key: 'dp_stores' },
   { collection: 'depots', key: 'dp_depots' },
   { collection: 'zones', key: 'dp_zones' },

@@ -7,10 +7,12 @@ import AppShell from '@/components/AppShell'
 import { useDroguerie, type AppUser } from '@/lib/store'
 import { useLanguage, type TKey } from '@/lib/i18n'
 
-const ROLES: AppUser['role'][] = ['Administrateur', 'Gérant', 'Magasinier', 'Caissier', 'Vendeur']
+const ROLES: AppUser['role'][] = ['Administrateur', 'Gérant', 'Comptable', 'Acheteur', 'Magasinier', 'Caissier', 'Vendeur']
 const ROLE_LABEL_KEY: Record<AppUser['role'], TKey> = {
   Administrateur: 'usr_role_admin',
   Gérant: 'usr_role_manager',
+  Comptable: 'usr_role_accountant',
+  Acheteur: 'usr_role_buyer',
   Magasinier: 'usr_role_stockman',
   Caissier: 'usr_role_cashier',
   Vendeur: 'usr_role_seller',
@@ -18,6 +20,8 @@ const ROLE_LABEL_KEY: Record<AppUser['role'], TKey> = {
 const ROLE_META: Record<AppUser['role'], { chip: string; icon: string }> = {
   Administrateur: { chip: 'border-violet-200 dark:border-violet-500/20 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400', icon: 'bg-violet-50 dark:bg-violet-500/10 text-violet-500' },
   Gérant: { chip: 'border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400', icon: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500' },
+  Comptable: { chip: 'border-teal-200 dark:border-teal-500/20 bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400', icon: 'bg-teal-50 dark:bg-teal-500/10 text-teal-500' },
+  Acheteur: { chip: 'border-indigo-200 dark:border-indigo-500/20 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400', icon: 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500' },
   Magasinier: { chip: 'border-orange-200 dark:border-orange-500/20 bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400', icon: 'bg-orange-50 dark:bg-orange-500/10 text-orange-500' },
   Caissier: { chip: 'border-sky-200 dark:border-sky-500/20 bg-sky-50 dark:bg-sky-500/10 text-sky-700', icon: 'bg-sky-50 dark:bg-sky-500/10 text-sky-500' },
   Vendeur: { chip: 'border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300', icon: 'bg-amber-50 dark:bg-amber-500/10 text-amber-500' },
@@ -26,6 +30,8 @@ const PERMISSION_KEYS = ['pos', 'produits', 'stock', 'achats', 'rapports', 'cais
 const ROLE_PERMS: Record<AppUser['role'], string[]> = {
   Administrateur: PERMISSION_KEYS,
   Gérant: ['pos', 'produits', 'stock', 'achats', 'rapports', 'caisse'],
+  Comptable: ['rapports', 'caisse'],
+  Acheteur: ['produits', 'stock', 'achats', 'rapports'],
   Magasinier: ['produits', 'stock', 'achats'],
   Caissier: ['pos', 'caisse', 'stock'],
   Vendeur: ['pos', 'produits'],

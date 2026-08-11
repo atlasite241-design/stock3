@@ -25,7 +25,7 @@ const PAYMENT_MODES = [
   { key: 'credit', fr: 'Crédit client', ar: 'دين العميل' },
   { key: 'mobile', fr: 'Paiement mobile', ar: 'دفع عبر الهاتف' },
 ]
-const ROLES = ['Administrateur', 'Gérant', 'Magasinier', 'Caissier', 'Vendeur'] as const
+const ROLES = ['Administrateur', 'Gérant', 'Comptable', 'Acheteur', 'Magasinier', 'Caissier', 'Vendeur'] as const
 
 function Content() {
   const d = useDroguerie()

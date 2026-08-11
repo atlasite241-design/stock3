@@ -77,6 +77,7 @@ export const ROUTE_PERM: Record<string, string> = {
   '/achats': 'purch.order',
   // Les demandes d'achat (création ET approbation) n'étaient protégées par rien.
   '/achats/demandes': 'purch.order',
+  '/achats/demandes-prix': 'purch.order',
   '/achats/bon-livraison': 'purch.delivery',
   '/achats/reception': 'purch.reception',
   '/achats/entrees-stock': 'stock.entry',

@@ -738,6 +738,84 @@ export interface PurchaseRequest {
   storeId?: string
 }
 
+/* ------------------------- Demandes de prix (consultation) ----------------- */
+
+/**
+ * DEMANDE DE PRIX : l'étape qui manquait entre la demande d'achat et le bon de
+ * commande. On consulte plusieurs fournisseurs sur une même liste d'articles,
+ * on saisit leurs offres, on compare, puis on retient un fournisseur — c'est ce
+ * qui JUSTIFIE le choix, et la trace reste dans le document.
+ *
+ * Le prix proposé est stocké PAR fournisseur ET PAR ligne : un fournisseur peut
+ * être le moins cher sur un article et le plus cher sur un autre, un prix global
+ * masquerait cet arbitrage.
+ */
+export type RfqStatus = 'brouillon' | 'envoyee' | 'depouillee' | 'attribuee' | 'annulee'
+
+export interface RfqItem {
+  productId: string
+  name: string
+  barcode?: string
+  qty: number
+  unitName?: string
+  unitFactor?: number
+}
+
+export interface RfqOffer {
+  supplierId: string
+  supplierName: string
+  /** Prix unitaire proposé par ligne : clé = productId. */
+  prices: Record<string, number>
+  /** Délai annoncé, en jours. */
+  leadDays?: number
+  note?: string
+  receivedAt?: string
+}
+
+export interface Rfq {
+  id: string
+  ref: string
+  date: string
+  /** Demande d'achat à l'origine de la consultation, s'il y en a une. */
+  requestId?: string
+  requestRef?: string
+  items: RfqItem[]
+  offers: RfqOffer[]
+  status: RfqStatus
+  /** Fournisseur retenu au dépouillement. */
+  awardedSupplierId?: string
+  awardedSupplierName?: string
+  /** BC issu de l'attribution. */
+  purchaseId?: string
+  note?: string
+  neededBy?: string
+  storeId?: string
+  createdAt: string
+  createdBy?: string
+  awardedAt?: string
+  awardedBy?: string
+}
+
+export const RFQ_STATUS_META: Record<RfqStatus, { chip: string }> = {
+  brouillon: { chip: 'border-gray-200 bg-gray-50 text-gray-600 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300' },
+  envoyee: { chip: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-400' },
+  depouillee: { chip: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400' },
+  attribuee: { chip: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400' },
+  annulee: { chip: 'border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400' },
+}
+
+/** Total d'une offre : somme des prix proposés × quantités demandées. Les lignes non chiffrées comptent pour zéro. */
+export function rfqOfferTotal(rfq: Rfq, offer: RfqOffer): number {
+  let s = 0
+  for (const it of rfq.items) s += (offer.prices[it.productId] ?? 0) * it.qty
+  return s
+}
+
+/** Une offre n'est comparable que si toutes les lignes sont chiffrées. */
+export function rfqOfferComplete(rfq: Rfq, offer: RfqOffer): boolean {
+  return rfq.items.every((it) => typeof offer.prices[it.productId] === 'number' && offer.prices[it.productId] > 0)
+}
+
 export interface SaleReturn {
   /**
    * Numéro d'avoir, posé à l'enregistrement du retour et jamais recalculé —
@@ -817,7 +895,7 @@ export interface AppUser {
   id: string
   name: string
   phone: string
-  role: 'Administrateur' | 'Gérant' | 'Magasinier' | 'Caissier' | 'Vendeur'
+  role: 'Administrateur' | 'Gérant' | 'Comptable' | 'Acheteur' | 'Magasinier' | 'Caissier' | 'Vendeur'
   active: boolean
   /** Override individuel des permissions (clés du catalogue). Si défini, remplace les permissions du rôle. */
   permissions?: string[]
@@ -836,7 +914,7 @@ export interface AppUser {
   securityAnswerHash?: string
 }
 
-export const USER_ROLES: AppUser['role'][] = ['Administrateur', 'Gérant', 'Magasinier', 'Caissier', 'Vendeur']
+export const USER_ROLES: AppUser['role'][] = ['Administrateur', 'Gérant', 'Comptable', 'Acheteur', 'Magasinier', 'Caissier', 'Vendeur']
 
 /** Store ids a user may access. Administrators see all stores. */
 export function userStoreAccess(user: AppUser | null | undefined, stores: Store[]): string[] {
@@ -1295,6 +1373,7 @@ const K = {
   exercices: 'dp_exercices',
   budgets: 'dp_budgets',
   investments: 'dp_investments',
+  rfqs: 'dp_rfqs',
 }
 
 /** Storage keys whose records carry a storeId and must be filtered per active store. */
@@ -1320,6 +1399,7 @@ const SCOPED_KEYS: string[] = [
   K.inventories,
   K.budgets,
   K.investments,
+  K.rfqs,
 ]
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -1387,7 +1467,31 @@ export const MOVEMENT_META: Record<StockMovement['type'], { label: string; chip:
   stock_initial: { label: 'Stock initial', chip: 'border-indigo-200 bg-indigo-50 text-indigo-700' },
 }
 
-export const fmtDH = (n: number) => `${n.toFixed(2).replace('.', ',')} DH`
+/*
+ * SYMBOLE DE LA DEVISE. « DH » était écrit en dur, si bien que le réglage
+ * Paramètres › Devise n'avait aucun effet sur les montants affichés.
+ *
+ * `fmtDH` est appelée depuis plus de cent fichiers avec la même signature :
+ * lui passer les réglages à chaque appel imposerait de toucher tout le code.
+ * Le symbole est donc posé UNE fois, au chargement des réglages et à chaque
+ * enregistrement — les deux moments provoquent déjà un rendu.
+ *
+ * Le réglage est un texte libre, « MAD (DH) » par défaut : on retient ce qui
+ * est entre parenthèses quand il y en a, sinon le texte entier.
+ */
+let deviseSymbole = 'DH'
+
+export function setCurrencySymbol(currency?: string) {
+  const brut = (currency ?? '').trim()
+  if (!brut) { deviseSymbole = 'DH'; return }
+  const entreParentheses = /\(([^)]+)\)/.exec(brut)
+  // Sans parenthèses exploitables, on retient le texte débarrassé des siennes :
+  // une saisie comme « () » donnerait sinon un symbole fait de ponctuation.
+  const symbole = (entreParentheses ? entreParentheses[1] : brut.replace(/[()]/g, '')).trim()
+  deviseSymbole = symbole || 'DH'
+}
+
+export const fmtDH = (n: number) => `${n.toFixed(2).replace('.', ',')} ${deviseSymbole}`
 
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
 
@@ -2124,6 +2228,7 @@ export function useDroguerieState() {
   const [exercices, setExercices] = useState<FiscalYear[]>([])
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [investments, setInvestments] = useState<Investment[]>([])
+  const [rfqs, setRfqs] = useState<Rfq[]>([])
   const [activeStoreId, setActiveStoreIdState] = useState<string>('')
   const [ready, setReady] = useState(false)
   // Étape de démarrage affichée sous le loader plein écran (diagnostic + confort).
@@ -2190,8 +2295,11 @@ export function useDroguerieState() {
       setExercices(load(K.exercices, []))
       setBudgets(load(K.budgets, []))
       setInvestments(load(K.investments, []))
+      setRfqs(load(K.rfqs, []))
       setActiveStoreIdState(getActiveStoreId())
-      setSettings({ ...DEFAULT_SETTINGS, ...load<Partial<Settings>>(K.settings, {}) })
+      const reglages = { ...DEFAULT_SETTINGS, ...load<Partial<Settings>>(K.settings, {}) }
+      setCurrencySymbol(reglages.currency)
+      setSettings(reglages)
       setReady(true)
     }
 
@@ -2348,9 +2456,13 @@ export function useDroguerieState() {
   const persistExercices = useCallback(makePersist<FiscalYear[]>(K.exercices, setExercices), [])
   const persistBudgets = useCallback(makeScopedPersist<Budget>(K.budgets, setBudgets), [])
   const persistInvestments = useCallback(makeScopedPersist<Investment>(K.investments, setInvestments), [])
+  const persistRfqs = useCallback(makeScopedPersist<Rfq>(K.rfqs, setRfqs), [])
   /* eslint-enable react-hooks/exhaustive-deps */
 
   const saveSettings = useCallback((next: Settings) => {
+    // Changer la devise doit se voir immédiatement partout : le symbole est
+    // relu ici, avant le rendu déclenché par setSettings.
+    setCurrencySymbol(next.currency)
     setSettings(next)
     save(K.settings, next)
   }, [])
@@ -3732,6 +3844,101 @@ export function useDroguerieState() {
     return po
   }
 
+  // ---- Demandes de prix (consultation fournisseurs) ----
+
+  const addRfq = (
+    items: RfqItem[],
+    meta?: { requestId?: string; requestRef?: string; neededBy?: string; note?: string }
+  ): Rfq | undefined => {
+    if (items.length === 0) return
+    const seq = rfqs.filter((r) => r.storeId === activeStoreId).length + 1
+    const rfq: Rfq = {
+      id: uid(),
+      ref: docNumber('DP', stores.find((s) => s.id === activeStoreId) ?? null, seq, 4),
+      date: new Date().toISOString(),
+      items,
+      offers: [],
+      status: 'brouillon',
+      createdAt: new Date().toISOString(),
+      createdBy: invUser(),
+      ...meta,
+    }
+    persistRfqs([rfq, ...rfqs])
+    logActivity(`Demande de prix ${rfq.ref} créée (${items.length} article(s))`, { target: rfq.ref })
+    return rfq
+  }
+
+  /** Une consultation attribuée est figée : elle justifie un bon de commande. */
+  const updateRfq = (id: string, patch: Partial<Rfq>) => {
+    persistRfqs(rfqs.map((r) => (r.id === id && r.status !== 'attribuee' ? { ...r, ...patch } : r)))
+  }
+
+  /** Enregistre ou remplace l'offre d'un fournisseur. */
+  const setRfqOffer = (id: string, offer: RfqOffer) => {
+    const rfq = rfqs.find((r) => r.id === id)
+    if (!rfq || rfq.status === 'attribuee' || rfq.status === 'annulee') return
+    const autres = rfq.offers.filter((o) => o.supplierId !== offer.supplierId)
+    const offers = [...autres, { ...offer, receivedAt: offer.receivedAt ?? new Date().toISOString() }]
+    // Dès qu'une offre arrive, la consultation passe au dépouillement.
+    persistRfqs(rfqs.map((r) => (r.id === id ? { ...r, offers, status: r.status === 'brouillon' || r.status === 'envoyee' ? 'depouillee' : r.status } : r)))
+  }
+
+  const removeRfqOffer = (id: string, supplierId: string) => {
+    const rfq = rfqs.find((r) => r.id === id)
+    if (!rfq || rfq.status === 'attribuee') return
+    persistRfqs(rfqs.map((r) => (r.id === id ? { ...r, offers: r.offers.filter((o) => o.supplierId !== supplierId) } : r)))
+  }
+
+  /**
+   * ATTRIBUTION : retient un fournisseur et crée le bon de commande à ses prix.
+   * Le lien est conservé des deux côtés — le BC porte la référence de la
+   * consultation, la consultation garde l'identifiant du BC : c'est ce qui rend
+   * le choix du fournisseur justifiable après coup.
+   */
+  const awardRfq = (id: string, supplierId: string): Purchase | undefined => {
+    const rfq = rfqs.find((r) => r.id === id)
+    if (!rfq || rfq.status === 'attribuee' || rfq.status === 'annulee') return
+    const offer = rfq.offers.find((o) => o.supplierId === supplierId)
+    if (!offer) return
+    const items: PurchaseItem[] = rfq.items.map((it) => ({
+      productId: it.productId,
+      name: it.name,
+      barcode: it.barcode,
+      cost: offer.prices[it.productId] ?? 0,
+      qty: it.qty,
+      unitName: it.unitName,
+      unitFactor: it.unitFactor,
+    }))
+    const po = addPurchase(supplierId, items, {
+      note: `${rfq.ref}${rfq.requestRef ? ` (${rfq.requestRef})` : ''}`,
+      expectedDate: rfq.neededBy,
+    })
+    if (!po) return
+    persistRfqs(rfqs.map((r) => (r.id === id
+      ? {
+          ...r, status: 'attribuee' as const, awardedSupplierId: supplierId,
+          awardedSupplierName: offer.supplierName, purchaseId: po.id,
+          awardedAt: new Date().toISOString(), awardedBy: invUser(),
+        }
+      : r)))
+    logActivity(`Demande de prix ${rfq.ref} attribuée à ${offer.supplierName} → ${po.ref}`, { target: rfq.ref })
+    return po
+  }
+
+  const cancelRfq = (id: string) => {
+    const rfq = rfqs.find((r) => r.id === id)
+    if (!rfq || rfq.status === 'attribuee') return
+    persistRfqs(rfqs.map((r) => (r.id === id ? { ...r, status: 'annulee' as const } : r)))
+    logActivity(`Demande de prix ${rfq.ref} annulée`, { target: rfq.ref })
+  }
+
+  const deleteRfq = (id: string) => {
+    const rfq = rfqs.find((r) => r.id === id)
+    // Une consultation attribuée a produit un BC : elle reste dans l'historique.
+    if (!rfq || rfq.status === 'attribuee') return
+    persistRfqs(rfqs.filter((r) => r.id !== id))
+  }
+
   // ---- Demandes d'achat (DA) ----
 
   const daEvent = (action: string, comment?: string): PurchaseRequestEvent => ({
@@ -4703,6 +4910,7 @@ export function useDroguerieState() {
   const scopedInventories = useScopedList(inventories, activeStoreId)
   const scopedBudgets = useScopedList(budgets, activeStoreId)
   const scopedInvestments = useScopedList(investments, activeStoreId)
+  const scopedRfqs = useScopedList(rfqs, activeStoreId)
 
   return {
     ready,
@@ -4818,6 +5026,15 @@ export function useDroguerieState() {
     addInvestment,
     updateInvestment,
     deleteInvestment,
+    // Demandes de prix (consultation fournisseurs)
+    rfqs: scopedRfqs,
+    addRfq,
+    updateRfq,
+    setRfqOffer,
+    removeRfqOffer,
+    awardRfq,
+    cancelRfq,
+    deleteRfq,
     addInventory,
     updateInventory,
     submitInventory,
