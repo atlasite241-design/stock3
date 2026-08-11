@@ -950,6 +950,8 @@ export interface Expense {
   dueDate?: string
   note: string
   storeId?: string
+  /** Budget OPEX auquel cette dépense s'impute (module Finance). Optionnel : une dépense hors budget reste valide. */
+  budgetId?: string
 }
 
 export const EXPENSE_CATEGORIES = ['Loyer', 'Électricité', 'Internet', 'Fournitures', 'Assurance', 'Bureau', 'Transport', 'Autre']
@@ -1136,6 +1138,116 @@ export const INVENTORY_FREQUENCY_DAYS: Record<Exclude<InventoryFrequency, 'perso
 export const inventoryDiffs = (inv: Inventory) => inv.lines.filter((l) => l.counted !== l.theoretical)
 
 // ------------------------------------------------------------------
+// Finance : exercices, budgets OPEX, investissements CAPEX
+// ------------------------------------------------------------------
+
+/** Exercice financier (année de gestion). Un budget appartient à un exercice. */
+export interface FiscalYear {
+  id: string
+  year: number
+  startDate: string
+  endDate: string
+  closed?: boolean
+}
+
+/**
+ * Workflow budgétaire : brouillon → soumis → valide → en_cours → cloture.
+ * À partir de `valide`, les montants ne sont plus librement modifiables —
+ * seuls le statut et les notes bougent encore. Le CONSOMMÉ n'est jamais
+ * stocké : il se calcule depuis les dépenses liées (budgetId), la vérité
+ * reste dans un seul endroit.
+ */
+export type BudgetStatus = 'brouillon' | 'soumis' | 'valide' | 'en_cours' | 'cloture'
+
+export interface Budget {
+  id: string
+  ref: string
+  exerciceId: string
+  year: number
+  category: string
+  subcategory?: string
+  planned: number
+  startDate: string
+  endDate: string
+  responsable?: string
+  status: BudgetStatus
+  notes?: string
+  storeId?: string
+  createdAt: string
+  createdBy?: string
+  updatedAt?: string
+  updatedBy?: string
+  validatedAt?: string
+  validatedBy?: string
+}
+
+export type InvestmentStatus = 'prevu' | 'commande' | 'achete' | 'annule'
+
+/** Investissement CAPEX : dépense d'équipement amortie sur plusieurs années. */
+export interface Investment {
+  id: string
+  ref: string
+  designation: string
+  category: string
+  exerciceId: string
+  year: number
+  supplierId?: string
+  supplierName?: string
+  planned: number
+  actual?: number
+  plannedDate: string
+  purchaseDate?: string
+  /** Durée d'utilisation prévue, en années. */
+  usefulLifeYears?: number
+  status: InvestmentStatus
+  responsable?: string
+  note?: string
+  storeId?: string
+  createdAt: string
+  createdBy?: string
+  updatedAt?: string
+  updatedBy?: string
+}
+
+export const CAPEX_CATEGORIES = ['Rayonnage', 'Matériel informatique', 'Véhicule', 'Machine', 'Équipement', 'Aménagement', 'Travaux', 'Mobilier', 'Sécurité', 'Autre']
+
+export const BUDGET_STATUS_META: Record<BudgetStatus, { chip: string }> = {
+  brouillon: { chip: 'border-gray-200 bg-gray-50 text-gray-600 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300' },
+  soumis: { chip: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-400' },
+  valide: { chip: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400' },
+  en_cours: { chip: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400' },
+  cloture: { chip: 'border-violet-200 bg-violet-50 text-violet-600 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-400' },
+}
+
+export const INVESTMENT_STATUS_META: Record<InvestmentStatus, { chip: string }> = {
+  prevu: { chip: 'border-gray-200 bg-gray-50 text-gray-600 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300' },
+  commande: { chip: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-400' },
+  achete: { chip: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400' },
+  annule: { chip: 'border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400' },
+}
+
+/**
+ * Consommation d'un budget : somme des dépenses qui lui sont IMPUTÉES
+ * (budgetId), quelle que soit leur date — l'imputation fait foi, pas le
+ * calendrier. Seuils d'alerte : 80 % avertissement, 100 % atteint, au-delà
+ * dépassement.
+ */
+export function budgetConsumed(budget: Budget, expenses: Expense[]): number {
+  let s = 0
+  for (const e of expenses) if (e.budgetId === budget.id) s += e.amount
+  return s
+}
+
+export function budgetAlert(planned: number, consumed: number): 'ok' | 'warning' | 'reached' | 'over' {
+  if (planned <= 0) return 'ok'
+  const pct = (consumed / planned) * 100
+  if (pct > 100) return 'over'
+  if (pct >= 100) return 'reached'
+  if (pct >= 80) return 'warning'
+  return 'ok'
+}
+
+// ------------------------------------------------------------------
 // Storage keys / helpers
 // ------------------------------------------------------------------
 
@@ -1180,6 +1292,9 @@ const K = {
   lots: 'dp_lots',
   purchaseRequests: 'dp_purchase_requests',
   inventories: 'dp_inventories',
+  exercices: 'dp_exercices',
+  budgets: 'dp_budgets',
+  investments: 'dp_investments',
 }
 
 /** Storage keys whose records carry a storeId and must be filtered per active store. */
@@ -1203,6 +1318,8 @@ const SCOPED_KEYS: string[] = [
   K.moneyTransfers,
   K.users,
   K.inventories,
+  K.budgets,
+  K.investments,
 ]
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -2004,6 +2121,9 @@ export function useDroguerieState() {
   const [emplacements, setEmplacements] = useState<Emplacement[]>([])
   const [transfers, setTransfers] = useState<Transfer[]>([])
   const [inventories, setInventories] = useState<Inventory[]>([])
+  const [exercices, setExercices] = useState<FiscalYear[]>([])
+  const [budgets, setBudgets] = useState<Budget[]>([])
+  const [investments, setInvestments] = useState<Investment[]>([])
   const [activeStoreId, setActiveStoreIdState] = useState<string>('')
   const [ready, setReady] = useState(false)
   // Étape de démarrage affichée sous le loader plein écran (diagnostic + confort).
@@ -2067,6 +2187,9 @@ export function useDroguerieState() {
       setEmplacements(load(K.emplacements, []))
       setTransfers(load(K.transfers, []))
       if (wants('inventories')) setInventories(load(K.inventories, []))
+      setExercices(load(K.exercices, []))
+      setBudgets(load(K.budgets, []))
+      setInvestments(load(K.investments, []))
       setActiveStoreIdState(getActiveStoreId())
       setSettings({ ...DEFAULT_SETTINGS, ...load<Partial<Settings>>(K.settings, {}) })
       setReady(true)
@@ -2221,6 +2344,10 @@ export function useDroguerieState() {
   const persistEmplacements = useCallback(makePersist<Emplacement[]>(K.emplacements, setEmplacements), [])
   const persistTransfers = useCallback(makePersist<Transfer[]>(K.transfers, setTransfers), [])
   const persistInventories = useCallback(makeScopedPersist<Inventory>(K.inventories, setInventories), [])
+  // Exercices : partagés entre magasins (une seule année de gestion pour l'enseigne).
+  const persistExercices = useCallback(makePersist<FiscalYear[]>(K.exercices, setExercices), [])
+  const persistBudgets = useCallback(makeScopedPersist<Budget>(K.budgets, setBudgets), [])
+  const persistInvestments = useCallback(makeScopedPersist<Investment>(K.investments, setInvestments), [])
   /* eslint-enable react-hooks/exhaustive-deps */
 
   const saveSettings = useCallback((next: Settings) => {
@@ -2848,6 +2975,130 @@ export function useDroguerieState() {
     if (!inv || inv.status === 'valide' || inv.status === 'annule') return
     updateInventory(id, { status: 'annule', cancelledBy: invUser(), cancelledAt: new Date().toISOString() })
     logActivity(`Inventaire ${inv.ref} annulé`, { target: inv.ref })
+  }
+
+  // ---- Finance : exercices, budgets OPEX, investissements CAPEX ----
+
+  /** L'exercice couvrant une année. Créé à la demande (année civile) s'il n'existe pas. */
+  const ensureExercice = (year: number): FiscalYear => {
+    const found = exercices.find((e) => e.year === year)
+    if (found) return found
+    const ex: FiscalYear = { id: uid(), year, startDate: `${year}-01-01`, endDate: `${year}-12-31` }
+    persistExercices([...exercices, ex].sort((a, b) => a.year - b.year))
+    return ex
+  }
+
+  const updateExercice = (id: string, patch: Partial<Omit<FiscalYear, 'id'>>) => {
+    persistExercices(exercices.map((e) => {
+      if (e.id !== id) return e
+      const next = { ...e, ...patch }
+      // Cohérence : le début doit précéder la fin, sinon la saisie est ignorée.
+      return next.startDate < next.endDate ? next : e
+    }))
+  }
+
+  const addBudget = (
+    data: Pick<Budget, 'year' | 'category' | 'planned'> & Partial<Pick<Budget, 'subcategory' | 'startDate' | 'endDate' | 'responsable' | 'notes'>>
+  ): Budget | { error: 'dates' } => {
+    const ex = ensureExercice(data.year)
+    const startDate = data.startDate || ex.startDate
+    const endDate = data.endDate || ex.endDate
+    // Un budget ne déborde pas de son exercice, et commence avant de finir.
+    if (startDate >= endDate || startDate < ex.startDate || endDate > ex.endDate) return { error: 'dates' }
+    const seq = budgets.filter((b) => b.year === data.year && b.storeId === activeStoreId).length + 1
+    const budget: Budget = {
+      id: uid(),
+      ref: docNumber(`BUD-${data.year}`, stores.find((s) => s.id === activeStoreId) ?? null, seq, 3),
+      exerciceId: ex.id,
+      year: data.year,
+      category: data.category,
+      subcategory: data.subcategory,
+      planned: data.planned,
+      startDate,
+      endDate,
+      responsable: data.responsable,
+      status: 'brouillon',
+      notes: data.notes,
+      createdAt: new Date().toISOString(),
+      createdBy: invUser(),
+    }
+    persistBudgets([budget, ...budgets])
+    logActivity(`Budget ${budget.ref} créé (${budget.category}, ${fmtDH(budget.planned)})`, { target: budget.ref })
+    return budget
+  }
+
+  /**
+   * Un budget VALIDÉ n'est plus librement modifiable : à partir de `valide`,
+   * seuls le statut, les notes et le responsable peuvent encore changer —
+   * les montants et le périmètre sont figés, c'est l'engagement pris.
+   */
+  const updateBudget = (id: string, patch: Partial<Budget>) => {
+    persistBudgets(budgets.map((b) => {
+      if (b.id !== id) return b
+      const locked = b.status === 'valide' || b.status === 'en_cours' || b.status === 'cloture'
+      const allowed: Partial<Budget> = locked
+        ? { status: patch.status, notes: patch.notes, responsable: patch.responsable }
+        : patch
+      return { ...b, ...allowed, updatedAt: new Date().toISOString(), updatedBy: invUser() }
+    }))
+  }
+
+  const BUDGET_FLOW: BudgetStatus[] = ['brouillon', 'soumis', 'valide', 'en_cours', 'cloture']
+
+  /** Avance le budget d'une étape du workflow. La validation est journalisée avec son auteur. */
+  const advanceBudget = (id: string) => {
+    const b = budgets.find((x) => x.id === id)
+    if (!b) return
+    const idx = BUDGET_FLOW.indexOf(b.status)
+    if (idx < 0 || idx >= BUDGET_FLOW.length - 1) return
+    const next = BUDGET_FLOW[idx + 1]
+    persistBudgets(budgets.map((x) => (x.id === id
+      ? {
+          ...x, status: next, updatedAt: new Date().toISOString(), updatedBy: invUser(),
+          ...(next === 'valide' ? { validatedAt: new Date().toISOString(), validatedBy: invUser() } : {}),
+        }
+      : x)))
+    logActivity(`Budget ${b.ref} : ${b.status} → ${next}`, { target: b.ref })
+  }
+
+  /** Suppression réservée aux brouillons — au-delà, le budget fait partie de l'historique de gestion. */
+  const deleteBudget = (id: string) => {
+    const b = budgets.find((x) => x.id === id)
+    if (!b || b.status !== 'brouillon') return
+    persistBudgets(budgets.filter((x) => x.id !== id))
+    logActivity(`Budget ${b.ref} supprimé (brouillon)`, { target: b.ref })
+  }
+
+  const addInvestment = (
+    data: Pick<Investment, 'designation' | 'category' | 'year' | 'planned' | 'plannedDate'> &
+      Partial<Pick<Investment, 'supplierId' | 'supplierName' | 'actual' | 'purchaseDate' | 'usefulLifeYears' | 'responsable' | 'note'>>
+  ): Investment => {
+    const ex = ensureExercice(data.year)
+    const seq = investments.filter((i) => i.year === data.year && i.storeId === activeStoreId).length + 1
+    const inv: Investment = {
+      id: uid(),
+      ref: docNumber(`CAP-${data.year}`, stores.find((s) => s.id === activeStoreId) ?? null, seq, 3),
+      exerciceId: ex.id,
+      status: 'prevu',
+      createdAt: new Date().toISOString(),
+      createdBy: invUser(),
+      ...data,
+    }
+    persistInvestments([inv, ...investments])
+    logActivity(`Investissement ${inv.ref} créé (${inv.designation}, ${fmtDH(inv.planned)})`, { target: inv.ref })
+    return inv
+  }
+
+  const updateInvestment = (id: string, patch: Partial<Investment>) => {
+    persistInvestments(investments.map((i) => (i.id === id ? { ...i, ...patch, updatedAt: new Date().toISOString(), updatedBy: invUser() } : i)))
+  }
+
+  /** Un investissement ACHETÉ ne se supprime pas : il s'annule ou reste — c'est une trace comptable. */
+  const deleteInvestment = (id: string) => {
+    const i = investments.find((x) => x.id === id)
+    if (!i || i.status === 'achete') return
+    persistInvestments(investments.filter((x) => x.id !== id))
+    logActivity(`Investissement ${i.ref} supprimé`, { target: i.ref })
   }
 
   // ---- Stock initial (mise en service d'un magasin) ----
@@ -4450,6 +4701,8 @@ export function useDroguerieState() {
   const scopedSupplierPayments = useScopedList(supplierPayments, activeStoreId)
   const scopedExpenses = useScopedList(expenses, activeStoreId)
   const scopedInventories = useScopedList(inventories, activeStoreId)
+  const scopedBudgets = useScopedList(budgets, activeStoreId)
+  const scopedInvestments = useScopedList(investments, activeStoreId)
 
   return {
     ready,
@@ -4550,6 +4803,21 @@ export function useDroguerieState() {
     // Inventaires (physique + tournant) — vues scopées magasin + workflow complet.
     inventories: scopedInventories,
     allInventories: inventories,
+    // Finance (budgets scopés magasin ; exercices partagés).
+    exercices,
+    budgets: scopedBudgets,
+    allBudgets: budgets,
+    investments: scopedInvestments,
+    allInvestments: investments,
+    ensureExercice,
+    updateExercice,
+    addBudget,
+    updateBudget,
+    advanceBudget,
+    deleteBudget,
+    addInvestment,
+    updateInvestment,
+    deleteInvestment,
     addInventory,
     updateInventory,
     submitInventory,

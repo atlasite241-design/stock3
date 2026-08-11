@@ -119,6 +119,17 @@ export const PERMISSION_CATALOG: PermCategory[] = [
     ],
   },
   {
+    key: 'fin', fr: 'Finance', ar: 'المالية', icon: 'Landmark',
+    perms: [
+      { key: 'fin.view', fr: 'Voir le module Finance (budgets, trésorerie, analyse)', ar: 'عرض وحدة المالية (الميزانيات، الخزينة، التحليل)' },
+      { key: 'fin.budget_create', fr: 'Créer un budget / investissement', ar: 'إنشاء ميزانية / استثمار' },
+      { key: 'fin.budget_edit', fr: 'Modifier un budget / investissement', ar: 'تعديل ميزانية / استثمار' },
+      { key: 'fin.budget_validate', fr: 'Valider un budget (workflow)', ar: 'اعتماد ميزانية (سير العمل)' },
+      { key: 'fin.budget_delete', fr: 'Supprimer un budget en brouillon', ar: 'حذف ميزانية في المسودة' },
+      { key: 'fin.export', fr: 'Exporter les rapports financiers', ar: 'تصدير التقارير المالية' },
+    ],
+  },
+  {
     key: 'report', fr: 'Rapports', ar: 'التقارير', icon: 'BarChart3',
     perms: [
       { key: 'report.sales', fr: 'Rapport des ventes', ar: 'تقرير المبيعات' },

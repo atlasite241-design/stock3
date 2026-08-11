@@ -54,10 +54,11 @@ const EMPTY_FORM = {
   amount: '',
   status: 'payee' as Expense['status'],
   dueDate: '',
+  budgetId: '',
 }
 
 function Content() {
-  const { ready, expenses, settings, saveSettings, addExpense, markExpensePaid, deleteExpense } = useDroguerie()
+  const { ready, expenses, budgets, settings, saveSettings, addExpense, markExpensePaid, deleteExpense } = useDroguerie()
   const { can } = usePermissions()
   const { t } = useLanguage()
   const toast = useToast()
@@ -179,6 +180,9 @@ function Content() {
       status: form.status,
       dueDate: form.status !== 'payee' && form.dueDate ? new Date(form.dueDate).toISOString() : undefined,
       note: '',
+      // Imputation budgétaire (module Finance) : c'est elle qui alimente le
+      // « consommé » du budget choisi.
+      budgetId: form.budgetId || undefined,
     })
     toast(`✓ ${t('exp_toast_registered')} ${fmtDH(amount)}`)
     setNewOpen(false)
@@ -436,6 +440,24 @@ function Content() {
             <label className="field-label">{t('exp_category_label')}</label>
             <Select value={form.category} onChange={(v) => setForm({ ...form, category: v })} options={EXPENSE_CATEGORIES} />
           </div>
+          {/* Imputation à un budget OPEX ouvert (module Finance). Les budgets de
+              la même catégorie d'abord — c'est presque toujours le bon. */}
+          {budgets.some((b) => b.status === 'valide' || b.status === 'en_cours') && (
+            <div>
+              <label className="field-label">{t('exp_budget_link')}</label>
+              <Select
+                value={form.budgetId}
+                onChange={(v) => setForm({ ...form, budgetId: v })}
+                options={[
+                  { value: '', label: t('exp_budget_none') },
+                  ...budgets
+                    .filter((b) => b.status === 'valide' || b.status === 'en_cours')
+                    .sort((a, b) => (a.category === form.category ? -1 : 0) - (b.category === form.category ? -1 : 0))
+                    .map((b) => ({ value: b.id, label: `${b.ref} — ${b.category}${b.subcategory ? ` · ${b.subcategory}` : ''}` })),
+                ]}
+              />
+            </div>
+          )}
           <div>
             <label className="field-label">{t('exp_label_required')}</label>
             <input

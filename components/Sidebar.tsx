@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ClipboardCheck,
   Coins,
+  Landmark,
   LayoutDashboard,
   Monitor,
   Package,
@@ -359,6 +360,28 @@ const NAV_ALL: NavItem[] = [
     ],
   },
   {
+    labelKey: 'nav_finance',
+    icon: Landmark,
+    children: [
+      { href: '/finance', labelKey: 'nav_fin_dash' },
+      {
+        sectionKey: 'nav_fin_sec_budgets',
+        items: [
+          { href: '/finance/budgets', labelKey: 'nav_fin_budget_general' },
+          { href: '/finance/budgets/opex', labelKey: 'nav_fin_budget_opex' },
+          { href: '/finance/budgets/capex', labelKey: 'nav_fin_budget_capex' },
+        ],
+      },
+      // Dépenses et Recettes existent déjà (groupe Caisse) : mêmes pages,
+      // simplement accessibles aussi depuis la lecture financière.
+      { href: '/depenses', labelKey: 'nav_caisse_expenses' },
+      { href: '/recettes', labelKey: 'nav_caisse_income' },
+      { href: '/finance/tresorerie', labelKey: 'nav_fin_treasury' },
+      { href: '/finance/previsions', labelKey: 'nav_fin_forecast' },
+      { href: '/finance/analyse', labelKey: 'nav_fin_analysis' },
+    ],
+  },
+  {
     labelKey: 'nav_accounting',
     icon: Calculator,
     children: [
@@ -582,6 +605,7 @@ const NAV_FAMILIES: NavFamily[] = [
   fam('nav_fam_pilot', ['nav_dashboard']),
   fam('nav_fam_ops', ['nav_pos', 'nav_caisse', 'nav_products', 'nav_stock', 'nav_stores']),
   fam('nav_fam_commerce', ['nav_purchases', 'nav_sales', 'nav_clients', 'nav_suppliers']),
+  fam('nav_fam_finance', ['nav_finance']),
   fam('nav_fam_analysis', ['nav_reports', 'nav_accounting', 'nav_alerts']),
   fam('nav_fam_admin', ['nav_hr', 'nav_users', 'nav_settings']),
   fam('nav_fam_help', ['nav_setup', 'nav_guide', 'nav_guide_exercise', 'nav_guide_ops']),

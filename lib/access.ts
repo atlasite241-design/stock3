@@ -15,6 +15,14 @@ export const ROUTE_PERM: Record<string, string> = {
   '/caisse-journal/fin-journee': 'cash.close',
   '/caisse-journal/archives': 'cash.journal',
   '/depenses': 'cash.journal',
+  // Finance (budgets OPEX/CAPEX, trésorerie, analyse)
+  '/finance': 'fin.view',
+  '/finance/budgets': 'fin.view',
+  '/finance/budgets/opex': 'fin.view',
+  '/finance/budgets/capex': 'fin.view',
+  '/finance/tresorerie': 'fin.view',
+  '/finance/previsions': 'fin.view',
+  '/finance/analyse': 'fin.view',
   '/recettes': 'cash.in',
   '/transfert-argent': 'cash.journal',
   // Produits
