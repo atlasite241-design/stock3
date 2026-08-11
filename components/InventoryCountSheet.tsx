@@ -5,7 +5,7 @@
 // brouillon et envoi au contrôle. Le théorique est FIGÉ à la première saisie
 // d'une ligne — une vente encaissée pendant le comptage ne fausse pas l'écart.
 
-import { useMemo, useRef, useState } from 'react'
+import { useDeferredValue, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Camera, ClipboardCheck, Save, ScanBarcode, Search } from 'lucide-react'
 import CameraScanner from '@/components/CameraScanner'
@@ -87,16 +87,28 @@ export default function InventoryCountSheet({ inventory, pool }: {
     [pool, frozen]
   )
 
-  // Index scan : code principal + codes hérités des fusions de doublons.
-  const byBarcode = useMemo(() => {
+  /*
+   * INDEX, PAS DE RECHERCHE LINÉAIRE. Chercher chaque produit avec
+   * `pool.find()` dans une boucle sur les lignes est quadratique : sur un
+   * catalogue de plusieurs dizaines de milliers de références, l'onglet fige
+   * avant même d'afficher la feuille. Les deux index sont construits en UNE
+   * passe et toutes les recherches deviennent instantanées.
+   */
+  const rowById = useMemo(() => {
     const m = new Map<string, Row>()
-    for (const r of rows) {
-      const p = pool.find((x) => x.id === r.productId)
-      if (r.barcode) m.set(r.barcode, r)
-      for (const b of p?.altBarcodes ?? []) m.set(b, r)
+    for (const r of rows) m.set(r.productId, r)
+    return m
+  }, [rows])
+
+  // Code principal + codes hérités des fusions de doublons.
+  const byBarcode = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const p of pool) {
+      if (p.barcode) m.set(p.barcode, p.id)
+      for (const b of p.altBarcodes ?? []) m.set(b, p.id)
     }
     return m
-  }, [rows, pool])
+  }, [pool])
 
   const num = (s: string | undefined) => {
     const n = parseFloat((s ?? '').replace(',', '.'))
@@ -108,33 +120,50 @@ export default function InventoryCountSheet({ inventory, pool }: {
   }
   const isCounted = (r: Row) => !Number.isNaN(num(counts[r.productId]))
 
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return rows
-      .filter((r) => !q || r.name.toLowerCase().includes(q) || (r.barcode ?? '').includes(q) || (r.category ?? '').toLowerCase().includes(q))
-      .filter((r) => !onlyGaps || (isCounted(r) && gapOf(r) !== 0))
+  // La recherche est différée : sur un gros catalogue, filtrer à chaque frappe
+  // rendrait la saisie saccadée.
+  const deferredQuery = useDeferredValue(query)
+  const searched = useMemo(() => {
+    const q = deferredQuery.trim().toLowerCase()
+    if (!q) return rows
+    return rows.filter(
+      (r) => r.name.toLowerCase().includes(q) || (r.barcode ?? '').includes(q) || (r.category ?? '').toLowerCase().includes(q)
+    )
+  }, [rows, deferredQuery])
+
+  // Le filtre « écarts uniquement » dépend des quantités saisies : il n'est
+  // appliqué QUE s'il est coché, sinon chaque frappe reparcourrait tout le
+  // catalogue pour rien.
+  const visible = useMemo(
+    () => (onlyGaps ? searched.filter((r) => isCounted(r) && gapOf(r) !== 0) : searched),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, query, onlyGaps, counts])
+    [searched, onlyGaps, counts]
+  )
 
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
   const paged = visible.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
+  // Parcourt les quantités SAISIES (quelques dizaines), pas tout le catalogue :
+  // les compteurs se recalculent à chaque frappe.
   const stats = useMemo(() => {
     let counted = 0, gaps = 0, value = 0
-    for (const r of rows) {
-      if (!isCounted(r)) continue
+    for (const [productId, raw] of Object.entries(counts)) {
+      const n = num(raw)
+      if (Number.isNaN(n)) continue
+      const r = rowById.get(productId)
+      if (!r) continue
       counted++
-      const d = gapOf(r)
+      const d = n - r.theoretical
       if (d !== 0) { gaps++; value += d * r.cost }
     }
     return { counted, gaps, value, total: rows.length }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, counts])
+  }, [counts, rowById, rows.length])
 
   const handleScan = (code: string) => {
     const c = code.trim()
     if (!c) return
-    const r = byBarcode.get(c)
+    const id = byBarcode.get(c)
+    const r = id ? rowById.get(id) : undefined
     if (!r) { toast(`${t('inv_scan_unknown')} : ${c}`, 'error'); return }
     setCounts((prev) => {
       const cur = num(prev[r.productId])
