@@ -1942,6 +1942,27 @@ export function importAllJSON(text: string): boolean {
 // Main hook
 // ------------------------------------------------------------------
 
+/**
+ * VUE D'UNE COLLECTION LIMITÉE AU MAGASIN ACTIF, MÉMORISÉE.
+ *
+ * Ce filtrage était refait à CHAQUE rendu du provider, pour une quinzaine de
+ * collections dont certaines dépassent les 100 000 lignes — et le moindre
+ * changement d'état (une frappe au clavier dans une page, une vente, un toast)
+ * rejouait l'ensemble.
+ *
+ * Le coût du filtre n'était que la moitié du problème : `filter()` renvoyant un
+ * nouveau tableau à chaque fois, toutes les pages voyaient leurs dépendances
+ * changer et recalculaient leurs propres `useMemo` — l'invalidation se
+ * propageait à toute l'application.
+ *
+ * Une mémorisation PAR collection (et non un seul memo global) est ce qui
+ * compte : enregistrer une vente ne doit pas invalider la vue des mouvements,
+ * des lots ou des crédits.
+ */
+function useScopedList<R extends { storeId?: string }>(arr: R[], storeId: string): R[] {
+  return useMemo(() => arr.filter((r) => r.storeId === storeId), [arr, storeId])
+}
+
 // Hook interne : contient TOUT l'état + les actions. Appelé UNE SEULE FOIS par le
 // DroguerieProvider (voir lib/droguerie-provider.tsx). Les pages consomment via le
 // contexte partagé `useDroguerie()` → les 55 000 produits ne sont chargés qu'une fois.
@@ -4377,35 +4398,50 @@ export function useDroguerieState() {
     return { ok: true }
   }
 
-  // Store-scoped views returned to every page (mutations keep operating on the full arrays).
-  const scoped = <R extends { storeId?: string }>(arr: R[]) => arr.filter((r) => r.storeId === activeStoreId)
-
-  // Les produits peuvent être TRÈS nombreux (50 000+) : on mémorise le filtrage par
-  // magasin pour ne pas le recalculer à chaque rendu (sinon l'app fige).
-  const scopedProducts = useMemo(
-    () => products.filter((p) => p.storeId === activeStoreId),
-    [products, activeStoreId]
-  )
+  /*
+   * Vues limitées au magasin actif, servies à toutes les pages (les mutations,
+   * elles, continuent d'opérer sur les tableaux complets). Chacune est
+   * mémorisée séparément — voir useScopedList : le filtrage de collections de
+   * plusieurs dizaines de milliers de lignes ne doit pas être rejoué à chaque
+   * rendu, et les références doivent rester stables pour ne pas invalider les
+   * calculs des pages.
+   */
+  const scopedProducts = useScopedList(products, activeStoreId)
+  const scopedSales = useScopedList(sales, activeStoreId)
+  const scopedMovements = useScopedList(movements, activeStoreId)
+  const scopedLots = useScopedList(lots, activeStoreId)
+  const scopedPurchases = useScopedList(purchases, activeStoreId)
+  const scopedPurchaseRequests = useScopedList(purchaseRequests, activeStoreId)
+  const scopedQuotes = useScopedList(quotes, activeStoreId)
+  const scopedReturns = useScopedList(returns, activeStoreId)
+  const scopedCash = useScopedList(cash, activeStoreId)
+  const scopedSessions = useScopedList(sessions, activeStoreId)
+  const scopedClientPayments = useScopedList(clientPayments, activeStoreId)
+  const scopedCredits = useScopedList(credits, activeStoreId)
+  const scopedLoyalty = useScopedList(loyaltyMovements, activeStoreId)
+  const scopedSupplierPayments = useScopedList(supplierPayments, activeStoreId)
+  const scopedExpenses = useScopedList(expenses, activeStoreId)
+  const scopedInventories = useScopedList(inventories, activeStoreId)
 
   return {
     ready,
     bootPhase,
     // Store-scoped views (filtered to the active store).
     products: scopedProducts,
-    sales: scoped(sales),
-    movements: scoped(movements),
-    lots: scoped(lots),
-    purchases: scoped(purchases),
-    purchaseRequests: scoped(purchaseRequests),
-    quotes: scoped(quotes),
-    returns: scoped(returns),
-    cash: scoped(cash),
-    sessions: scoped(sessions),
-    clientPayments: scoped(clientPayments),
-    credits: scoped(credits),
-    loyaltyMovements: scoped(loyaltyMovements),
-    supplierPayments: scoped(supplierPayments),
-    expenses: scoped(expenses),
+    sales: scopedSales,
+    movements: scopedMovements,
+    lots: scopedLots,
+    purchases: scopedPurchases,
+    purchaseRequests: scopedPurchaseRequests,
+    quotes: scopedQuotes,
+    returns: scopedReturns,
+    cash: scopedCash,
+    sessions: scopedSessions,
+    clientPayments: scopedClientPayments,
+    credits: scopedCredits,
+    loyaltyMovements: scopedLoyalty,
+    supplierPayments: scopedSupplierPayments,
+    expenses: scopedExpenses,
     // Shared master data (not scoped per store).
     clients,
     suppliers,
@@ -4484,7 +4520,7 @@ export function useDroguerieState() {
     restockProduct,
     applyInventory,
     // Inventaires (physique + tournant) — vues scopées magasin + workflow complet.
-    inventories: scoped(inventories),
+    inventories: scopedInventories,
     allInventories: inventories,
     addInventory,
     updateInventory,
