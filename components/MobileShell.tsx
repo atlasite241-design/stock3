@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Bell, Building2, Check, ChevronDown } from 'lucide-react'
 import AuthGate from './AuthGate'
+import AccessGuard from './AccessGuard'
 import BottomNav from './MobileNav'
 import { useDroguerie } from '@/lib/store'
 import { useAuth } from '@/lib/auth-context'
@@ -90,7 +91,11 @@ export default function MobileShell({ children }: { children: React.ReactNode })
         </div>
       </header>
 
-      <main className="relative z-10 mt-20 space-y-8 px-6">{children}</main>
+      {/* Mêmes droits que sur l'ordinateur : encaisser, inventorier ou
+          transférer du stock depuis le téléphone exige la même permission. */}
+      <main className="relative z-10 mt-20 space-y-8 px-6">
+        <AccessGuard home="/mobile">{children}</AccessGuard>
+      </main>
 
       <BottomNav />
     </div>

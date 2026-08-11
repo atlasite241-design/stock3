@@ -7,20 +7,16 @@ import type { LucideIcon } from 'lucide-react'
 import {
   BarChart3,
   Bell,
-  Calculator,
   Boxes,
   Building2,
   ChevronDown,
-  ClipboardCheck,
   Coins,
   Landmark,
   LayoutDashboard,
-  Monitor,
+  MapPin,
   Package,
-  RefreshCw,
   Rocket,
   Settings,
-  Sparkles,
   ShoppingCart,
   Truck,
   UserCog,
@@ -100,20 +96,6 @@ interface NavFamily {
 
 const NAV_ALL: NavItem[] = [
   { labelKey: 'nav_dashboard', icon: LayoutDashboard, href: '/' },
-  { labelKey: 'nav_setup', icon: Sparkles, href: '/setup' },
-  { labelKey: 'nav_guide', icon: Rocket, href: '/guide-demarrage' },
-  { labelKey: 'nav_guide_exercise', icon: RefreshCw, href: '/guide-exercice' },
-  { labelKey: 'nav_guide_ops', icon: ClipboardCheck, href: '/guide-exploitation' },
-  {
-    labelKey: 'nav_pos',
-    icon: Monitor,
-    children: [
-      { href: '/caisse', labelKey: 'nav_pos_new_sale' },
-      { href: '/caisse/vente-rapide', labelKey: 'nav_pos_quick_sale' },
-      { href: '/caisse?suspend=1', labelKey: 'nav_pos_suspend' },
-      { href: '/caisse?resume=1', labelKey: 'nav_pos_resume' },
-    ],
-  },
   {
     labelKey: 'nav_caisse',
     // La caisse enregistreuse (l'icône « machine à clavier »), pas le
@@ -134,16 +116,31 @@ const NAV_ALL: NavItem[] = [
     labelKey: 'nav_products',
     icon: Package,
     children: [
-      { href: '/produits', labelKey: 'nav_products_list' },
-      { href: '/produits/categories', labelKey: 'nav_products_categories' },
-      { href: '/produits/sous-categories', labelKey: 'nav_products_subcategories' },
-      { href: '/produits/marques', labelKey: 'nav_products_brands' },
-      { href: '/produits/unites', labelKey: 'nav_products_units' },
-      { href: '/produits/codes-barres', labelKey: 'nav_products_barcodes' },
-      { href: '/produits/analyse', labelKey: 'nav_products_analysis' },
-      { href: '/produits/declinaisons', labelKey: 'nav_products_variants' },
-      { href: '/produits/etat', labelKey: 'nav_products_health' },
-      { href: '/produits/conversion', labelKey: 'nav_products_conversion' },
+      {
+        sectionKey: 'nav_prod_sec_catalog',
+        items: [
+          { href: '/produits', labelKey: 'nav_products_list' },
+          { href: '/produits/codes-barres', labelKey: 'nav_products_barcodes' },
+        ],
+      },
+      {
+        sectionKey: 'nav_prod_sec_class',
+        items: [
+          { href: '/produits/categories', labelKey: 'nav_products_categories' },
+          { href: '/produits/sous-categories', labelKey: 'nav_products_subcategories' },
+          { href: '/produits/marques', labelKey: 'nav_products_brands' },
+          { href: '/produits/unites', labelKey: 'nav_products_units' },
+        ],
+      },
+      {
+        sectionKey: 'nav_prod_sec_quality',
+        items: [
+          { href: '/produits/etat', labelKey: 'nav_products_health' },
+          { href: '/produits/declinaisons', labelKey: 'nav_products_variants' },
+          { href: '/produits/analyse', labelKey: 'nav_products_analysis' },
+          { href: '/produits/conversion', labelKey: 'nav_products_conversion' },
+        ],
+      },
     ],
   },
   {
@@ -211,14 +208,8 @@ const NAV_ALL: NavItem[] = [
           { href: '/stock/previsions', labelKey: 'nav_stock_forecast' },
         ],
       },
-      {
-        sectionKey: 'nav_stock_sec_reports',
-        items: [
-          { href: '/stock/rapports/historique', labelKey: 'nav_stock_rep_history' },
-          { href: '/rapports/stock', labelKey: 'nav_stock_rep_state' },
-          { href: '/stock/rapports/export', labelKey: 'nav_stock_rep_export' },
-        ],
-      },
+      // La section « Rapports » du stock rejoint le menu Rapports : un écran qui
+      // se contente de lire n'a pas à exister à deux endroits du menu.
       {
         sectionKey: 'nav_stock_sec_control',
         items: [
@@ -234,27 +225,61 @@ const NAV_ALL: NavItem[] = [
   {
     labelKey: 'nav_purchases',
     icon: Truck,
+    // Sections calquées sur le circuit réel : on approvisionne, on reçoit,
+    // on règle. L'ordre du menu est celui du workflow.
     children: [
-      { href: '/achats/demandes', labelKey: 'nav_purchases_requests' },
-      { href: '/achats', labelKey: 'nav_purchases_orders' },
-      { href: '/achats/bon-livraison', labelKey: 'nav_purchases_delivery' },
-      { href: '/achats/reception', labelKey: 'nav_purchases_reception' },
-      { href: '/achats/entrees-stock', labelKey: 'nav_purchases_stock_entries' },
-      { href: '/achats/factures', labelKey: 'nav_purchases_invoices' },
-      { href: '/achats/historique', labelKey: 'nav_purchases_history' },
-      { href: '/achats/retours', labelKey: 'nav_purchases_returns' },
+      {
+        sectionKey: 'nav_pur_sec_supply',
+        items: [
+          { href: '/achats/demandes', labelKey: 'nav_purchases_requests' },
+          { href: '/achats', labelKey: 'nav_purchases_orders' },
+        ],
+      },
+      {
+        sectionKey: 'nav_pur_sec_receipt',
+        items: [
+          { href: '/achats/bon-livraison', labelKey: 'nav_purchases_delivery' },
+          { href: '/achats/reception', labelKey: 'nav_purchases_reception' },
+          { href: '/achats/entrees-stock', labelKey: 'nav_purchases_stock_entries' },
+        ],
+      },
+      {
+        sectionKey: 'nav_pur_sec_payment',
+        items: [
+          { href: '/achats/factures', labelKey: 'nav_purchases_invoices' },
+          { href: '/achats/retours', labelKey: 'nav_purchases_returns' },
+          { href: '/achats/historique', labelKey: 'nav_purchases_history' },
+        ],
+      },
     ],
   },
   {
+    // Encaisser et facturer sont un seul métier : le point de vente était une
+    // entrée séparée, dans une AUTRE famille — le caissier changeait de bloc
+    // de menu au milieu de son acte de vente.
     labelKey: 'nav_sales',
     icon: ShoppingCart,
     children: [
-      { href: '/ventes/devis', labelKey: 'nav_sales_quotes' },
-      { href: '/ventes/bon-livraison', labelKey: 'nav_sales_delivery' },
-      { href: '/ventes/factures', labelKey: 'nav_sales_invoices' },
-      { href: '/ventes/avoirs', labelKey: 'nav_sales_credits' },
-      { href: '/ventes/retours', labelKey: 'nav_sales_returns' },
-      { href: '/ventes', labelKey: 'nav_sales_history' },
+      {
+        sectionKey: 'nav_sales_sec_pos',
+        items: [
+          { href: '/caisse', labelKey: 'nav_pos_new_sale' },
+          { href: '/caisse/vente-rapide', labelKey: 'nav_pos_quick_sale' },
+          { href: '/caisse?suspend=1', labelKey: 'nav_pos_suspend' },
+          { href: '/caisse?resume=1', labelKey: 'nav_pos_resume' },
+        ],
+      },
+      {
+        sectionKey: 'nav_sales_sec_docs',
+        items: [
+          { href: '/ventes/devis', labelKey: 'nav_sales_quotes' },
+          { href: '/ventes/bon-livraison', labelKey: 'nav_sales_delivery' },
+          { href: '/ventes/factures', labelKey: 'nav_sales_invoices' },
+          { href: '/ventes/avoirs', labelKey: 'nav_sales_credits' },
+          { href: '/ventes/retours', labelKey: 'nav_sales_returns' },
+          { href: '/ventes', labelKey: 'nav_sales_history' },
+        ],
+      },
     ],
   },
   {
@@ -282,26 +307,21 @@ const NAV_ALL: NavItem[] = [
     ],
   },
   {
+    /*
+     * RAPPORTS NE CONTIENT QUE DES RAPPORTS.
+     *
+     * La règle qui départage : si l'écran ÉCRIT quelque chose, il reste dans son
+     * module ; s'il se contente de LIRE, il vient ici. « Ajustements » crée un
+     * mouvement de stock, « Crédits clients » encaisse — ils restent chez eux.
+     *
+     * C'est ce qui supprime les douze doublons de navigation. Ils n'étaient pas
+     * qu'inesthétiques : le dépliage automatique retient le PREMIER groupe qui
+     * correspond, si bien que cliquer « Écarts » depuis Rapports ouvrait le
+     * groupe Stock — le menu désignait une position où l'utilisateur n'était pas.
+     */
     labelKey: 'nav_reports',
     icon: BarChart3,
     children: [
-      {
-        sectionKey: 'nav_rp_sec_stock',
-        items: [
-          { href: '/stock/rapports/valorisation', labelKey: 'nav_rp_valuation' },
-          { href: '/stock/rapports/rotation', labelKey: 'nav_rp_rotation' },
-          { href: '/stock/controle/ruptures', labelKey: 'nav_rp_out' },
-          { href: '/stock/critique', labelKey: 'nav_rp_critical' },
-        ],
-      },
-      {
-        sectionKey: 'nav_rp_sec_purchases',
-        items: [
-          { href: '/rapports/achats', labelKey: 'nav_rp_purch_period' },
-          { href: '/rapports/fournisseurs', labelKey: 'nav_rp_purch_supplier' },
-          { href: '/rapports/produits-achetes', labelKey: 'nav_rp_purch_products' },
-        ],
-      },
       {
         sectionKey: 'nav_rp_sec_sales',
         items: [
@@ -314,56 +334,83 @@ const NAV_ALL: NavItem[] = [
         ],
       },
       {
-        sectionKey: 'nav_rp_sec_clients',
+        sectionKey: 'nav_rp_sec_purchases',
         items: [
-          { href: '/rapports/clients', labelKey: 'nav_rp_cli_balances' },
-          { href: '/clients/credits', labelKey: 'nav_rp_cli_credits' },
-          { href: '/clients/fidelite', labelKey: 'nav_rp_cli_loyalty' },
+          { href: '/rapports/achats', labelKey: 'nav_rp_purch_period' },
+          { href: '/rapports/produits-achetes', labelKey: 'nav_rp_purch_products' },
         ],
+      },
+      {
+        sectionKey: 'nav_rp_sec_stock',
+        items: [
+          { href: '/rapports/stock', labelKey: 'nav_stock_rep_state' },
+          { href: '/stock/rapports/valorisation', labelKey: 'nav_rp_valuation' },
+          { href: '/stock/rapports/rotation', labelKey: 'nav_rp_rotation' },
+          { href: '/stock/rapports/historique', labelKey: 'nav_stock_rep_history' },
+          { href: '/stock/controle/ruptures', labelKey: 'nav_rp_out' },
+          { href: '/stock/rapports/export', labelKey: 'nav_stock_rep_export' },
+        ],
+      },
+      {
+        sectionKey: 'nav_rp_sec_clients',
+        items: [{ href: '/rapports/clients', labelKey: 'nav_rp_cli_balances' }],
       },
       {
         sectionKey: 'nav_rp_sec_suppliers',
-        items: [
-          { href: '/fournisseurs/soldes', labelKey: 'nav_rp_sup_balances' },
-          { href: '/fournisseurs/historique', labelKey: 'nav_rp_sup_history' },
-        ],
+        items: [{ href: '/rapports/fournisseurs', labelKey: 'nav_rp_purch_supplier' }],
       },
       {
         sectionKey: 'nav_rp_sec_cash',
-        items: [
-          { href: '/rapports/caisse', labelKey: 'nav_rp_cash_journal' },
-          { href: '/recettes', labelKey: 'nav_rp_cash_in' },
-          { href: '/depenses', labelKey: 'nav_rp_cash_out' },
-        ],
+        items: [{ href: '/rapports/caisse', labelKey: 'nav_rp_cash_journal' }],
       },
       {
-        sectionKey: 'nav_rp_sec_inventory',
+        sectionKey: 'nav_rp_sec_locations',
         items: [
-          { href: '/stock/ecarts', labelKey: 'nav_rp_inv_gaps' },
-          { href: '/stock/ajustement', labelKey: 'nav_rp_inv_adjust' },
+          { href: '/magasins/rapports?report=occupancy', labelKey: 'nav_st_r_occupancy' },
+          { href: '/magasins/rapports?report=by_position', labelKey: 'nav_st_r_by_position' },
+          { href: '/magasins/rapports?report=empty_locations', labelKey: 'nav_st_r_empty' },
+          { href: '/magasins/rapports?report=fill_rate', labelKey: 'nav_st_r_fill' },
         ],
       },
       {
         sectionKey: 'nav_rp_sec_stores',
-        items: [
-          { href: '/stock/par-magasin', labelKey: 'nav_rp_store_stock' },
-          { href: '/rapports/magasins', labelKey: 'nav_rp_store_perf' },
-        ],
+        items: [{ href: '/rapports/magasins', labelKey: 'nav_rp_store_perf' }],
       },
       {
-        sectionKey: 'nav_rp_sec_users',
+        sectionKey: 'nav_rp_sec_hr',
         items: [
-          { href: '/utilisateurs/connexions', labelKey: 'nav_rp_usr_logins' },
-          { href: '/utilisateurs/journal', labelKey: 'nav_rp_usr_activity' },
+          { href: '/rh/rapports/effectif', labelKey: 'nav_hr_headcount' },
+          { href: '/rh/rapports/presence', labelKey: 'nav_hr_rep_presence' },
+          { href: '/rh/rapports/heures', labelKey: 'nav_hr_rep_hours' },
+          { href: '/rh/rapports/masse-salariale', labelKey: 'nav_hr_payroll_mass' },
+          { href: '/rh/rapports/export', labelKey: 'nav_hr_export' },
         ],
       },
     ],
   },
   {
+    /*
+     * FINANCE couvre la chaîne entière : on prévoit (budgets), on constate
+     * (dépenses, recettes), on pilote (trésorerie, prévisions, analyse), on
+     * restitue (comptabilité). Cette dernière était classée dans « Analyse » —
+     * ni le bon menu, ni la bonne permission.
+     *
+     * Que des sections, plus aucune feuille nue : l'entrée mélangeait les deux,
+     * si bien que les liens placés après l'intertitre « Budgets » semblaient en
+     * faire partie.
+     */
     labelKey: 'nav_finance',
     icon: Landmark,
     children: [
-      { href: '/finance', labelKey: 'nav_fin_dash' },
+      {
+        sectionKey: 'nav_fin_sec_pilot',
+        items: [
+          { href: '/finance', labelKey: 'nav_fin_dash' },
+          { href: '/finance/tresorerie', labelKey: 'nav_fin_treasury' },
+          { href: '/finance/previsions', labelKey: 'nav_fin_forecast' },
+          { href: '/finance/analyse', labelKey: 'nav_fin_analysis' },
+        ],
+      },
       {
         sectionKey: 'nav_fin_sec_budgets',
         items: [
@@ -372,25 +419,24 @@ const NAV_ALL: NavItem[] = [
           { href: '/finance/budgets/capex', labelKey: 'nav_fin_budget_capex' },
         ],
       },
-      // Dépenses et Recettes existent déjà (groupe Caisse) : mêmes pages,
-      // simplement accessibles aussi depuis la lecture financière.
-      { href: '/depenses', labelKey: 'nav_caisse_expenses' },
-      { href: '/recettes', labelKey: 'nav_caisse_income' },
-      { href: '/finance/tresorerie', labelKey: 'nav_fin_treasury' },
-      { href: '/finance/previsions', labelKey: 'nav_fin_forecast' },
-      { href: '/finance/analyse', labelKey: 'nav_fin_analysis' },
-    ],
-  },
-  {
-    labelKey: 'nav_accounting',
-    icon: Calculator,
-    children: [
-      { href: '/comptabilite/journaux', labelKey: 'nav_acc_journals' },
-      { href: '/comptabilite/plan-comptable', labelKey: 'nav_acc_chart' },
-      { href: '/comptabilite/tva', labelKey: 'nav_acc_vat' },
-      { href: '/comptabilite/ecritures', labelKey: 'nav_acc_entries' },
-      { href: '/comptabilite/reglements', labelKey: 'nav_acc_payments' },
-      { href: '/comptabilite/banque', labelKey: 'nav_acc_bank' },
+      {
+        sectionKey: 'nav_fin_sec_actual',
+        items: [
+          { href: '/depenses', labelKey: 'nav_caisse_expenses' },
+          { href: '/recettes', labelKey: 'nav_caisse_income' },
+        ],
+      },
+      {
+        sectionKey: 'nav_fin_sec_accounting',
+        items: [
+          { href: '/comptabilite/journaux', labelKey: 'nav_acc_journals' },
+          { href: '/comptabilite/ecritures', labelKey: 'nav_acc_entries' },
+          { href: '/comptabilite/plan-comptable', labelKey: 'nav_acc_chart' },
+          { href: '/comptabilite/tva', labelKey: 'nav_acc_vat' },
+          { href: '/comptabilite/reglements', labelKey: 'nav_acc_payments' },
+          { href: '/comptabilite/banque', labelKey: 'nav_acc_bank' },
+        ],
+      },
     ],
   },
   {
@@ -405,21 +451,31 @@ const NAV_ALL: NavItem[] = [
     ],
   },
   {
+    /*
+     * MAGASINS = les entités de gestion, et rien d'autre. Le menu réunissait
+     * jusqu'ici trois métiers sous une même entrée (27 liens) : la fiche du
+     * magasin, la topologie physique et le rangement quotidien. Ce sont deux
+     * utilisateurs différents — le gérant qui ouvre un magasin, le magasinier
+     * qui range un article — et deux jeux de permissions distincts
+     * (`set.store` contre `loc.*`). Le WMS vit maintenant dans « Emplacements ».
+     */
     labelKey: 'nav_stores',
     icon: Building2,
     children: [
+      { href: '/magasins', labelKey: 'nav_stores_list' },
+      { href: '/magasins/nouveau', labelKey: 'nav_stores_new' },
+      { href: '/magasins/depots', labelKey: 'nav_stores_depots' },
+      { href: '/magasins/utilisateurs', labelKey: 'nav_stores_users' },
+      { href: '/magasins/parametres', labelKey: 'nav_stores_settings' },
+    ],
+  },
+  {
+    // EMPLACEMENTS (WMS) : de la topologie au rangement au scan.
+    labelKey: 'nav_locations',
+    icon: MapPin,
+    children: [
       {
-        sectionKey: 'nav_st_sec_manage',
-        items: [
-          { href: '/magasins', labelKey: 'nav_stores_list' },
-          { href: '/magasins/nouveau', labelKey: 'nav_stores_new' },
-          { href: '/magasins/depots', labelKey: 'nav_stores_depots' },
-          { href: '/magasins/utilisateurs', labelKey: 'nav_stores_users' },
-          { href: '/magasins/parametres', labelKey: 'nav_stores_settings' },
-        ],
-      },
-      {
-        sectionKey: 'nav_st_sec_arch',
+        sectionKey: 'nav_loc_sec_structure',
         items: [
           { href: '/magasins/plan', labelKey: 'nav_stores_plan' },
           { href: '/magasins/zones', labelKey: 'nav_stores_zones' },
@@ -431,7 +487,7 @@ const NAV_ALL: NavItem[] = [
         ],
       },
       {
-        sectionKey: 'nav_st_sec_ai',
+        sectionKey: 'nav_loc_sec_design',
         items: [
           { href: '/magasins/generateur', labelKey: 'nav_stores_generator' },
           { href: '/magasins/assistant-photos', labelKey: 'nav_stores_photo_wizard' },
@@ -440,40 +496,35 @@ const NAV_ALL: NavItem[] = [
         ],
       },
       {
-        sectionKey: 'nav_st_sec_ops',
+        sectionKey: 'nav_loc_sec_ops',
         items: [
-          { href: '/magasins/guide-emplacements', labelKey: 'nav_stores_loc_guide' },
           { href: '/magasins/rangement', labelKey: 'nav_stores_rangement' },
           { href: '/magasins/deplacement', labelKey: 'nav_st_move' },
+          { href: '/magasins/guide-emplacements', labelKey: 'nav_stores_loc_guide' },
         ],
       },
       {
-        sectionKey: 'nav_st_sec_print',
+        sectionKey: 'nav_loc_sec_print',
         items: [
           { href: '/magasins/impression', labelKey: 'nav_st_labels' },
-          { href: '/magasins/plan?print=1', labelKey: 'nav_st_plan_print' },
           { href: '/magasins/qr-codes', labelKey: 'nav_st_qr' },
-        ],
-      },
-      {
-        sectionKey: 'nav_st_sec_reports',
-        items: [
-          { href: '/magasins/rapports?report=occupancy', labelKey: 'nav_st_r_occupancy' },
-          { href: '/magasins/rapports?report=by_position', labelKey: 'nav_st_r_by_position' },
-          { href: '/magasins/rapports?report=empty_locations', labelKey: 'nav_st_r_empty' },
-          { href: '/magasins/rapports?report=fill_rate', labelKey: 'nav_st_r_fill' },
+          { href: '/magasins/plan?print=1', labelKey: 'nav_st_plan_print' },
         ],
       },
     ],
   },
   {
+    // Ici vit le COMPTE (identifiant, rôle, droits, traces) ; la personne
+    // (contrat, paie, présence) vit dans Personnel. D'où « Comptes » et non
+    // « Employés » : les deux menus affichaient le même mot pour deux notions.
     labelKey: 'nav_users',
     icon: UserCog,
     children: [
-      { href: '/utilisateurs/employes', labelKey: 'nav_users_employees' },
+      { href: '/utilisateurs/employes', labelKey: 'nav_users_accounts' },
       { href: '/utilisateurs/roles', labelKey: 'nav_users_roles' },
       { href: '/utilisateurs/permissions', labelKey: 'nav_users_permissions' },
       { href: '/utilisateurs/journal', labelKey: 'nav_users_journal' },
+      { href: '/utilisateurs/connexions', labelKey: 'nav_rp_usr_logins' },
     ],
   },
   {
@@ -547,44 +598,59 @@ const NAV_ALL: NavItem[] = [
       },
       {
         sectionKey: 'nav_hr_sec_security',
-        items: [
-          // Rôles, permissions et connexions existent déjà sous Utilisateurs :
-          // ce sont les mêmes écrans, pas des copies.
-          { href: '/rh/securite/badges', labelKey: 'nav_hr_badges' },
-          { href: '/utilisateurs/connexions', labelKey: 'nav_hr_logins' },
-        ],
+        // L'historique des connexions concerne le COMPTE, pas la personne :
+        // il vit sous Utilisateurs, où il n'apparaît qu'une fois.
+        items: [{ href: '/rh/securite/badges', labelKey: 'nav_hr_badges' }],
       },
-      {
-        sectionKey: 'nav_hr_sec_reports',
-        items: [
-          { href: '/rh/rapports/effectif', labelKey: 'nav_hr_headcount' },
-          { href: '/rh/rapports/presence', labelKey: 'nav_hr_rep_presence' },
-          { href: '/rh/rapports/heures', labelKey: 'nav_hr_rep_hours' },
-          { href: '/rh/rapports/masse-salariale', labelKey: 'nav_hr_payroll_mass' },
-          { href: '/rh/rapports/export', labelKey: 'nav_hr_export' },
-        ],
-      },
+      // Les rapports du personnel rejoignent le menu Rapports (lecture seule).
     ],
   },
   {
     labelKey: 'nav_settings',
     icon: Settings,
     children: [
-      { href: '/parametres/societe', labelKey: 'nav_settings_company' },
-      // TVA et Devise étaient des écrans FONCTIONNELS sans aucun lien de menu :
-      // on ne pouvait changer son taux de TVA qu'en tapant l'URL à la main.
-      { href: '/parametres/tva', labelKey: 'nav_settings_tva' },
-      { href: '/parametres/devise', labelKey: 'nav_settings_currency' },
-      // « Impression » retiré : ses deux réglages (largeur du rouleau, message
-      // de bas de ticket) vivent dans Société › onglet Ticket, où l'aperçu en
-      // montre l'effet immédiatement — un réglage se juge sur son rendu.
-      { href: '/parametres/sauvegarde', labelKey: 'nav_settings_backup' },
-      { href: '/parametres/theme', labelKey: 'nav_settings_theme' },
-      { href: '/parametres/reinitialisation', labelKey: 'nav_settings_reset' },
-      { href: '/parametres/remise-a-zero', labelKey: 'nav_settings_wipe' },
-      { href: '/parametres/licences', labelKey: 'nav_settings_licenses' },
-      { href: '/sync', labelKey: 'nav_settings_sync' },
-      { href: '/parametres/administration', labelKey: 'nav_settings_admin' },
+      {
+        sectionKey: 'nav_set_sec_company',
+        items: [
+          { href: '/parametres/societe', labelKey: 'nav_settings_company' },
+          // TVA et Devise étaient des écrans FONCTIONNELS sans aucun lien de menu :
+          // on ne pouvait changer son taux de TVA qu'en tapant l'URL à la main.
+          { href: '/parametres/tva', labelKey: 'nav_settings_tva' },
+          { href: '/parametres/devise', labelKey: 'nav_settings_currency' },
+        ],
+      },
+      {
+        sectionKey: 'nav_set_sec_data',
+        items: [
+          { href: '/parametres/sauvegarde', labelKey: 'nav_settings_backup' },
+          { href: '/sync', labelKey: 'nav_settings_sync' },
+          { href: '/parametres/reinitialisation', labelKey: 'nav_settings_reset' },
+          { href: '/parametres/remise-a-zero', labelKey: 'nav_settings_wipe' },
+        ],
+      },
+      {
+        sectionKey: 'nav_set_sec_app',
+        items: [
+          // « Impression » retiré : ses deux réglages (largeur du rouleau, message
+          // de bas de ticket) vivent dans Société › onglet Ticket, où l'aperçu en
+          // montre l'effet immédiatement — un réglage se juge sur son rendu.
+          { href: '/parametres/theme', labelKey: 'nav_settings_theme' },
+          { href: '/parametres/licences', labelKey: 'nav_settings_licenses' },
+          { href: '/parametres/administration', labelKey: 'nav_settings_admin' },
+        ],
+      },
+    ],
+  },
+  {
+    // L'aide formait une famille à elle seule pour quatre liens : elle devient
+    // une entrée ordinaire, en fin d'administration.
+    labelKey: 'nav_help',
+    icon: Rocket,
+    children: [
+      { href: '/setup', labelKey: 'nav_setup' },
+      { href: '/guide-demarrage', labelKey: 'nav_guide' },
+      { href: '/guide-exercice', labelKey: 'nav_guide_exercise' },
+      { href: '/guide-exploitation', labelKey: 'nav_guide_ops' },
     ],
   },
 ]
@@ -601,14 +667,26 @@ const byKey = (k: TKey): NavItem => {
 }
 const fam = (familyKey: TKey, keys: TKey[]): NavFamily => ({ familyKey, items: keys.map(byKey) })
 
+/*
+ * CINQ FAMILLES, ORDONNÉES PAR QUESTION POSÉE.
+ *
+ *   Pilotage       ce que je surveille
+ *   Exploitation   ce que je fais aujourd'hui
+ *   Référentiels   ce que je tiens à jour
+ *   Gestion        ce que je pilote dans la durée
+ *   Administration ce que je configure
+ *
+ * L'ancienne famille « Exploitation » portait 39 % du menu à elle seule, en
+ * mélangeant la caisse, le catalogue, le stock et tout le WMS. « Commercial »
+ * disparaît : ses entrées se répartissent selon qu'on y AGIT (Achats, Ventes)
+ * ou qu'on y tient une FICHE (Clients, Fournisseurs).
+ */
 const NAV_FAMILIES: NavFamily[] = [
-  fam('nav_fam_pilot', ['nav_dashboard']),
-  fam('nav_fam_ops', ['nav_pos', 'nav_caisse', 'nav_products', 'nav_stock', 'nav_stores']),
-  fam('nav_fam_commerce', ['nav_purchases', 'nav_sales', 'nav_clients', 'nav_suppliers']),
-  fam('nav_fam_finance', ['nav_finance']),
-  fam('nav_fam_analysis', ['nav_reports', 'nav_accounting', 'nav_alerts']),
-  fam('nav_fam_admin', ['nav_hr', 'nav_users', 'nav_settings']),
-  fam('nav_fam_help', ['nav_setup', 'nav_guide', 'nav_guide_exercise', 'nav_guide_ops']),
+  fam('nav_fam_pilot', ['nav_dashboard', 'nav_alerts']),
+  fam('nav_fam_ops', ['nav_sales', 'nav_caisse', 'nav_purchases', 'nav_stock', 'nav_locations']),
+  fam('nav_fam_data', ['nav_products', 'nav_clients', 'nav_suppliers', 'nav_stores']),
+  fam('nav_fam_manage', ['nav_finance', 'nav_hr', 'nav_reports']),
+  fam('nav_fam_admin', ['nav_users', 'nav_settings', 'nav_help']),
 ]
 
 /** Vue à plat, pour les recherches « quel groupe contient la page courante ? ». */

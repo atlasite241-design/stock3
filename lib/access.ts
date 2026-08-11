@@ -51,6 +51,8 @@ export const ROUTE_PERM: Record<string, string> = {
   '/stock/reapprovisionnement': 'stock.view',
   '/stock/consultation': 'stock.view',
   '/stock/mouvements': 'stock.movements',
+  // Lots et dates de péremption : écran métier qui n'était protégé par rien.
+  '/stock/lots': 'stock.view',
   '/stock/ajustement': 'stock.adjust',
   '/stock/comptage': 'stock.inventory',
   '/stock/ecarts': 'stock.inventory',
@@ -73,6 +75,8 @@ export const ROUTE_PERM: Record<string, string> = {
   '/stock/transferts/details': 'stock.transfer',
   // Achats
   '/achats': 'purch.order',
+  // Les demandes d'achat (création ET approbation) n'étaient protégées par rien.
+  '/achats/demandes': 'purch.order',
   '/achats/bon-livraison': 'purch.delivery',
   '/achats/reception': 'purch.reception',
   '/achats/entrees-stock': 'stock.entry',
@@ -202,6 +206,35 @@ export const ROUTE_PERM: Record<string, string> = {
   '/parametres/licences': 'set.company',
   '/parametres/administration': 'set.users',
   '/sync': 'set.backup',
+  // Assistant de configuration : il ÉCRIT les réglages de l'enseigne. Sur une
+  // installation neuve, aucun compte n'existe encore et `can()` laisse passer.
+  '/setup': 'set.company',
+
+  /*
+   * INTERFACE MOBILE. Elle n'appliquait aucun droit : ni entrée ici, ni garde
+   * dans MobileShell. Or on y encaisse, on y inventorie et on y transfère du
+   * stock. Chaque écran reprend la permission de son équivalent ordinateur —
+   * un même compte a désormais les mêmes pouvoirs sur les deux supports.
+   *
+   * `/mobile` et `/mobile/plus` (accueil et sommaire) restent ouverts, comme
+   * le tableau de bord ; `/mobile/plus/parametres` aussi : ce sont des
+   * préférences d'affichage propres à l'appareil, pas des réglages de gestion.
+   */
+  '/mobile/caisse': 'sale.create',
+  '/mobile/ventes': 'sale.history',
+  '/mobile/stock': 'stock.view',
+  '/mobile/inventaire': 'stock.inventory',
+  '/mobile/analytics': 'report.sales',
+  '/mobile/plus/caisse': 'cash.open',
+  '/mobile/plus/clients': 'client.view',
+  '/mobile/plus/factures-whatsapp': 'sale.print_invoice',
+  '/mobile/plus/fournisseurs': 'supp.view',
+  '/mobile/plus/notifications': 'stock.critical',
+  '/mobile/plus/produits': 'prod.view',
+  '/mobile/plus/reappro': 'stock.view',
+  '/mobile/plus/reception': 'purch.reception',
+  '/mobile/plus/stock-critique': 'stock.critical',
+  '/mobile/plus/transferts': 'stock.transfer',
 }
 
 export const basePath = (href: string) => href.split('?')[0]
