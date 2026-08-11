@@ -122,8 +122,8 @@ const NAV_ALL: NavItem[] = [
     children: [
       { href: '/caisse-journal?action=open', labelKey: 'nav_caisse_open' },
       { href: '/caisse-journal?action=close', labelKey: 'nav_caisse_close' },
-      { href: '/depenses', labelKey: 'nav_caisse_expenses' },
-      { href: '/recettes', labelKey: 'nav_caisse_income' },
+      // Dépenses et Recettes vivent désormais sous Finance : les charges et les
+      // produits relèvent du suivi budgétaire, pas de la tenue de la caisse.
       { href: '/transfert-argent', labelKey: 'nav_caisse_transfer' },
       { href: '/caisse-journal/fin-journee', labelKey: 'nav_caisse_endday' },
       { href: '/caisse-journal', labelKey: 'nav_caisse_journal' },
