@@ -491,7 +491,8 @@ function Content() {
       </Modal>
 
       {/* Delete confirm */}
-      {/* Budget OPEX mensuel */}
+      {/* Budget mensuel (champ interne settings.opexBudget, conservé pour ne pas
+          casser les réglages déjà enregistrés et synchronisés). */}
       <Modal open={budgetOpen} onClose={() => setBudgetOpen(false)} title={t('exp_budget_title')} maxWidth="max-w-sm">
         <p className="text-sm text-gray-600 dark:text-zinc-400">{t('exp_budget_desc')}</p>
         <div className="mt-4">
