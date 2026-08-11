@@ -24,11 +24,12 @@ import {
   useDroguerie,
   type InventoryFrequency,
   type InventoryLine,
+  type InventoryStatus,
   type Product,
 } from '@/lib/store'
 import { useLanguage, type TKey } from '@/lib/i18n'
 
-const STATUS_KEY: Record<string, TKey> = {
+const STATUS_KEY: Record<InventoryStatus, TKey> = {
   brouillon: 'inv_status_brouillon',
   controle: 'inv_status_controle',
   valide: 'inv_status_valide',

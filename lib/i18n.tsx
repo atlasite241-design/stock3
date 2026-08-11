@@ -4918,7 +4918,18 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
-  const t = useCallback((key: TKey) => DICT[key][lang], [lang])
+  /*
+   * Une clé inconnue ne doit JAMAIS faire tomber la page. `DICT[key][lang]`
+   * levait une exception et l'écran entier disparaissait derrière un
+   * « Cannot read properties of undefined » — pour un simple libellé.
+   *
+   * Le cas se produit sans faute de frappe dans le code : clé lue dans une
+   * donnée enregistrée par une version antérieure, table de correspondance
+   * indexée par une valeur inattendue, ou code servi par un cache périmé
+   * (dossier .next mélangé entre `next dev` et `next build`). On affiche alors
+   * la clé, qui reste lisible et signale le manque, au lieu de tout casser.
+   */
+  const t = useCallback((key: TKey) => DICT[key]?.[lang] ?? String(key), [lang])
 
   return <Ctx.Provider value={{ lang, toggleLang, t }}>{children}</Ctx.Provider>
 }

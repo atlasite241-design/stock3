@@ -16,10 +16,10 @@ import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
 import InventoryCountSheet from '@/components/InventoryCountSheet'
 import { usePermissions } from '@/lib/access'
-import { INVENTORY_META, useDroguerie } from '@/lib/store'
+import { INVENTORY_META, useDroguerie, type InventoryStatus } from '@/lib/store'
 import { useLanguage, type TKey } from '@/lib/i18n'
 
-const STATUS_KEY: Record<string, TKey> = {
+const STATUS_KEY: Record<InventoryStatus, TKey> = {
   brouillon: 'inv_status_brouillon',
   controle: 'inv_status_controle',
   valide: 'inv_status_valide',
