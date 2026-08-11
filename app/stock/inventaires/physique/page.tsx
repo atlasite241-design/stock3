@@ -44,9 +44,21 @@ function Content() {
     .sort((a, b) => b.date.localeCompare(a.date))
   const current = urlId ? inventories.find((i) => i.id === urlId && i.kind === 'physique') : undefined
 
+  /*
+   * UN SEUL INVENTAIRE PHYSIQUE À LA FOIS. Il porte sur TOUT le stock : en
+   * ouvrir un second pendant qu'un comptage est en cours ferait compter les
+   * mêmes articles deux fois, avec deux stocks théoriques figés à des instants
+   * différents — la validation du second écraserait celle du premier. Il faut
+   * donc valider ou annuler celui en cours avant d'en démarrer un autre.
+   * Un inventaire tournant, lui, ne porte que sur une sélection : il reste
+   * possible d'en lancer en parallèle.
+   */
+  const enCours = open[0]
+
   if (!ready) return <Loader />
 
   const create = () => {
+    if (enCours) { toast(`${t('inv_already_open')} ${enCours.ref}`, 'error'); return }
     const inv = addInventory('physique', { depotId: depotId || undefined, note: note.trim() || undefined })
     setCreateOpen(false)
     setDepotId('')
@@ -72,10 +84,22 @@ function Content() {
           </p>
         </div>
         {can('stock.inventory_create') && (
-          <button onClick={() => setCreateOpen(true)} className="btn-primary">
-            <Plus className="h-4 w-4" />
-            {t('inv_new_phys')}
-          </button>
+          <div className="flex flex-col items-end gap-1.5">
+            <button
+              onClick={() => setCreateOpen(true)}
+              disabled={!!enCours}
+              title={enCours ? `${t('inv_already_open')} ${enCours.ref}` : undefined}
+              className="btn-primary disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Plus className="h-4 w-4" />
+              {t('inv_new_phys')}
+            </button>
+            {enCours && (
+              <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                {t('inv_already_open')} {enCours.ref}
+              </span>
+            )}
+          </div>
         )}
       </motion.div>
 

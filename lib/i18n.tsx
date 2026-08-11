@@ -2594,6 +2594,7 @@ const DICT = {
   inv_phys_sub: { fr: 'Comptage général de tout le stock, en brouillon jusqu’à validation', ar: 'عدّ عام لكل المخزون، كمسودة حتى الاعتماد' },
   inv_phys_empty: { fr: 'Aucun inventaire physique en cours — créez-en un pour commencer le comptage', ar: 'لا يوجد جرد شامل جارٍ — أنشئ واحدًا لبدء العدّ' },
   inv_new_phys: { fr: 'Nouvel inventaire physique', ar: 'جرد شامل جديد' },
+  inv_already_open: { fr: 'Inventaire déjà en cours :', ar: 'جرد جارٍ بالفعل:' },
   inv_new_phys_desc: { fr: 'Toutes les références actives du magasin seront chargées. Le comptage peut être interrompu et repris : le brouillon est conservé.', ar: 'سيتم تحميل كل مراجع المتجر النشطة. يمكن إيقاف العدّ واستئنافه: المسودة محفوظة.' },
   inv_cy_title: { fr: 'Inventaire tournant', ar: 'الجرد الدوري' },
   inv_cy_sub: { fr: 'Contrôler une partie du stock sans bloquer l’activité', ar: 'مراقبة جزء من المخزون دون تعطيل النشاط' },
