@@ -178,15 +178,30 @@ export default function Topbar({
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => ouvrir(r.entry.href)}
                   onMouseEnter={() => setActif(i)}
-                  className={`block w-full px-3 py-2 text-left transition ${i === actif ? 'bg-amber-50 dark:bg-white/[0.07]' : ''}`}
+                  /*
+                   * La ligne sélectionnée passe en jaune plein — elle était
+                   * signalée par un gris à peine visible. Sur cette ligne, la
+                   * pastille s'inverse (fond sombre, texte ambre) : deux ambres
+                   * superposés ne se distingueraient pas.
+                   */
+                  className={`block w-full px-3 py-2 text-left transition ${
+                    i === actif ? 'bg-amber-400' : 'hover:bg-gray-50 dark:hover:bg-white/5'
+                  }`}
                 >
-                  {/* Couleur inversée : fond ambre, texte sombre — l'effet
-                      surligneur. Le texte reste volontairement sombre dans les
-                      deux thèmes, c'est le fond qui porte la couleur. */}
-                  <span className="inline-block max-w-full truncate rounded bg-amber-400 px-1.5 py-0.5 text-sm font-bold text-gray-900">
+                  <span
+                    className={`inline-block max-w-full truncate rounded px-1.5 py-0.5 text-sm font-bold ${
+                      i === actif ? 'bg-gray-900 text-amber-400' : 'bg-amber-400 text-gray-900'
+                    }`}
+                  >
                     {r.label}
                   </span>
-                  <span className="mt-0.5 block truncate text-[11px] text-gray-400 dark:text-zinc-500">{r.chemin}</span>
+                  <span
+                    className={`mt-0.5 block truncate text-[11px] ${
+                      i === actif ? 'text-gray-900/70' : 'text-gray-400 dark:text-zinc-500'
+                    }`}
+                  >
+                    {r.chemin}
+                  </span>
                 </button>
               ))
             )}
