@@ -7,7 +7,7 @@ import { Minus, Plus, Search, Undo2 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
-import { fmtDH, useDroguerie, type Sale, type SaleReturn } from '@/lib/store'
+import { fmtDH, returnableQty, saleFullyReturned, useDroguerie, type Sale, type SaleReturn } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 function Content() {
@@ -32,6 +32,13 @@ function Content() {
     })
     .slice(0, 8)
 
+  /*
+   * Ce qui reste RETOURNABLE, pas ce qui a été vendu : une vente déjà retournée
+   * pouvait l'être encore, indéfiniment. Les compteurs sont plafonnés ici et le
+   * store refuse de son côté — l'écran guide, le store garantit.
+   */
+  const restant = selected ? returnableQty(selected, returns) : new Map<string, number>()
+
   const pick = (s: Sale) => {
     setSelected(s)
     const init: Record<string, number> = {}
@@ -55,8 +62,12 @@ function Content() {
       toast(t('cret_toast_select_item'), 'error')
       return
     }
-    recordReturn(selected, returnItems, method)
-    toast(`✓ ${t('cret_toast_recorded')} ${fmtDH(refund)} ${method === 'especes' ? t('cret_toast_refunded') : t('cret_toast_deducted')}`)
+    const ret = recordReturn(selected, returnItems, method)
+    if (!ret) {
+      toast(t('cret_toast_already_returned'), 'error')
+      return
+    }
+    toast(`✓ ${t('cret_toast_recorded')} ${fmtDH(ret.total)} ${method === 'especes' ? t('cret_toast_refunded') : t('cret_toast_deducted')}`)
     setSelected(null)
     setQtys({})
   }
@@ -110,7 +121,14 @@ function Content() {
                     {s.clientName ? ` · ${s.clientName}` : ''}
                   </p>
                 </div>
-                <span className="font-mono text-xs text-gray-400 dark:text-zinc-500">#{s.id.slice(-5)}</span>
+                <span className="flex shrink-0 items-center gap-2">
+                  {saleFullyReturned(s, returns) && (
+                    <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-bold uppercase text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400">
+                      {t('cret_all_returned')}
+                    </span>
+                  )}
+                  <span className="font-mono text-xs text-gray-400 dark:text-zinc-500">#{s.id.slice(-5)}</span>
+                </span>
               </button>
             ))}
             {recent.length === 0 && <p className="py-6 text-center text-sm text-gray-400 dark:text-zinc-500">{t('cret_no_sale')}</p>}
@@ -130,33 +148,44 @@ function Content() {
           ) : (
             <>
               <div className="space-y-2">
-                {selected.items.map((i) => (
-                  <div key={i.productId} className="flex items-center gap-3 rounded-xl border border-gray-100 dark:border-white/10 bg-gray-50/60 dark:bg-white/5 p-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{i.name}</p>
-                      <p className="text-xs text-gray-500 dark:text-zinc-400 tabular-nums">
-                        {t('cret_sold_prefix')} {i.qty} × {fmtDH(i.price)}
-                      </p>
+                {selected.items.map((i) => {
+                  const max = restant.get(i.productId) ?? 0
+                  const epuise = max <= 0
+                  return (
+                    <div key={i.productId} className={`flex items-center gap-3 rounded-xl border p-3 ${epuise ? 'border-gray-100 bg-gray-50/40 opacity-60 dark:border-white/5 dark:bg-white/[0.02]' : 'border-gray-100 bg-gray-50/60 dark:border-white/10 dark:bg-white/5'}`}>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{i.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-zinc-400 tabular-nums">
+                          {t('cret_sold_prefix')} {i.qty} × {fmtDH(i.price)}
+                          {max < i.qty && (
+                            <span className={`ml-1 font-semibold ${epuise ? 'text-rose-500' : 'text-amber-600 dark:text-amber-400'}`}>
+                              · {epuise ? t('cret_all_returned') : `${t('cret_remaining')} ${max}`}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setQty(i.productId, max, -1)}
+                          disabled={epuise}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#12121a] text-gray-600 dark:text-zinc-400 transition hover:border-amber-300 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Minus className="h-3.5 w-3.5" />
+                        </button>
+                        <span className="w-8 text-center text-sm font-bold text-gray-900 dark:text-white tabular-nums">
+                          {qtys[i.productId] ?? 0}
+                        </span>
+                        <button
+                          onClick={() => setQty(i.productId, max, 1)}
+                          disabled={epuise}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#12121a] text-gray-600 dark:text-zinc-400 transition hover:border-amber-300 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => setQty(i.productId, i.qty, -1)}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#12121a] text-gray-600 dark:text-zinc-400 transition hover:border-amber-300 hover:bg-amber-50"
-                      >
-                        <Minus className="h-3.5 w-3.5" />
-                      </button>
-                      <span className="w-8 text-center text-sm font-bold text-gray-900 dark:text-white tabular-nums">
-                        {qtys[i.productId] ?? 0}
-                      </span>
-                      <button
-                        onClick={() => setQty(i.productId, i.qty, 1)}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#12121a] text-gray-600 dark:text-zinc-400 transition hover:border-amber-300 hover:bg-amber-50"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
 
               <div className="mt-4">

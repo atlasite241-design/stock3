@@ -832,6 +832,43 @@ export interface SaleReturn {
   storeId?: string
 }
 
+/**
+ * QUANTITÉS DÉJÀ RETOURNÉES d'une vente, par produit.
+ *
+ * Rien n'empêchait de retourner deux fois la même vente : le stock était
+ * ré-incrémenté à chaque fois et le client remboursé autant de fois — constaté
+ * avec trois avoirs pour une seule vente. Ces deux fonctions sont la mémoire
+ * qui manquait.
+ *
+ * Les lignes sont agrégées par produit : une même référence peut apparaître
+ * deux fois dans une vente, comparer ligne à ligne laisserait passer l'excédent.
+ */
+export function returnedQtyBySale(saleId: string, returns: SaleReturn[]): Map<string, number> {
+  const m = new Map<string, number>()
+  for (const r of returns) {
+    if (r.saleId !== saleId) continue
+    for (const i of r.items) m.set(i.productId, roundQty((m.get(i.productId) ?? 0) + i.qty))
+  }
+  return m
+}
+
+/** Ce qui RESTE retournable d'une vente, par produit (unité de vente). */
+export function returnableQty(sale: Sale, returns: SaleReturn[]): Map<string, number> {
+  const deja = returnedQtyBySale(sale.id, returns)
+  const vendu = new Map<string, number>()
+  for (const it of sale.items) vendu.set(it.productId, roundQty((vendu.get(it.productId) ?? 0) + it.qty))
+  const reste = new Map<string, number>()
+  vendu.forEach((q, pid) => reste.set(pid, roundQty(Math.max(0, q - (deja.get(pid) ?? 0)))))
+  return reste
+}
+
+/** Vrai si plus rien n'est retournable sur cette vente. */
+export function saleFullyReturned(sale: Sale, returns: SaleReturn[]): boolean {
+  let reste = 0
+  returnableQty(sale, returns).forEach((q) => { reste += q })
+  return reste <= 0
+}
+
 export interface CashEntry {
   id: string
   date: string
@@ -3446,6 +3483,19 @@ export function useDroguerieState() {
   }
 
   const recordReturn = (sale: Sale, items: SaleItem[], method: SaleReturn['method']) => {
+    /*
+     * ON NE RETOURNE PAS DEUX FOIS LE MÊME ARTICLE. Sans ce plafond, valider
+     * trois fois le même retour créait trois avoirs, remettait trois fois la
+     * marchandise en stock et remboursait trois fois le client. Le garde-fou
+     * est ICI, et pas seulement dans l'écran : c'est le seul endroit par où
+     * tout retour passe.
+     */
+    const reste = returnableQty(sale, returns)
+    const retenus = items
+      .map((i) => ({ ...i, qty: roundQty(Math.min(i.qty, reste.get(i.productId) ?? 0)) }))
+      .filter((i) => i.qty > 0)
+    if (retenus.length === 0) return
+    items = retenus
     const total = items.reduce((s, i) => s + i.price * i.qty, 0)
     // Numéro d'avoir séquentiel, posé une fois pour toutes — même règle que
     // la facture : un avoir remis à un client ne se renumérote jamais.

@@ -141,7 +141,7 @@ function TrendChip({ pct }: { pct: number | null }) {
 }
 
 export default function DashboardPage() {
-  const { ready, products: scopedProducts, sales: scopedSales, allProducts, allSales, stores, activeStore, settings } = useDroguerie()
+  const { ready, products: scopedProducts, sales: scopedSales, returns: scopedReturns, allProducts, allSales, stores, activeStore, settings } = useDroguerie()
   const { session } = useAuth()
   const { t, lang } = useLanguage()
   const [dateStr, setDateStr] = useState('')
@@ -154,6 +154,12 @@ export default function DashboardPage() {
   // l'activité postérieure au début d'exercice (les données restent intactes).
   const statsCutoff = settings.statsResetAt || ''
   const sales = (consolidated ? allSales : scopedSales).filter((s) => !statsCutoff || s.date >= statsCutoff)
+  /*
+   * Les retours étaient totalement ignorés : une vente entièrement remboursée
+   * restait comptée dans le chiffre d'affaires du jour. Un avoir annule la
+   * vente — le CA affiché est donc NET des retours, comme en comptabilité.
+   */
+  const returns = scopedReturns.filter((r) => !statsCutoff || r.date >= statsCutoff)
 
   useEffect(() => {
     setDateStr(
@@ -192,10 +198,24 @@ export default function DashboardPage() {
   const todaySales = salesOf(dayKey(today))
   const yesterdaySales = salesOf(dayKey(yesterday))
 
-  const caToday = todaySales.reduce((a, s) => a + s.total, 0)
-  const caYesterday = yesterdaySales.reduce((a, s) => a + s.total, 0)
-  const profitToday = todaySales.reduce((a, s) => a + s.profit, 0)
-  const profitYesterday = yesterdaySales.reduce((a, s) => a + s.profit, 0)
+  // Retours du jour : montant remboursé et marge annulée. La marge se recalcule
+  // au coût courant, exactement comme le profit d'une vente.
+  const returnsOf = (key: string) => returns.filter((r) => dayKey(new Date(r.date)) === key)
+  const retTotals = (rs: typeof returns) => {
+    let total = 0, profit = 0
+    for (const r of rs) {
+      total += r.total
+      for (const i of r.items) profit += i.price * i.qty - (prodById.get(i.productId)?.cost ?? 0) * baseQty(i)
+    }
+    return { total, profit }
+  }
+  const retToday = retTotals(returnsOf(dayKey(today)))
+  const retYesterday = retTotals(returnsOf(dayKey(yesterday)))
+
+  const caToday = todaySales.reduce((a, s) => a + s.total, 0) - retToday.total
+  const caYesterday = yesterdaySales.reduce((a, s) => a + s.total, 0) - retYesterday.total
+  const profitToday = todaySales.reduce((a, s) => a + s.profit, 0) - retToday.profit
+  const profitYesterday = yesterdaySales.reduce((a, s) => a + s.profit, 0) - retYesterday.profit
 
   const pct = (t: number, y: number) => (y > 0 ? ((t - y) / y) * 100 : null)
 
@@ -275,7 +295,8 @@ export default function DashboardPage() {
     const daySales = salesOf(dayKey(d))
     days.push({
       label: t(DAY_KEYS[d.getDay()]),
-      ca: daySales.reduce((a, s) => a + s.total, 0),
+      // Net des retours, comme les compteurs du haut.
+      ca: daySales.reduce((a, s) => a + s.total, 0) - retTotals(returnsOf(dayKey(d))).total,
       ventes: daySales.length,
     })
   }
@@ -289,7 +310,16 @@ export default function DashboardPage() {
       catMap.set(cat, (catMap.get(cat) ?? 0) + i.price * i.qty)
     })
   )
+  // Les articles rendus sortent de leur catégorie : sans cela, le donut
+  // continuait d'attribuer un chiffre d'affaires à une vente remboursée.
+  returns.forEach((r) =>
+    r.items.forEach((i) => {
+      const cat = prodById.get(i.productId)?.category ?? t('dash_other_category')
+      catMap.set(cat, (catMap.get(cat) ?? 0) - i.price * i.qty)
+    })
+  )
   const catData = Array.from(catMap.entries())
+    .filter(([, value]) => value > 0)
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value)
   const catTotal = catData.reduce((a, c) => a + c.value, 0)
