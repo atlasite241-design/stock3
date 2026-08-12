@@ -180,10 +180,13 @@ export default function Topbar({
                   onMouseEnter={() => setActif(i)}
                   className={`block w-full px-3 py-2 text-left transition ${i === actif ? 'bg-amber-50 dark:bg-white/[0.07]' : ''}`}
                 >
-                  {/* Le nom trouvé porte la couleur d'accent : l'œil saute
-                      d'un résultat à l'autre sans lire les chemins. */}
-                  <span className="block truncate text-sm font-semibold text-amber-600 dark:text-amber-400">{r.label}</span>
-                  <span className="block truncate text-[11px] text-gray-400 dark:text-zinc-500">{r.chemin}</span>
+                  {/* Couleur inversée : fond ambre, texte sombre — l'effet
+                      surligneur. Le texte reste volontairement sombre dans les
+                      deux thèmes, c'est le fond qui porte la couleur. */}
+                  <span className="inline-block max-w-full truncate rounded bg-amber-400 px-1.5 py-0.5 text-sm font-bold text-gray-900">
+                    {r.label}
+                  </span>
+                  <span className="mt-0.5 block truncate text-[11px] text-gray-400 dark:text-zinc-500">{r.chemin}</span>
                 </button>
               ))
             )}
