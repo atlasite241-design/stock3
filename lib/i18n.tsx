@@ -2744,6 +2744,8 @@ const DICT = {
   rpr_confirm_sales_title: { fr: 'Annuler les ventes cochées ?', ar: 'إلغاء المبيعات المؤشرة؟' },
   rpr_confirm_sales_1: { fr: 'vente(s) seront annulées : la marchandise revient en stock, le client retrouve son total, ses points et son encours. L’opération est définitive et tracée dans le journal.', ar: 'عملية (عمليات) بيع ستُلغى: تعود البضاعة إلى المخزون، ويستعيد العميل مجموعه ونقاطه ورصيده. العملية نهائية ومسجلة في السجل.' },
   dvc_already_converted: { fr: 'Ce devis a déjà été converti en vente', ar: 'تم تحويل هذا العرض إلى بيع بالفعل' },
+  dvc_save_first: { fr: 'Enregistrez d’abord le brouillon — on ne convertit qu’un devis existant', ar: 'احفظ المسودة أولًا — لا يُحوَّل إلا عرض موجود' },
+  dvc_saved_ready: { fr: 'Devis enregistré — vous pouvez le convertir en vente', ar: 'تم حفظ العرض — يمكنك تحويله إلى بيع' },
   dvc_send_wa: { fr: 'Envoyer par WhatsApp', ar: 'إرسال عبر واتساب' },
   dvc_send_mail: { fr: 'Envoyer par e-mail', ar: 'إرسال بالبريد الإلكتروني' },
   dvc_no_email: { fr: 'Ce client n’a pas d’adresse e-mail — complétez sa fiche ou saisissez-la dans le brouillon', ar: 'هذا العميل بدون بريد إلكتروني — أكمل بطاقته أو أدخله في المسودة' },

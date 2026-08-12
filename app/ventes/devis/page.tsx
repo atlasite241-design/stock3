@@ -28,7 +28,7 @@ type Line = SaleItem & { discount: number }
 const r2 = (n: number) => Math.round(n * 100) / 100
 
 function Content() {
-  const { ready, products, clients, quotes, settings, activeStore, activeStoreId, addQuote, deleteQuote, recordSale, convertQuote } = useDroguerie()
+  const { ready, products, clients, quotes, settings, activeStore, activeStoreId, addQuote, deleteQuote, convertQuote } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
 
@@ -52,6 +52,7 @@ function Content() {
   const addLine = (productId: string) => {
     const p = products.find((x) => x.id === productId)
     if (!p) return
+    diverge()
     setLines((ls) => {
       const ex = ls.find((l) => l.productId === productId)
       if (ex) return ls.map((l) => (l.productId === productId ? { ...l, qty: l.qty + 1 } : l))
@@ -59,9 +60,14 @@ function Content() {
     })
     setSearch('')
   }
-  const patchLine = (id: string, patch: Partial<Line>) =>
+  const patchLine = (id: string, patch: Partial<Line>) => {
+    diverge()
     setLines((ls) => ls.map((l) => (l.productId === id ? { ...l, ...patch } : l)))
-  const removeLine = (id: string) => setLines((ls) => ls.filter((l) => l.productId !== id))
+  }
+  const removeLine = (id: string) => {
+    diverge()
+    setLines((ls) => ls.filter((l) => l.productId !== id))
+  }
 
   // Items persistés : la remise de ligne + la remise globale sont incorporées au prix unitaire.
   const buildItems = (): SaleItem[] =>
@@ -74,21 +80,40 @@ function Content() {
 
   const matchedClient: Client | null = clients.find((c) => c.name === clientName.trim()) ?? null
 
+  /*
+   * ON NE VEND PAS UN DEVIS QUI N'EXISTE PAS.
+   *
+   * « Convertir en vente » créait une vente à partir des lignes saisies, sans
+   * jamais enregistrer de devis : la vente n'avait aucun document d'origine.
+   * Le bouton n'est donc actif qu'une fois le brouillon enregistré, et la
+   * conversion porte alors sur CE devis — qui se trouve marqué converti, donc
+   * inconvertible une seconde fois.
+   *
+   * Toute retouche postérieure (ligne, quantité, prix, remise, client) fait
+   * diverger le formulaire du devis enregistré : le bouton se referme jusqu'au
+   * prochain enregistrement, sinon on vendrait autre chose que ce qui est écrit.
+   */
+  const [devisEnregistre, setDevisEnregistre] = useState<Quote | null>(null)
+  const diverge = () => setDevisEnregistre(null)
+
   const saveDraft = () => {
     if (lines.length === 0) return toast(t('dvc_need_line'), 'error')
     if (!clientName.trim()) return toast(t('quote_toast_client_required'), 'error')
     const q = addQuote(clientName.trim(), buildItems())
+    // Le formulaire n'est PLUS vidé : c'est ce devis-là qu'on va convertir.
+    setDevisEnregistre(q)
     toast(`✓ ${t('quote_prefix')} ${q.ref} ${t('dvc_saved')}`)
-    setLines([])
-    setNotes('')
   }
 
   const convert = () => {
-    if (lines.length === 0) return toast(t('dvc_need_line'), 'error')
-    recordSale(buildItems(), 'especes', matchedClient)
-    toast(`✓ ${t('dvc_converted')}`)
+    if (!devisEnregistre) return toast(t('dvc_save_first'), 'error')
+    const sale = convertQuote(devisEnregistre.id)
+    if (!sale) return toast(t('dvc_already_converted'), 'error')
+    toast(`✓ ${devisEnregistre.ref} ${t('dvc_converted')}`)
+    setDevisEnregistre(null)
     setLines([])
     setNotes('')
+    setClientName('')
   }
 
   /*
@@ -249,11 +274,21 @@ ${notes.trim() ? `<div class="notes"><b>Conditions particulières :</b><br>${esc
           </nav>
           <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{t('dvc_create_title')}</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Dit pourquoi « Convertir » est ouvert ou fermé, plutôt que de
+              laisser l'utilisateur deviner devant un bouton grisé. */}
+          <span className={`text-xs font-semibold ${devisEnregistre ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-zinc-500'}`}>
+            {devisEnregistre ? `${devisEnregistre.ref} · ${t('dvc_saved_ready')}` : t('dvc_save_first')}
+          </span>
           <button onClick={saveDraft} className="rounded-full border border-gray-300 px-5 py-2.5 text-sm font-bold text-gray-700 transition hover:bg-gray-100 dark:border-white/15 dark:text-zinc-200 dark:hover:bg-white/5">
             {t('dvc_save_draft')}
           </button>
-          <button onClick={convert} className="flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-5 py-2.5 text-sm font-bold text-slate-900 shadow-lg transition hover:brightness-110 active:scale-95">
+          <button
+            onClick={convert}
+            disabled={!devisEnregistre}
+            title={devisEnregistre ? `${devisEnregistre.ref}` : t('dvc_save_first')}
+            className="flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-5 py-2.5 text-sm font-bold text-slate-900 shadow-lg transition hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:from-gray-300 disabled:to-gray-300 disabled:text-gray-500 disabled:shadow-none dark:disabled:from-white/10 dark:disabled:to-white/10 dark:disabled:text-zinc-500"
+          >
             <Rocket className="h-4 w-4" />{t('dvc_convert')}
           </button>
         </div>
@@ -271,7 +306,7 @@ ${notes.trim() ? `<div class="notes"><b>Conditions particulières :</b><br>${esc
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-zinc-400">{t('dvc_select_client')}</label>
-                <input list="dvc-clients" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder={t('dvc_new_client')} className={input} />
+                <input list="dvc-clients" value={clientName} onChange={(e) => { diverge(); setClientName(e.target.value) }} placeholder={t('dvc_new_client')} className={input} />
                 <datalist id="dvc-clients">
                   {clients.map((c) => <option key={c.id} value={c.name} />)}
                 </datalist>
@@ -405,7 +440,7 @@ ${notes.trim() ? `<div class="notes"><b>Conditions particulières :</b><br>${esc
               </div>
               <div className="flex items-center justify-between text-sm text-gray-500 dark:text-zinc-400">
                 <span>{t('dvc_global_discount')}</span>
-                <input type="number" min={0} max={100} value={globalDiscount} onChange={(e) => setGlobalDiscount(e.target.value)} className="w-16 rounded-lg border border-gray-200 bg-gray-50 p-1 text-center text-sm text-gray-900 outline-none focus:border-amber-400 dark:border-white/10 dark:bg-white/5 dark:text-white" />
+                <input type="number" min={0} max={100} value={globalDiscount} onChange={(e) => { diverge(); setGlobalDiscount(e.target.value) }} className="w-16 rounded-lg border border-gray-200 bg-gray-50 p-1 text-center text-sm text-gray-900 outline-none focus:border-amber-400 dark:border-white/10 dark:bg-white/5 dark:text-white" />
               </div>
               <div className="flex justify-between text-sm text-gray-500 dark:text-zinc-400">
                 <span>{t('dvc_tva')} ({tvaRate}%)</span>
