@@ -180,7 +180,9 @@ export default function Topbar({
                   onMouseEnter={() => setActif(i)}
                   className={`block w-full px-3 py-2 text-left transition ${i === actif ? 'bg-amber-50 dark:bg-white/[0.07]' : ''}`}
                 >
-                  <span className="block truncate text-sm font-semibold text-gray-900 dark:text-white">{r.label}</span>
+                  {/* Le nom trouvé porte la couleur d'accent : l'œil saute
+                      d'un résultat à l'autre sans lire les chemins. */}
+                  <span className="block truncate text-sm font-semibold text-amber-600 dark:text-amber-400">{r.label}</span>
                   <span className="block truncate text-[11px] text-gray-400 dark:text-zinc-500">{r.chemin}</span>
                 </button>
               ))
