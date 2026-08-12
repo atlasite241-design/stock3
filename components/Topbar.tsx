@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AlertTriangle, Bell, Languages, LogOut, Menu, Moon, Search, Sun, Volume2, VolumeX, Wifi, WifiOff } from 'lucide-react'
 import { useDroguerie } from '@/lib/store'
+import { MENU_INDEX } from './Sidebar'
+import { ROUTE_PERM, usePermissions } from '@/lib/access'
 import type { Theme } from '@/lib/theme'
 import { playSound, setSoundEnabled, soundEnabled } from '@/lib/sound'
 import { useLanguage } from '@/lib/i18n'
@@ -23,6 +25,7 @@ export default function Topbar({
 }) {
   const router = useRouter()
   const { lang, toggleLang, t } = useLanguage()
+  const { can } = usePermissions()
   const { currentUser, session, logout } = useAuth()
   const [logoutOpen, setLogoutOpen] = useState(false)
 
@@ -45,6 +48,7 @@ export default function Topbar({
     }
   }, [])
   const [query, setQuery] = useState('')
+  const [actif, setActif] = useState(0)
   const [bellOpen, setBellOpen] = useState(false)
   const [sound, setSound] = useState(true)
 
@@ -76,11 +80,59 @@ export default function Topbar({
     if (next) playSound('success')
   }
 
-  const submitSearch = () => {
-    const q = query.trim()
-    if (q) {
-      setQuery('')
-      router.push(`/produits?q=${encodeURIComponent(q)}`)
+  /*
+   * RECHERCHE DE MENU. Dix-sept menus et près de deux cents écrans : déplier
+   * les groupes pour retrouver une page était devenu plus long que de la
+   * chercher. La barre cherche donc dans le MENU, et non plus dans les
+   * produits — ceux-ci se cherchent dans leur propre écran ou au scan.
+   *
+   * Seules les entrées auxquelles l'utilisateur a droit remontent : la
+   * recherche ne doit pas révéler l'existence d'écrans qui lui sont fermés.
+   */
+  const sansAccent = (s: string) =>
+    s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+
+  const menuResults = useMemo(() => {
+    const q = sansAccent(query.trim())
+    if (q.length < 2) return []
+    return MENU_INDEX
+      .filter((e) => can(ROUTE_PERM[e.href.split('?')[0]]))
+      .map((e) => ({
+        entry: e,
+        label: t(e.labelKey),
+        chemin: [t(e.familyKey), t(e.groupKey), e.sectionKey ? t(e.sectionKey) : null].filter(Boolean).join(' › '),
+      }))
+      // Le nom de l'écran d'abord, son chemin ensuite : taper « stock » doit
+      // remonter « Stock actuel » avant tout ce que contient le menu Stock.
+      .map((r) => {
+        const nom = sansAccent(r.label)
+        const chemin = sansAccent(r.chemin)
+        const score = nom.startsWith(q) ? 0 : nom.includes(q) ? 1 : chemin.includes(q) ? 2 : -1
+        return { ...r, score }
+      })
+      .filter((r) => r.score >= 0)
+      .sort((a, b) => a.score - b.score || a.label.localeCompare(b.label))
+      .slice(0, 8)
+  }, [query, can, t])
+
+  // Remet la sélection en tête dès que la liste change.
+  useEffect(() => { setActif(0) }, [query])
+
+  const ouvrir = (href: string) => {
+    setQuery('')
+    setActif(0)
+    router.push(href)
+  }
+
+  const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActif((i) => Math.min(menuResults.length - 1, i + 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActif((i) => Math.max(0, i - 1)) }
+    else if (e.key === 'Escape') { setQuery('') }
+    else if (e.key === 'Enter') {
+      if (menuResults[actif]) ouvrir(menuResults[actif].entry.href)
+      // Aucun menu ne correspond : on retombe sur la recherche produit, qui
+      // était le comportement d'avant — rien n'est perdu.
+      else if (query.trim()) { const q = query.trim(); setQuery(''); router.push(`/produits?q=${encodeURIComponent(q)}`) }
     }
   }
 
@@ -96,17 +148,45 @@ export default function Topbar({
       {/* Active store selector */}
       <StoreSwitcher />
 
-      {/* Search */}
+      {/* Recherche de menu */}
       <div className="relative hidden max-w-md flex-1 sm:block">
         <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-zinc-500" />
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && submitSearch()}
+          onKeyDown={onSearchKey}
+          onBlur={() => setTimeout(() => setQuery(''), 150)}
           placeholder={t('topbar_search_placeholder')}
           className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-amber-400 focus:bg-white focus:ring-2 focus:ring-amber-400/25 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder-zinc-500 dark:focus:bg-white/[0.08]"
         />
+        {query.trim().length >= 2 && (
+          <div className="absolute left-0 right-0 top-12 z-50 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-white/10 dark:bg-[#12121a]">
+            {menuResults.length === 0 ? (
+              <button
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => { const q = query.trim(); setQuery(''); router.push(`/produits?q=${encodeURIComponent(q)}`) }}
+                className="flex w-full items-center gap-2 px-3 py-3 text-left text-sm text-gray-500 transition hover:bg-amber-50 dark:text-zinc-400 dark:hover:bg-white/5"
+              >
+                <Search className="h-4 w-4 shrink-0" />
+                {t('topbar_search_none')} — {t('topbar_search_products')}
+              </button>
+            ) : (
+              menuResults.map((r, i) => (
+                <button
+                  key={r.entry.href}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => ouvrir(r.entry.href)}
+                  onMouseEnter={() => setActif(i)}
+                  className={`block w-full px-3 py-2 text-left transition ${i === actif ? 'bg-amber-50 dark:bg-white/[0.07]' : ''}`}
+                >
+                  <span className="block truncate text-sm font-semibold text-gray-900 dark:text-white">{r.label}</span>
+                  <span className="block truncate text-[11px] text-gray-400 dark:text-zinc-500">{r.chemin}</span>
+                </button>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       <div className="ml-auto flex items-center gap-1.5">

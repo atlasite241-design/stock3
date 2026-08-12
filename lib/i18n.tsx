@@ -2458,7 +2458,9 @@ const DICT = {
   },
 
   // Topbar
-  topbar_search_placeholder: { fr: 'Rechercher un produit… (Entrée)', ar: 'ابحث عن منتج… (Enter)' },
+  topbar_search_placeholder: { fr: 'Rechercher un menu…', ar: 'ابحث عن قائمة…' },
+  topbar_search_none: { fr: 'Aucun menu trouvé', ar: 'لم يُعثر على أي قائمة' },
+  topbar_search_products: { fr: 'chercher dans les produits', ar: 'البحث في المنتجات' },
   topbar_light_mode: { fr: 'Passer en mode clair', ar: 'التبديل إلى الوضع الفاتح' },
   topbar_dark_mode: { fr: 'Passer en mode sombre', ar: 'التبديل إلى الوضع الداكن' },
   topbar_sound_on: { fr: 'Activer les sons', ar: 'تفعيل الأصوات' },

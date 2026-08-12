@@ -693,6 +693,40 @@ const NAV_FAMILIES: NavFamily[] = [
 /** Vue à plat, pour les recherches « quel groupe contient la page courante ? ». */
 const NAV: NavItem[] = NAV_FAMILIES.flatMap((f) => f.items)
 
+/**
+ * INDEX PLAT DU MENU, exporté pour la recherche de la barre du haut.
+ *
+ * Avec dix-sept menus et près de deux cents écrans, retrouver une page en
+ * dépliant les groupes est devenu plus long que de la chercher. Chaque entrée
+ * garde son chemin complet (famille › groupe › section) pour que le résultat
+ * dise OÙ elle se trouve, et pas seulement son nom.
+ */
+export interface MenuEntry {
+  href: string
+  labelKey: TKey
+  familyKey: TKey
+  groupKey: TKey
+  sectionKey?: TKey
+}
+
+export const MENU_INDEX: MenuEntry[] = NAV_FAMILIES.flatMap((famille) =>
+  famille.items.flatMap((groupe) => {
+    if (!groupe.children) {
+      return groupe.href
+        ? [{ href: groupe.href, labelKey: groupe.labelKey, familyKey: famille.familyKey, groupKey: groupe.labelKey }]
+        : []
+    }
+    return groupe.children.flatMap((entree) =>
+      isSection(entree)
+        ? entree.items.map((c) => ({
+            href: c.href, labelKey: c.labelKey, familyKey: famille.familyKey,
+            groupKey: groupe.labelKey, sectionKey: entree.sectionKey,
+          }))
+        : [{ href: entree.href, labelKey: entree.labelKey, familyKey: famille.familyKey, groupKey: groupe.labelKey }]
+    )
+  })
+)
+
 const basePath = (href: string) => href.split('?')[0]
 
 export default function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
