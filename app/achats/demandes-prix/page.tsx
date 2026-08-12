@@ -7,7 +7,7 @@
 
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Award, FileQuestion, Plus, Search, Trash2, X } from 'lucide-react'
+import { Award, FileQuestion, Plus, Printer, Search, Trash2, X } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Loader from '@/components/Loader'
 import Modal from '@/components/Modal'
@@ -36,8 +36,8 @@ const STATUS_KEY: Record<Rfq['status'], TKey> = {
 
 function Content() {
   const {
-    ready, rfqs, products, suppliers, purchaseRequests, activeStore,
-    addRfq, setRfqOffer, removeRfqOffer, awardRfq, cancelRfq, deleteRfq,
+    ready, rfqs, products, suppliers, purchaseRequests, activeStore, settings,
+    addRfq, updateRfq, setRfqOffer, removeRfqOffer, awardRfq, cancelRfq, deleteRfq,
   } = useDroguerie()
   const { can } = usePermissions()
   const { t } = useLanguage()
@@ -119,6 +119,20 @@ function Content() {
     toast(`✓ ${t('rfq_toast_offer_saved')} ${sup.name}`)
   }
 
+  /*
+   * LE PRIX VIENT DU FOURNISSEUR, PAS DE NOUS. Cet écran sautait l'étape :
+   * on saisissait des prix sans jamais avoir produit le document à envoyer.
+   * On imprime donc une feuille de consultation — articles et quantités, avec
+   * une colonne de prix VIDE que le fournisseur remplit — et la consultation
+   * passe à « envoyée ». Les prix saisis ensuite ne sont que le report de sa
+   * réponse.
+   */
+  const envoyer = () => {
+    if (!current) return
+    if (current.status === 'brouillon') updateRfq(current.id, { status: 'envoyee' })
+    setTimeout(() => window.print(), 60)
+  }
+
   const doAward = () => {
     if (!awardTarget) return
     const po = awardRfq(awardTarget.rfq.id, awardTarget.supplierId)
@@ -151,11 +165,53 @@ function Content() {
         </div>
         <div className="flex flex-wrap gap-2">
           {current && <button onClick={() => setOpenId(null)} className="btn-secondary"><X className="h-4 w-4" />{t('rfq_back')}</button>}
+          {current && can('purch.order') && (
+            <button onClick={envoyer} className="btn-primary"><Printer className="h-4 w-4" />{t('rfq_print')}</button>
+          )}
           {can('purch.order') && !current && (
             <button onClick={() => setCreateOpen(true)} className="btn-primary"><Plus className="h-4 w-4" />{t('rfq_new')}</button>
           )}
         </div>
       </motion.div>
+
+      {/* Feuille envoyée au fournisseur : il y inscrit SES prix. Masquée à
+          l'écran, elle est la seule chose imprimée. */}
+      {current && (
+        <div className="hidden print:block print-area bg-white p-6 text-gray-900">
+          <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>{t('rfq_sheet_title')} — {current.ref}</h2>
+          <p style={{ margin: '4px 0 2px', fontSize: 13 }}>
+            {settings.storeName}{settings.address ? ` · ${settings.address}` : ''}{settings.phone ? ` · ${settings.phone}` : ''}
+          </p>
+          <p style={{ margin: '0 0 14px', fontSize: 12 }}>
+            {new Date(current.date).toLocaleDateString('fr-FR')}
+            {current.neededBy && <> · {t('rfq_needed_by')} {new Date(current.neededBy).toLocaleDateString('fr-FR')}</>}
+          </p>
+          <p style={{ margin: '0 0 12px', fontSize: 13 }}>{t('rfq_sheet_intro')}</p>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: 'left', borderBottom: '1px solid #000', padding: '6px 4px' }}>{t('rfq_col_article')}</th>
+                <th style={{ textAlign: 'center', borderBottom: '1px solid #000', padding: '6px 4px', width: 90 }}>{t('rfq_col_qty')}</th>
+                <th style={{ textAlign: 'right', borderBottom: '1px solid #000', padding: '6px 4px', width: 150 }}>{t('rfq_sheet_price_col')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {current.items.map((it) => (
+                <tr key={it.productId}>
+                  <td style={{ padding: '8px 4px', borderBottom: '1px dotted #999' }}>
+                    {it.name}{it.barcode ? ` (${it.barcode})` : ''}
+                  </td>
+                  <td style={{ padding: '8px 4px', borderBottom: '1px dotted #999', textAlign: 'center' }}>{it.qty}</td>
+                  {/* Colonne volontairement VIDE : c'est le fournisseur qui la remplit. */}
+                  <td style={{ padding: '8px 4px', borderBottom: '1px solid #000' }} />
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p style={{ marginTop: 22, fontSize: 13 }}>{t('rfq_sheet_lead')} : ______________</p>
+          <p style={{ marginTop: 28, fontSize: 13 }}>{t('rfq_sheet_stamp')}</p>
+        </div>
+      )}
 
       {current ? (
         <>
@@ -236,7 +292,10 @@ function Content() {
           {current.status !== 'attribuee' && current.status !== 'annulee' && can('purch.order') && (
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="glass-card p-5">
-                <p className="mb-3 text-sm font-bold text-gray-900 dark:text-white">{t('rfq_add_offer')}</p>
+                <p className="text-sm font-bold text-gray-900 dark:text-white">{t('rfq_add_offer')}</p>
+                {/* Lever l'ambiguïté : on ne fixe pas un prix, on reporte celui
+                    que le fournisseur a annoncé. */}
+                <p className="mb-3 mt-0.5 text-xs text-gray-500 dark:text-zinc-400">{t('rfq_offer_hint')}</p>
                 <Select
                   value={offerSupplier}
                   onChange={setOfferSupplier}
