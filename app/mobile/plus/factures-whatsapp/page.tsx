@@ -4,16 +4,9 @@ import { useMemo } from 'react'
 import { MessageCircle } from 'lucide-react'
 import MobileSubShell from '@/components/MobileSubShell'
 import { fmtDH, useDroguerie } from '@/lib/store'
+// La normalisation du numéro vit dans lib/envoi.ts : les devis l'utilisent aussi.
+import { waLink } from '@/lib/envoi'
 import { useLanguage } from '@/lib/i18n'
-
-// Normalise un numéro marocain vers le format international pour wa.me.
-function waNumber(phone: string): string {
-  const digits = (phone || '').replace(/\D/g, '')
-  if (!digits) return ''
-  if (digits.startsWith('212')) return digits
-  if (digits.startsWith('0')) return '212' + digits.slice(1)
-  return digits
-}
 
 export default function MobileFacturesWhatsappPage() {
   const { credits, clients, settings } = useDroguerie()
@@ -30,7 +23,6 @@ export default function MobileFacturesWhatsappPage() {
   }, [credits, clients])
 
   const send = (row: (typeof rows)[number]) => {
-    const num = waNumber(row.phone)
     const company = settings?.storeName || 'Droguerie'
     const ref = row.c.invoiceRef || row.c.ref
     const msg =
@@ -38,8 +30,7 @@ export default function MobileFacturesWhatsappPage() {
       `Votre facture ${ref} d'un montant de ${fmtDH(row.c.amount)}.\n` +
       `Reste à régler : ${fmtDH(row.remaining)}.\n` +
       `Merci — ${company}`
-    const url = num ? `https://wa.me/${num}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`
-    window.open(url, '_blank')
+    window.open(waLink(row.phone, msg), '_blank')
   }
 
   return (

@@ -6,6 +6,8 @@ import { motion } from 'framer-motion'
 import {
   ChevronRight,
   FileDown,
+  Mail,
+  MessageCircle,
   Package,
   Plus,
   Rocket,
@@ -17,7 +19,8 @@ import {
 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import { useToast } from '@/components/Toast'
-import { availableStock, docNumber, fmtDH, useDroguerie, type Client, type SaleItem } from '@/lib/store'
+import { availableStock, docNumber, fmtDH, useDroguerie, type Client, type Quote, type SaleItem } from '@/lib/store'
+import { mailLink, waLink } from '@/lib/envoi'
 import { useLanguage } from '@/lib/i18n'
 
 type Line = SaleItem & { discount: number }
@@ -25,7 +28,7 @@ type Line = SaleItem & { discount: number }
 const r2 = (n: number) => Math.round(n * 100) / 100
 
 function Content() {
-  const { ready, products, clients, quotes, settings, activeStore, activeStoreId, addQuote, deleteQuote, recordSale } = useDroguerie()
+  const { ready, products, clients, quotes, settings, activeStore, activeStoreId, addQuote, deleteQuote, recordSale, convertQuote } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
 
@@ -86,6 +89,40 @@ function Content() {
     toast(`✓ ${t('dvc_converted')}`)
     setLines([])
     setNotes('')
+  }
+
+  /*
+   * Conversion d'un devis ENREGISTRÉ : elle passe par le store, qui refuse un
+   * devis déjà converti. L'écran appelait directement recordSale sans marquer
+   * le devis — d'où six ventes identiques nées d'un même devis.
+   */
+  const convertir = (q: Quote) => {
+    const sale = convertQuote(q.id)
+    toast(sale ? `✓ ${q.ref} ${t('dvc_converted')}` : t('dvc_already_converted'), sale ? 'success' : 'error')
+  }
+
+  /** Corps du message envoyé au client — même contenu pour WhatsApp et courriel. */
+  const messageDevis = (q: Quote) => {
+    const lignes = q.items.map((i) => `• ${i.name} × ${i.qty} — ${fmtDH(i.price * i.qty)}`).join('\n')
+    return (
+      `${t('dvc_msg_hello')} ${q.clientName || ''}\n\n` +
+      `${t('dvc_msg_intro')} ${q.ref} (${new Date(q.date).toLocaleDateString('fr-FR')}) :\n` +
+      `${lignes}\n\n` +
+      `${t('dvc_msg_total')} : ${fmtDH(q.total)}\n\n` +
+      `${t('dvc_msg_regards')} — ${settings?.storeName ?? ''}`
+    )
+  }
+
+  const clientDe = (q: Quote) => clients.find((c) => c.name === q.clientName)
+
+  const envoyerWhatsApp = (q: Quote) => {
+    window.open(waLink(clientDe(q)?.phone, messageDevis(q)), '_blank')
+  }
+
+  const envoyerMail = (q: Quote) => {
+    const client = clientDe(q)
+    if (!client?.email) toast(t('dvc_no_email'), 'warning')
+    window.open(mailLink(client?.email, `${t('dvc_msg_subject')} ${q.ref}`, messageDevis(q)), '_blank')
   }
 
   const genPdf = () => {
@@ -329,7 +366,24 @@ ${notes.trim() ? `<div class="notes"><b>Conditions particulières :</b><br>${esc
                       <p className="text-xs text-gray-400">{new Date(quote.date).toLocaleDateString('fr-FR')} · {quote.items.length} art.</p>
                     </div>
                     <p className="shrink-0 text-sm font-bold tabular-nums text-amber-600 dark:text-amber-400">{fmtDH(quote.total)}</p>
-                    <button onClick={() => { recordSale(quote.items, 'especes', clients.find((c) => c.name === quote.clientName) ?? null); toast(`✓ ${t('dvc_converted')}`) }} className="shrink-0 rounded-lg bg-amber-500/10 p-2 text-amber-600 transition hover:bg-amber-500/20 dark:text-amber-400" title={t('dvc_convert')}><Rocket className="h-4 w-4" /></button>
+                    {quote.status === 'converti' && (
+                      <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
+                        {t('dvc_badge_converted')}
+                      </span>
+                    )}
+                    <button onClick={() => envoyerWhatsApp(quote)} className="shrink-0 rounded-lg p-2 text-emerald-500 transition hover:bg-emerald-500/10" title={t('dvc_send_wa')}>
+                      <MessageCircle className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => envoyerMail(quote)} className="shrink-0 rounded-lg p-2 text-sky-500 transition hover:bg-sky-500/10" title={t('dvc_send_mail')}>
+                      <Mail className="h-4 w-4" />
+                    </button>
+                    {/* Converti = bouton retiré : c'est le clic répété sur cette
+                        icône qui créait une vente de plus à chaque fois. */}
+                    {quote.status !== 'converti' && (
+                      <button onClick={() => convertir(quote)} className="shrink-0 rounded-lg bg-amber-500/10 p-2 text-amber-600 transition hover:bg-amber-500/20 dark:text-amber-400" title={t('dvc_convert')}>
+                        <Rocket className="h-4 w-4" />
+                      </button>
+                    )}
                     <button onClick={() => deleteQuote(quote.id)} className="shrink-0 rounded-lg p-2 text-rose-400 transition hover:bg-rose-500/10 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 ))}

@@ -4313,6 +4313,26 @@ export function useDroguerieState() {
     persistQuotes(quotes.map((q) => (q.id === id ? { ...q, status } : q)))
   }
 
+  /**
+   * CONVERSION D'UN DEVIS EN VENTE — une seule fois.
+   *
+   * L'écran appelait `recordSale` sans jamais marquer le devis converti : le
+   * bouton restait actif et chaque clic créait une vente de plus. Constaté avec
+   * six ventes identiques issues du même devis, et le stock débité six fois.
+   *
+   * Le verrou est ici, sur le seul chemin qui convertit : le statut passe à
+   * `converti` dans la foulée de la vente, et un devis déjà converti est refusé.
+   */
+  const convertQuote = (id: string, payment: Sale['payment'] = 'especes'): Sale | undefined => {
+    const q = quotes.find((x) => x.id === id)
+    if (!q || q.status === 'converti') return
+    const client = clients.find((c) => c.name === q.clientName) ?? null
+    const sale = recordSale(q.items, payment, client)
+    persistQuotes(quotes.map((x) => (x.id === id ? { ...x, status: 'converti' as const } : x)))
+    logActivity(`Devis ${q.ref} converti en vente (${fmtDH(q.total)})`, { target: q.ref })
+    return sale
+  }
+
   const deleteQuote = (id: string) => {
     persistQuotes(quotes.filter((q) => q.id !== id))
   }
@@ -5117,6 +5137,7 @@ export function useDroguerieState() {
     returnPurchase,
     addQuote,
     setQuoteStatus,
+    convertQuote,
     deleteQuote,
     addCashEntry,
     openSession,
