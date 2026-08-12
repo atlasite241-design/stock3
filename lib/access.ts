@@ -202,6 +202,9 @@ export const ROUTE_PERM: Record<string, string> = {
   '/parametres/devise': 'set.company',
   '/parametres/impression': 'set.print',
   '/parametres/sauvegarde': 'set.backup',
+  // Réparation : corrige des données déjà écrites — même niveau que la
+  // réinitialisation des statistiques.
+  '/parametres/reparation': 'set.reset_stats',
   '/parametres/reinitialisation': 'set.reset_stats',
   '/parametres/remise-a-zero': 'set.reset_stats',
   '/parametres/licences': 'set.company',

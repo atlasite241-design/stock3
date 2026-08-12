@@ -625,6 +625,7 @@ const NAV_ALL: NavItem[] = [
         items: [
           { href: '/parametres/sauvegarde', labelKey: 'nav_settings_backup' },
           { href: '/sync', labelKey: 'nav_settings_sync' },
+          { href: '/parametres/reparation', labelKey: 'nav_settings_repair' },
           { href: '/parametres/reinitialisation', labelKey: 'nav_settings_reset' },
           { href: '/parametres/remise-a-zero', labelKey: 'nav_settings_wipe' },
         ],

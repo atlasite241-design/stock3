@@ -869,6 +869,67 @@ export function saleFullyReturned(sale: Sale, returns: SaleReturn[]): boolean {
   return reste <= 0
 }
 
+/**
+ * RETOURS EN TROP : les avoirs qui font dépasser, pour une vente, la quantité
+ * réellement vendue. C'est une CERTITUDE arithmétique, pas une supposition —
+ * on ne peut pas rendre plus qu'on n'a acheté. Les plus récents sont désignés
+ * en premier : le premier retour est presque toujours le bon.
+ */
+export function retoursExcedentaires(sales: Sale[], returns: SaleReturn[]): SaleReturn[] {
+  const trop: SaleReturn[] = []
+  const parVente = new Map<string, SaleReturn[]>()
+  for (const r of returns) {
+    const l = parVente.get(r.saleId)
+    if (l) l.push(r)
+    else parVente.set(r.saleId, [r])
+  }
+  parVente.forEach((liste, saleId) => {
+    const sale = sales.find((s) => s.id === saleId)
+    if (!sale) return
+    const vendu = new Map<string, number>()
+    for (const it of sale.items) vendu.set(it.productId, roundQty((vendu.get(it.productId) ?? 0) + it.qty))
+    // Du plus ancien au plus récent : on garde ce qui tenait dans la vente.
+    const chrono = [...liste].sort((a, b) => a.date.localeCompare(b.date))
+    const cumul = new Map<string, number>()
+    for (const r of chrono) {
+      const depasse = r.items.some((i) => {
+        const apres = roundQty((cumul.get(i.productId) ?? 0) + i.qty)
+        return apres > (vendu.get(i.productId) ?? 0) + 0.0001
+      })
+      if (depasse) trop.push(r)
+      else for (const i of r.items) cumul.set(i.productId, roundQty((cumul.get(i.productId) ?? 0) + i.qty))
+    }
+  })
+  return trop
+}
+
+/**
+ * VENTES SUSPECTES DE DOUBLON : même client, même contenu, même total, à la
+ * même minute. C'est un SOUPÇON, pas une preuve — deux clients peuvent acheter
+ * la même chose en même temps. Rien n'est donc supprimé automatiquement : on
+ * présente les groupes et l'utilisateur désigne ce qu'il annule.
+ */
+export function ventesDupliquees(sales: Sale[]): Sale[][] {
+  const empreinte = (s: Sale) =>
+    [
+      s.clientId ?? s.clientName ?? '',
+      s.date.slice(0, 16), // à la minute
+      s.total.toFixed(2),
+      [...s.items].map((i) => `${i.productId}x${i.qty}`).sort().join('|'),
+    ].join('#')
+  const groupes = new Map<string, Sale[]>()
+  for (const s of sales) {
+    const k = empreinte(s)
+    const l = groupes.get(k)
+    if (l) l.push(s)
+    else groupes.set(k, [s])
+  }
+  return [...groupes.values()]
+    .filter((g) => g.length > 1)
+    .map((g) => [...g].sort((a, b) => a.date.localeCompare(b.date)))
+    .sort((a, b) => b.length - a.length)
+}
+
 export interface CashEntry {
   id: string
   date: string
@@ -3563,6 +3624,102 @@ export function useDroguerieState() {
     return ret
   }
 
+  /* ---------------- Réparation : annuler une opération erronée --------------- */
+
+  /**
+   * ANNULE UN RETOUR et défait TOUT ce qu'il avait fait : la marchandise
+   * ressort du stock, ses mouvements et son lot d'entrée disparaissent, le
+   * remboursement en caisse est retiré, l'avoir porté au crédit du client est
+   * repris. Destiné aux retours saisis en double avant que le garde-fou
+   * n'existe — pas à l'usage courant.
+   */
+  const annulerRetour = (id: string): boolean => {
+    const ret = returns.find((r) => r.id === id)
+    if (!ret) return false
+    const qteParProduit = new Map<string, number>()
+    for (const i of ret.items) qteParProduit.set(i.productId, roundQty((qteParProduit.get(i.productId) ?? 0) + baseQty(i)))
+
+    persistProducts(products.map((p) => {
+      const q = qteParProduit.get(p.id)
+      return q ? { ...p, stock: roundQty(Math.max(0, p.stock - q)) } : p
+    }))
+    // Le retour avait créé un lot d'entrée : on reprend la quantité par une sortie.
+    {
+      let nextLots = lots
+      qteParProduit.forEach((q, pid) => {
+        const p = products.find((x) => x.id === pid)
+        if (p) nextLots = sortieLots(nextLots, p, q)
+      })
+      if (nextLots !== lots) persistLots(nextLots)
+    }
+    // Ses mouvements : même date exacte et même note que ceux qu'il avait créés.
+    const noteRetour = `Retour vente ${ret.saleId.slice(-5)}`
+    persistMovements(movements.filter((m) => !(m.date === ret.date && m.type === 'retour' && m.note === noteRetour)))
+    if (ret.method === 'especes') {
+      const label = `Remboursement retour ${ret.id.slice(-5)}`
+      persistCash(cash.filter((c) => !(c.date === ret.date && c.type === 'depense' && c.label === label)))
+    } else {
+      // L'avoir avait diminué l'encours du client : on le rétablit.
+      const sale = sales.find((s) => s.id === ret.saleId)
+      if (sale?.clientId) {
+        persistClients(clients.map((c) => (c.id === sale.clientId ? { ...c, credit: c.credit + ret.total } : c)))
+      }
+    }
+    persistReturns(returns.filter((r) => r.id !== id))
+    logActivity(`Retour ${ret.creditNo ?? ret.id.slice(-5)} annulé (${fmtDH(ret.total)}) — réparation`, { target: ret.creditNo })
+    return true
+  }
+
+  /**
+   * ANNULE UNE VENTE et défait ses effets : la marchandise revient en stock,
+   * ses mouvements partent, le client retrouve son total, ses points et son
+   * encours, le crédit ouvert est supprimé.
+   *
+   * REFUSÉE si la vente a déjà des retours : les annuler d'abord, sinon ces
+   * retours deviendraient orphelins et le stock serait corrigé deux fois.
+   */
+  const annulerVente = (id: string): { ok: boolean; raison?: 'introuvable' | 'retours' } => {
+    const sale = sales.find((s) => s.id === id)
+    if (!sale) return { ok: false, raison: 'introuvable' }
+    if (returns.some((r) => r.saleId === id)) return { ok: false, raison: 'retours' }
+
+    const qteParProduit = new Map<string, number>()
+    for (const i of sale.items) qteParProduit.set(i.productId, roundQty((qteParProduit.get(i.productId) ?? 0) + baseQty(i)))
+
+    persistProducts(products.map((p) => {
+      const q = qteParProduit.get(p.id)
+      return q ? { ...p, stock: roundQty(p.stock + q) } : p
+    }))
+    {
+      let nextLots = lots
+      qteParProduit.forEach((q, pid) => {
+        const p = products.find((x) => x.id === pid)
+        if (p) nextLots = entreeLot(nextLots, p, q, { ref: `Annulation vente ${sale.id.slice(-5)}` })
+      })
+      if (nextLots !== lots) persistLots(nextLots)
+    }
+    const noteVente = `Vente ${sale.id.slice(-5)}`
+    persistMovements(movements.filter((m) => !(m.date === sale.date && m.type === 'vente' && m.note === noteVente)))
+    if (sale.clientId) {
+      const gagnes = Math.floor(sale.total / settings.pointsPerAmount)
+      persistClients(clients.map((c) => (c.id === sale.clientId
+        ? {
+            ...c,
+            totalSpent: Math.max(0, c.totalSpent - sale.total),
+            points: Math.max(0, c.points - gagnes),
+            credit: sale.payment === 'credit' ? Math.max(0, c.credit - sale.total) : c.credit,
+          }
+        : c)))
+      if (gagnes > 0) {
+        persistLoyalty(loyaltyMovements.filter((l) => !(l.date === sale.date && l.clientId === sale.clientId && l.note === noteVente)))
+      }
+    }
+    if (sale.payment === 'credit') persistCredits(credits.filter((c) => c.saleId !== sale.id))
+    persistSales(sales.filter((s) => s.id !== id))
+    logActivity(`Vente ${sale.invoiceNo ?? sale.id.slice(-5)} annulée (${fmtDH(sale.total)}) — réparation`, { target: sale.invoiceNo })
+    return { ok: true }
+  }
+
   // ---- Clients ----
   /*
    * UN NOM DE CLIENT = UNE FICHE. Deux fiches « Billa » finissent par se
@@ -5113,6 +5270,9 @@ export function useDroguerieState() {
     cancelInventory,
     recordSale,
     recordReturn,
+    // Réparation des données (écran Paramètres › Réparation).
+    annulerRetour,
+    annulerVente,
     addClient,
     clientNameTaken,
     updateClient,
