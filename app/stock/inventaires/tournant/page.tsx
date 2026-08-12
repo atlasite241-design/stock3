@@ -318,9 +318,15 @@ function Content() {
           {pickResults.length > 0 && (
             <div className="mt-1 overflow-hidden rounded-xl border border-gray-200 dark:border-white/10">
               {pickResults.map((p) => (
+                // Même correction que dans les demandes de prix : sans classe de
+                // couleur, le nom héritait d'un gris illisible en thème sombre.
                 <button key={p.id} onClick={() => { setPicked((prev) => [...prev, p]); setPickQuery('') }}
-                  className="block w-full px-3 py-2 text-left text-sm hover:bg-amber-50 dark:hover:bg-white/5">
-                  {p.name} <span className="text-xs text-gray-400">{p.barcode}</span>
+                  className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition hover:bg-amber-50 dark:hover:bg-white/5">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-gray-900 dark:text-white">{p.name}</span>
+                    <span className="block font-mono text-[11px] text-gray-400">{p.barcode || '—'}</span>
+                  </span>
+                  <span className="shrink-0 text-sm font-bold tabular-nums text-gray-600 dark:text-zinc-300">{p.stock}</span>
                 </button>
               ))}
             </div>

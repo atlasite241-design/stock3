@@ -181,8 +181,12 @@ function Content() {
                 <tr className="border-b border-gray-100 text-left text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:border-white/10 dark:text-zinc-500">
                   <th className="px-4 py-3">{t('rfq_col_article')}</th>
                   <th className="px-4 py-3 text-center">{t('rfq_col_qty')}</th>
+                  {/* Les fournisseurs sont l'axe de comparaison : ils ne doivent
+                      pas hériter du gris minuscule des autres en-têtes. */}
                   {current.offers.map((o) => (
-                    <th key={o.supplierId} className="px-4 py-3 text-right">{o.supplierName}</th>
+                    <th key={o.supplierId} className="px-4 py-3 text-right text-xs normal-case tracking-normal text-gray-900 dark:text-white">
+                      {o.supplierName}
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -367,9 +371,16 @@ function Content() {
         {results.length > 0 && (
           <div className="mt-1 overflow-hidden rounded-xl border border-gray-200 dark:border-white/10">
             {results.map((p) => (
+              // Nom sur sa ligne, en couleur explicite : sans classe de couleur
+              // il héritait d'un gris sombre, illisible sur fond sombre — seul
+              // le code-barres restait visible.
               <button key={p.id} onClick={() => { setPicked([...picked, { p, qty: '1' }]); setQuery('') }}
-                className="block w-full px-3 py-2 text-left text-sm hover:bg-amber-50 dark:hover:bg-white/5">
-                {p.name} <span className="text-xs text-gray-400">{p.barcode}</span>
+                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition hover:bg-amber-50 dark:hover:bg-white/5">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-gray-900 dark:text-white">{p.name}</span>
+                  <span className="block font-mono text-[11px] text-gray-400">{p.barcode || '—'}</span>
+                </span>
+                <span className="shrink-0 text-sm font-bold tabular-nums text-gray-600 dark:text-zinc-300">{fmtDH(p.cost)}</span>
               </button>
             ))}
           </div>
