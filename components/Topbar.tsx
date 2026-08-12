@@ -179,27 +179,25 @@ export default function Topbar({
                   onClick={() => ouvrir(r.entry.href)}
                   onMouseEnter={() => setActif(i)}
                   /*
-                   * La ligne sélectionnée passe en jaune plein — elle était
-                   * signalée par un gris à peine visible. Sur cette ligne, la
-                   * pastille s'inverse (fond sombre, texte ambre) : deux ambres
-                   * superposés ne se distingueraient pas.
+                   * Sélection : exactement le style de l'entrée active de la
+                   * barre latérale (fond ambre discret, texte ambre). Un jaune
+                   * plein tranchait avec le reste de l'application ; ici la
+                   * sélection se reconnaît d'un écran à l'autre.
                    */
-                  className={`block w-full px-3 py-2 text-left transition ${
-                    i === actif ? 'bg-amber-400' : 'hover:bg-gray-50 dark:hover:bg-white/5'
+                  className={`block w-full rounded-lg px-3 py-2 text-left transition-colors ${
+                    i === actif
+                      ? 'bg-amber-50 dark:bg-amber-500/10'
+                      : 'hover:bg-gray-50 dark:hover:bg-white/5'
                   }`}
                 >
                   <span
-                    className={`inline-block max-w-full truncate rounded px-1.5 py-0.5 text-sm font-bold ${
-                      i === actif ? 'bg-gray-900 text-amber-400' : 'bg-amber-400 text-gray-900'
+                    className={`block truncate text-sm font-semibold ${
+                      i === actif ? 'text-amber-800 dark:text-amber-300' : 'text-gray-900 dark:text-white'
                     }`}
                   >
                     {r.label}
                   </span>
-                  <span
-                    className={`mt-0.5 block truncate text-[11px] ${
-                      i === actif ? 'text-gray-900/70' : 'text-gray-400 dark:text-zinc-500'
-                    }`}
-                  >
+                  <span className="mt-0.5 block truncate text-[11px] text-gray-400 dark:text-zinc-500">
                     {r.chemin}
                   </span>
                 </button>
