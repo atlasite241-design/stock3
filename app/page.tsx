@@ -36,7 +36,7 @@ import {
 } from 'recharts'
 import AppShell from '@/components/AppShell'
 import Select from '@/components/Select'
-import { availableStock, baseQty, exportSalesCSV, fmtDH, PAYMENT_META, useDroguerie } from '@/lib/store'
+import { availableStock, baseQty, exportSalesCSV, fmtDH, PAYMENT_META, saleFullyReturned, useDroguerie } from '@/lib/store'
 import { useAuth } from '@/lib/auth-context'
 import { useLanguage, type TKey } from '@/lib/i18n'
 
@@ -198,6 +198,15 @@ export default function DashboardPage() {
   const todaySales = salesOf(dayKey(today))
   const yesterdaySales = salesOf(dayKey(yesterday))
 
+  /*
+   * UNE VENTE ENTIÈREMENT RENDUE N'EST PAS UNE VENTE. Le compteur affichait
+   * « 3 ventes » alors que les trois avaient été remboursées intégralement.
+   * Dès que le client garde ne serait-ce qu'un article, la vente compte de
+   * nouveau — c'est un achat, même partiel.
+   */
+  const venteEffective = (s: (typeof sales)[number]) => !saleFullyReturned(s, scopedReturns)
+  const nbVentes = (list: typeof sales) => list.filter(venteEffective).length
+
   // Retours du jour : montant remboursé et marge annulée. La marge se recalcule
   // au coût courant, exactement comme le profit d'une vente.
   const returnsOf = (key: string) => returns.filter((r) => dayKey(new Date(r.date)) === key)
@@ -212,10 +221,17 @@ export default function DashboardPage() {
   const retToday = retTotals(returnsOf(dayKey(today)))
   const retYesterday = retTotals(returnsOf(dayKey(yesterday)))
 
-  const caToday = todaySales.reduce((a, s) => a + s.total, 0) - retToday.total
-  const caYesterday = yesterdaySales.reduce((a, s) => a + s.total, 0) - retYesterday.total
-  const profitToday = todaySales.reduce((a, s) => a + s.profit, 0) - retToday.profit
-  const profitYesterday = yesterdaySales.reduce((a, s) => a + s.profit, 0) - retYesterday.profit
+  /*
+   * Arrondi au centime APRÈS la soustraction. Vendu puis rendu au même montant
+   * ne tombe pas exactement à zéro en virgule flottante : l'axe du graphique
+   * affichait « 2e-12 » au lieu de 0.
+   */
+  const centimes = (n: number) => Math.round(n * 100) / 100
+
+  const caToday = centimes(todaySales.reduce((a, s) => a + s.total, 0) - retToday.total)
+  const caYesterday = centimes(yesterdaySales.reduce((a, s) => a + s.total, 0) - retYesterday.total)
+  const profitToday = centimes(todaySales.reduce((a, s) => a + s.profit, 0) - retToday.profit)
+  const profitYesterday = centimes(yesterdaySales.reduce((a, s) => a + s.profit, 0) - retYesterday.profit)
 
   const pct = (t: number, y: number) => (y > 0 ? ((t - y) / y) * 100 : null)
 
@@ -255,10 +271,10 @@ export default function DashboardPage() {
     },
     {
       label: t('dash_kpi_sales_today'),
-      value: String(todaySales.length),
+      value: String(nbVentes(todaySales)),
       icon: ShoppingCart,
       iconClass: 'bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
-      trend: pct(todaySales.length, yesterdaySales.length),
+      trend: pct(nbVentes(todaySales), nbVentes(yesterdaySales)),
     },
     ...(voitLeProfit
       ? [{
@@ -296,8 +312,8 @@ export default function DashboardPage() {
     days.push({
       label: t(DAY_KEYS[d.getDay()]),
       // Net des retours, comme les compteurs du haut.
-      ca: daySales.reduce((a, s) => a + s.total, 0) - retTotals(returnsOf(dayKey(d))).total,
-      ventes: daySales.length,
+      ca: centimes(daySales.reduce((a, s) => a + s.total, 0) - retTotals(returnsOf(dayKey(d))).total),
+      ventes: nbVentes(daySales),
     })
   }
   const ca7 = days.reduce((a, d) => a + d.ca, 0)
@@ -319,8 +335,9 @@ export default function DashboardPage() {
     })
   )
   const catData = Array.from(catMap.entries())
-    .filter(([, value]) => value > 0)
-    .map(([name, value]) => ({ name, value }))
+    .map(([name, value]) => ({ name, value: centimes(value) }))
+    // Une catégorie entièrement rendue disparaît du donut au lieu d'y peser 0.
+    .filter((c) => c.value > 0)
     .sort((a, b) => b.value - a.value)
   const catTotal = catData.reduce((a, c) => a + c.value, 0)
 
