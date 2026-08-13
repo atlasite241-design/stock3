@@ -14,6 +14,14 @@ const VIOLET: Ramp = ['245 243 255', '237 233 254', '221 214 254', '196 181 253'
 const TEAL: Ramp = ['240 253 250', '204 251 241', '153 246 228', '94 234 212', '45 212 191', '20 184 166', '13 148 136', '15 118 110', '17 94 89', '19 78 74']
 const ROSE: Ramp = ['255 241 242', '255 228 230', '254 205 211', '253 164 175', '251 113 133', '244 63 94', '225 29 72', '190 18 60', '159 18 57', '136 19 55']
 const BLUE: Ramp = ['239 246 255', '219 234 254', '191 219 254', '147 197 253', '96 165 250', '59 130 246', '37 99 235', '29 78 216', '30 64 175', '30 58 138']
+/*
+ * Orange des documents commerciaux (#e8621a). Les nuances sont dérivées de
+ * cette teinte par la même règle que le sélecteur personnalisé (éclaircissement
+ * vers le blanc, assombrissement vers le noir) : la gamme est donc cohérente
+ * avec ce qui sort de la pipette, et le 500 correspond EXACTEMENT à la couleur
+ * imprimée sur les factures.
+ */
+const ORANGE: Ramp = ['253 242 237', '251 230 218', '248 205 182', '243 173 136', '238 136 81', '232 98 26', '204 86 23', '167 71 19', '130 55 15', '97 41 11']
 
 export interface Preset {
   id: string
@@ -25,6 +33,7 @@ export interface Preset {
 
 export const PRESETS: Preset[] = [
   { id: 'amber', swatch: '#f59e0b', amber: AMBER, yellow: YELLOW },
+  { id: 'orange', swatch: '#e8621a', amber: ORANGE, yellow: ORANGE },
   { id: 'violet', swatch: '#8b5cf6', amber: VIOLET, yellow: VIOLET },
   { id: 'teal', swatch: '#14b8a6', amber: TEAL, yellow: TEAL },
   { id: 'rose', swatch: '#f43f5e', amber: ROSE, yellow: ROSE },
