@@ -4471,6 +4471,22 @@ export function useDroguerieState() {
   }
 
   /**
+   * MODIFIE un devis existant au lieu d'en créer un second. Sans cela,
+   * retoucher un brouillon puis l'enregistrer laissait le premier derrière
+   * lui — trois devis identiques pour une seule demande client.
+   * Un devis converti est figé : il justifie une vente.
+   */
+  const updateQuote = (id: string, clientName: string, items: SaleItem[]): Quote | undefined => {
+    const q = quotes.find((x) => x.id === id)
+    if (!q || q.status === 'converti') return
+    const total = items.reduce((a, i) => a + i.price * i.qty, 0)
+    const next: Quote = { ...q, clientName, items, total }
+    persistQuotes(quotes.map((x) => (x.id === id ? next : x)))
+    logActivity(`Devis ${q.ref} modifié (${fmtDH(total)})`, { target: q.ref })
+    return next
+  }
+
+  /**
    * CONVERSION D'UN DEVIS EN VENTE — une seule fois.
    *
    * L'écran appelait `recordSale` sans jamais marquer le devis converti : le
@@ -5297,6 +5313,7 @@ export function useDroguerieState() {
     returnPurchase,
     addQuote,
     setQuoteStatus,
+    updateQuote,
     convertQuote,
     deleteQuote,
     addCashEntry,

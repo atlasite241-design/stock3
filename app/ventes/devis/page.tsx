@@ -28,7 +28,7 @@ type Line = SaleItem & { discount: number }
 const r2 = (n: number) => Math.round(n * 100) / 100
 
 function Content() {
-  const { ready, products, clients, quotes, settings, activeStore, activeStoreId, addQuote, deleteQuote, convertQuote } = useDroguerie()
+  const { ready, products, clients, quotes, settings, activeStore, activeStoreId, addQuote, updateQuote, deleteQuote, convertQuote } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
 
@@ -93,27 +93,53 @@ function Content() {
    * diverger le formulaire du devis enregistré : le bouton se referme jusqu'au
    * prochain enregistrement, sinon on vendrait autre chose que ce qui est écrit.
    */
-  const [devisEnregistre, setDevisEnregistre] = useState<Quote | null>(null)
-  const diverge = () => setDevisEnregistre(null)
+  /*
+   * Le formulaire reste LIÉ au devis qu'il a créé. Sans ce lien, chaque clic
+   * sur « Enregistrer » fabriquait un devis de plus : trois documents
+   * identiques pour une seule demande client. Enregistrer une seconde fois met
+   * donc à jour le même devis, et ne fait rien tant que rien n'a changé.
+   */
+  const [devisLie, setDevisLie] = useState<Quote | null>(null)
+  const [modifie, setModifie] = useState(false)
+  const diverge = () => setModifie(true)
+
+  const aEnregistrer = lines.length > 0 && (!devisLie || modifie)
+  const convertible = !!devisLie && !modifie
 
   const saveDraft = () => {
     if (lines.length === 0) return toast(t('dvc_need_line'), 'error')
     if (!clientName.trim()) return toast(t('quote_toast_client_required'), 'error')
+    if (devisLie && !modifie) return toast(t('dvc_nothing_to_save'), 'warning')
+    if (devisLie) {
+      const q = updateQuote(devisLie.id, clientName.trim(), buildItems())
+      if (!q) return toast(t('dvc_already_converted'), 'error')
+      setDevisLie(q)
+      setModifie(false)
+      return toast(`✓ ${q.ref} ${t('dvc_updated')}`)
+    }
     const q = addQuote(clientName.trim(), buildItems())
     // Le formulaire n'est PLUS vidé : c'est ce devis-là qu'on va convertir.
-    setDevisEnregistre(q)
+    setDevisLie(q)
+    setModifie(false)
     toast(`✓ ${t('quote_prefix')} ${q.ref} ${t('dvc_saved')}`)
   }
 
   const convert = () => {
-    if (!devisEnregistre) return toast(t('dvc_save_first'), 'error')
-    const sale = convertQuote(devisEnregistre.id)
+    if (!convertible) return toast(t('dvc_save_first'), 'error')
+    const sale = convertQuote(devisLie!.id)
     if (!sale) return toast(t('dvc_already_converted'), 'error')
-    toast(`✓ ${devisEnregistre.ref} ${t('dvc_converted')}`)
-    setDevisEnregistre(null)
+    toast(`✓ ${devisLie!.ref} ${t('dvc_converted')}`)
+    nouveau()
+  }
+
+  /** Repart d'un formulaire vierge, détaché du devis précédent. */
+  const nouveau = () => {
+    setDevisLie(null)
+    setModifie(false)
     setLines([])
     setNotes('')
     setClientName('')
+    setGlobalDiscount('0')
   }
 
   /*
@@ -277,16 +303,30 @@ ${notes.trim() ? `<div class="notes"><b>Conditions particulières :</b><br>${esc
         <div className="flex flex-wrap items-center gap-2">
           {/* Dit pourquoi « Convertir » est ouvert ou fermé, plutôt que de
               laisser l'utilisateur deviner devant un bouton grisé. */}
-          <span className={`text-xs font-semibold ${devisEnregistre ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-zinc-500'}`}>
-            {devisEnregistre ? `${devisEnregistre.ref} · ${t('dvc_saved_ready')}` : t('dvc_save_first')}
+          <span className={`text-xs font-semibold ${convertible ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-zinc-500'}`}>
+            {devisLie
+              ? modifie
+                ? `${devisLie.ref} · ${t('dvc_modified')}`
+                : `${devisLie.ref} · ${t('dvc_saved_ready')}`
+              : t('dvc_save_first')}
           </span>
-          <button onClick={saveDraft} className="rounded-full border border-gray-300 px-5 py-2.5 text-sm font-bold text-gray-700 transition hover:bg-gray-100 dark:border-white/15 dark:text-zinc-200 dark:hover:bg-white/5">
-            {t('dvc_save_draft')}
+          {devisLie && (
+            <button onClick={nouveau} className="rounded-full border border-gray-300 px-4 py-2.5 text-sm font-bold text-gray-700 transition hover:bg-gray-100 dark:border-white/15 dark:text-zinc-200 dark:hover:bg-white/5">
+              {t('dvc_new_quote')}
+            </button>
+          )}
+          <button
+            onClick={saveDraft}
+            disabled={!aEnregistrer}
+            title={aEnregistrer ? undefined : t('dvc_nothing_to_save')}
+            className="rounded-full border border-gray-300 px-5 py-2.5 text-sm font-bold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/15 dark:text-zinc-200 dark:hover:bg-white/5"
+          >
+            {devisLie ? t('dvc_update_draft') : t('dvc_save_draft')}
           </button>
           <button
             onClick={convert}
-            disabled={!devisEnregistre}
-            title={devisEnregistre ? `${devisEnregistre.ref}` : t('dvc_save_first')}
+            disabled={!convertible}
+            title={convertible ? devisLie!.ref : t('dvc_save_first')}
             className="flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-5 py-2.5 text-sm font-bold text-slate-900 shadow-lg transition hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:from-gray-300 disabled:to-gray-300 disabled:text-gray-500 disabled:shadow-none dark:disabled:from-white/10 dark:disabled:to-white/10 dark:disabled:text-zinc-500"
           >
             <Rocket className="h-4 w-4" />{t('dvc_convert')}
