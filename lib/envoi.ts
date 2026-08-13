@@ -26,6 +26,22 @@ export function waLink(phone: string | undefined, message: string): string {
   return num ? `https://wa.me/${num}?text=${txt}` : `https://wa.me/?text=${txt}`
 }
 
+/**
+ * COMPOSER DANS GMAIL plutôt qu'ouvrir un lien `mailto:`.
+ *
+ * `mailto:` délègue au logiciel de messagerie du poste. Quand aucun n'est
+ * associé — le cas courant sur un poste de magasin — le navigateur ouvre un
+ * onglet vide et le message est perdu. Gmail s'ouvre dans le navigateur, montre
+ * le sélecteur de compte si plusieurs sessions existent, et affiche le
+ * brouillon prêt à relire.
+ */
+export function gmailLink(email: string | undefined, subject: string, body: string): string {
+  const p = new URLSearchParams({ view: 'cm', fs: '1', su: subject, body })
+  if (email) p.set('to', email)
+  return `https://mail.google.com/mail/?${p.toString()}`
+}
+
+/** Lien `mailto:` classique — conservé pour qui a un logiciel de messagerie. */
 export function mailLink(email: string | undefined, subject: string, body: string): string {
   return `mailto:${email ?? ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
 }

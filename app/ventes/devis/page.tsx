@@ -20,7 +20,7 @@ import {
 import AppShell from '@/components/AppShell'
 import { useToast } from '@/components/Toast'
 import { availableStock, docNumber, fmtDH, useDroguerie, type Client, type Quote, type SaleItem } from '@/lib/store'
-import { mailLink, waLink } from '@/lib/envoi'
+import { gmailLink, waLink } from '@/lib/envoi'
 import { useLanguage } from '@/lib/i18n'
 
 type Line = SaleItem & { discount: number }
@@ -173,7 +173,7 @@ function Content() {
   const envoyerMail = (q: Quote) => {
     const client = clientDe(q)
     if (!client?.email) toast(t('dvc_no_email'), 'warning')
-    window.open(mailLink(client?.email, `${t('dvc_msg_subject')} ${q.ref}`, messageDevis(q)), '_blank')
+    window.open(gmailLink(client?.email, `${t('dvc_msg_subject')} ${q.ref}`, messageDevis(q)), '_blank')
   }
 
   const genPdf = () => {
@@ -270,10 +270,29 @@ ${notes.trim() ? `<div class="notes"><b>Conditions particulières :</b><br>${esc
     w.focus()
     setTimeout(() => w.print(), 400)
   }
+  /*
+   * Le courriel s'ouvre dans GMAIL, pas via `mailto:`. Sans logiciel de
+   * messagerie associé au poste — le cas d'un ordinateur de magasin — `mailto:`
+   * ouvrait un onglet vide et le message était perdu.
+   *
+   * Et le corps ne se résumait plus au total : un devis qui n'annonce qu'un
+   * montant, sans le détail, ne se compare pas et ne s'accepte pas.
+   */
   const sendEmail = () => {
-    const email = matchedClient?.email || ''
-    const body = `${t('dvc_total_ttc')}: ${fmtDH(totals.ttc)}`
-    window.open(`mailto:${email}?subject=${encodeURIComponent(t('dvc_create_title'))}&body=${encodeURIComponent(body)}`)
+    if (lines.length === 0) return toast(t('dvc_need_line'), 'error')
+    const detail = lines
+      .map((l) => `• ${l.name} × ${l.qty} — ${fmtDH(r2(l.price * (1 - (l.discount || 0) / 100) * (1 - global / 100)) * l.qty)}`)
+      .join('\n')
+    const corps =
+      `${t('dvc_msg_hello')} ${clientName.trim()}\n\n` +
+      `${t('dvc_msg_intro')}${devisLie ? ` ${devisLie.ref}` : ''} :\n${detail}\n\n` +
+      `${t('fdoc_total_ht')} : ${fmtDH(totals.afterGlobal)}\n` +
+      `${t('fdoc_total_tva')} : ${fmtDH(totals.tva)}\n` +
+      `${t('dvc_msg_total')} : ${fmtDH(totals.ttc)}\n` +
+      (validity ? `${t('dvc_validity')} : ${new Date(validity).toLocaleDateString('fr-FR')}\n` : '') +
+      `\n${t('dvc_msg_regards')} — ${settings?.storeName ?? ''}`
+    const objet = `${t('dvc_msg_subject')}${devisLie ? ` ${devisLie.ref}` : ''}`
+    window.open(gmailLink(matchedClient?.email, objet, corps), '_blank')
   }
 
   const q = search.trim().toLowerCase()
