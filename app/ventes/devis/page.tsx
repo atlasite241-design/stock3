@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import {
@@ -18,6 +18,8 @@ import {
   UserSearch,
 } from 'lucide-react'
 import AppShell from '@/components/AppShell'
+import InvoiceDocument from '@/components/InvoiceDocument'
+import { printInvoicePdf } from '@/lib/invoicePdf'
 import { useToast } from '@/components/Toast'
 import { availableStock, docNumber, fmtDH, useDroguerie, type Client, type Quote, type SaleItem } from '@/lib/store'
 import { gmailLink, waLink } from '@/lib/envoi'
@@ -176,99 +178,20 @@ function Content() {
     window.open(gmailLink(client?.email, `${t('dvc_msg_subject')} ${q.ref}`, messageDevis(q)), '_blank')
   }
 
+  /*
+   * Le PDF sort du GABARIT PARTAGÉ, comme la facture et le bon de commande.
+   * Cette page fabriquait sa propre page HTML : le devis ne ressemblait à aucun
+   * autre document de l'enseigne, et corriger l'en-tête dans Paramètres n'avait
+   * aucun effet sur lui. C'est désormais le même composant, donc le même rendu
+   * que l'aperçu de Paramètres › Société.
+   */
+  const printRef = useRef<HTMLDivElement>(null)
+
+  const refDevis = devisLie?.ref ?? docNumber('DEV', activeStore, quotes.filter((x) => x.storeId === activeStoreId).length + 1, 4)
+
   const genPdf = () => {
     if (lines.length === 0) return toast(t('dvc_need_line'), 'error')
-    const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string))
-    const ref = docNumber('DEV', activeStore, quotes.filter((x) => x.storeId === activeStoreId).length + 1, 4)
-    const accentRaw = (typeof window !== 'undefined' ? getComputedStyle(document.documentElement).getPropertyValue('--c-amber-500').trim() : '') || '245 158 11'
-    const accent = `rgb(${accentRaw})`
-    const today = new Date().toLocaleDateString('fr-FR')
-    const validTxt = validity ? new Date(validity).toLocaleDateString('fr-FR') : '—'
-    const cur = settings?.currency || 'MAD'
-    const rows = lines
-      .map((l) => {
-        const lt = l.price * l.qty * (1 - (l.discount || 0) / 100)
-        return `<tr><td>${esc(l.name)}</td><td class="c">${l.qty}</td><td class="r">${esc(fmtDH(l.price))}</td><td class="c">${l.discount || 0}%</td><td class="r">${esc(fmtDH(lt))}</td></tr>`
-      })
-      .join('')
-    const logo = settings?.logoDataUrl
-      ? `<img src="${esc(settings.logoDataUrl)}" style="max-height:60px;max-width:190px;object-fit:contain"/>`
-      : `<div style="font-size:20px;font-weight:800;color:${accent}">${esc(settings?.storeName || 'Droguerie')}</div>`
-    const coLines = [
-      settings?.legalForm && settings?.storeName ? `${esc(settings.storeName)} (${esc(settings.legalForm)})` : esc(settings?.storeName || ''),
-      [settings?.address, settings?.city].filter(Boolean).map(esc).join(', '),
-      [settings?.phone && `Tél : ${esc(settings.phone)}`, settings?.email && esc(settings.email)].filter(Boolean).join('  ·  '),
-      settings?.website ? esc(settings.website) : '',
-    ].filter(Boolean).join('<br>')
-    const legal = [
-      settings?.ice && `ICE : ${esc(settings.ice)}`,
-      settings?.idFiscal && `IF : ${esc(settings.idFiscal)}`,
-      settings?.rcNo && `RC : ${esc(settings.rcNo)}`,
-      settings?.cnss && `CNSS : ${esc(settings.cnss)}`,
-      settings?.taxePro && `Patente : ${esc(settings.taxePro)}`,
-    ].filter(Boolean).join('&nbsp;&nbsp;•&nbsp;&nbsp;')
-    const clientDetails = matchedClient
-      ? [matchedClient.phone && `Tél : ${esc(matchedClient.phone)}`, [matchedClient.address, matchedClient.city].filter(Boolean).map(esc).join(', '), matchedClient.cin && `CIN : ${esc(matchedClient.cin)}`].filter(Boolean).join('<br>')
-      : ''
-    const doc = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${esc(ref)}</title>
-<style>
-*{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{margin:0;padding:34px 38px;color:#1f2937;font-size:13px}
-.hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
-.co{font-size:11.5px;color:#4b5563;line-height:1.55;text-align:right}
-.bar{height:4px;background:${accent};border-radius:4px;margin:14px 0 22px}
-.title{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:22px}
-.title h1{margin:0;font-size:30px;letter-spacing:2px;color:${accent}}
-.title .ref{font-size:14px;font-weight:700}
-.title .date{font-size:11.5px;color:#6b7280}
-.parties{display:flex;gap:18px;margin-bottom:22px}
-.box{flex:1;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px}
-.box .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:${accent};font-weight:700;margin-bottom:4px}
-.box .nm{font-weight:700;font-size:14px;color:#111827}
-.box .dt{font-size:11.5px;color:#4b5563;line-height:1.5;margin-top:3px}
-table{width:100%;border-collapse:collapse;margin-bottom:16px}
-th{background:${accent};color:#fff;text-align:left;padding:9px;font-size:10.5px;text-transform:uppercase;letter-spacing:.6px}
-th:first-child{border-radius:6px 0 0 6px}th:last-child{border-radius:0 6px 6px 0}
-td{padding:9px;border-bottom:1px solid #eee}
-.c{text-align:center}.r{text-align:right}
-.tot{width:290px;margin-left:auto;font-size:13px}
-.tot .row{display:flex;justify-content:space-between;padding:5px 2px;color:#4b5563}
-.tot .ttc{border-top:2px solid ${accent};margin-top:6px;padding-top:10px;font-size:19px;font-weight:800;color:${accent}}
-.notes{margin-top:22px;font-size:12px;color:#374151;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;white-space:pre-wrap}
-.legal{margin-top:34px;border-top:1px solid #e5e7eb;padding-top:10px;text-align:center;font-size:10px;color:#6b7280;line-height:1.7}
-</style></head><body>
-<div class="hd">
-  <div>${logo}</div>
-  <div class="co">${coLines}</div>
-</div>
-<div class="bar"></div>
-<div class="title">
-  <div><h1>DEVIS</h1><div class="ref">N° ${esc(ref)}</div></div>
-  <div style="text-align:right"><div class="date">Date : ${esc(today)}</div><div class="date">Validité : ${esc(validTxt)}</div></div>
-</div>
-<div class="parties">
-  <div class="box"><div class="lbl">Client</div><div class="nm">${esc(clientName || '—')}</div>${clientDetails ? `<div class="dt">${clientDetails}</div>` : ''}</div>
-</div>
-<table>
-  <thead><tr><th>Produit</th><th class="c">Qté</th><th class="r">Prix Unit.</th><th class="c">Remise</th><th class="r">Total HT</th></tr></thead>
-  <tbody>${rows}</tbody>
-</table>
-<div class="tot">
-  <div class="row"><span>Sous-total HT</span><span>${esc(fmtDH(totals.subtotal))}</span></div>
-  ${global > 0 ? `<div class="row"><span>Remise globale (${global}%)</span><span>-${esc(fmtDH(totals.subtotal - totals.afterGlobal))}</span></div>` : ''}
-  <div class="row"><span>TVA (${tvaRate}%)</span><span>${esc(fmtDH(totals.tva))}</span></div>
-  <div class="row ttc"><span>TOTAL TTC (${esc(cur)})</span><span>${esc(fmtDH(totals.ttc))}</span></div>
-</div>
-${notes.trim() ? `<div class="notes"><b>Conditions particulières :</b><br>${esc(notes)}</div>` : ''}
-<div class="legal">${legal ? legal + '<br>' : ''}${esc(settings?.storeName || 'Droguerie Pro')} — Devis généré le ${esc(today)}</div>
-</body></html>`
-    const w = window.open('', '_blank', 'width=820,height=920')
-    if (!w) return toast(t('dvc_popup_blocked'), 'error')
-    w.document.open()
-    w.document.write(doc)
-    w.document.close()
-    w.focus()
-    setTimeout(() => w.print(), 400)
+    printInvoicePdf(printRef.current?.querySelector('.print-area') as HTMLElement)
   }
   /*
    * Le courriel s'ouvre dans GMAIL, pas via `mailto:`. Sans logiciel de
@@ -307,8 +230,53 @@ ${notes.trim() ? `<div class="notes"><b>Conditions particulières :</b><br>${esc
   const card = 'rounded-2xl border border-gray-200 bg-white/80 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.03]'
   const input = 'w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 dark:border-white/10 dark:bg-white/5 dark:text-white'
 
+  const parId = new Map(products.map((p) => [p.id, p]))
+
   return (
     <div className="mx-auto max-w-[1400px]">
+      {/*
+       * Le devis tel qu'il partira au PDF. Rendu hors écran à la largeur d'une
+       * A4 : html2canvas capture ce qui est réellement mis en page, pas une
+       * approximation — d'où un PDF identique à l'aperçu de Paramètres.
+       */}
+      <div ref={printRef} aria-hidden className="pointer-events-none fixed left-[-10000px] top-0 w-[794px]">
+        <InvoiceDocument
+          title={t('quote_prefix')}
+          number={refDevis}
+          date={new Date().toISOString()}
+          partyLabel={t('fdoc_client')}
+          partyName={clientName.trim() || t('bl_walk_in_client')}
+          partyAddress={[matchedClient?.address, matchedClient?.city].filter(Boolean).join(', ') || undefined}
+          partyLegal={matchedClient?.cin ? `CIN : ${matchedClient.cin}` : undefined}
+          contact={
+            matchedClient?.phone || matchedClient?.email
+              ? { name: matchedClient.name, phone: matchedClient.phone || undefined, email: matchedClient.email || undefined }
+              : undefined
+          }
+          // Un devis PROPOSE : il n'arrête aucune facture.
+          showAmountInWords={false}
+          observations={notes.trim() || undefined}
+          infos={[
+            { label: t('fdoc_date_label'), value: new Date().toLocaleDateString('fr-FR') },
+            { label: t('dvc_validity'), value: validity ? new Date(validity).toLocaleDateString('fr-FR') : null },
+            { label: t('fdoc_client_ref'), value: matchedClient?.code || null },
+          ]}
+          lines={lines.map((l) => {
+            // Remise EFFECTIVE : celle de la ligne composée avec la remise
+            // globale. Afficher la seule remise de ligne ferait mentir le total.
+            const eff = 100 * (1 - (1 - (l.discount || 0) / 100) * (1 - global / 100))
+            return {
+              label: l.name,
+              ref: parId.get(l.productId)?.barcode || undefined,
+              qty: l.qty,
+              puHT: r2(l.price * (1 - (l.discount || 0) / 100) * (1 - global / 100)),
+              tvaPct: tvaRate,
+              remisePct: eff > 0 ? r2(eff) : undefined,
+            }
+          })}
+        />
+      </div>
+
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
