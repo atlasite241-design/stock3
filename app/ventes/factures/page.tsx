@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { FileText, Printer, Search } from 'lucide-react'
@@ -12,10 +12,14 @@ import { fmtDH, PAYMENT_META, saleInvoiceNumber, useDroguerie, type Sale } from 
 import { useLanguage } from '@/lib/i18n'
 
 function Content() {
-  const { ready, sales, settings } = useDroguerie()
+  const { ready, sales, settings, clients, products } = useDroguerie()
   const { t } = useLanguage()
   const [query, setQuery] = useState('')
   const [invoice, setInvoice] = useState<Sale | null>(null)
+  // Index produit : la facture affiche la référence de chaque article, et le
+  // catalogue peut compter des dizaines de milliers de fiches.
+  const produitsParId = useMemo(() => new Map(products.map((p) => [p.id, p])), [products])
+  const clientFacture = invoice?.clientId ? clients.find((c) => c.id === invoice.clientId) : undefined
   const printRef = useRef<HTMLDivElement>(null)
 
   if (!ready) {
@@ -137,10 +141,26 @@ function Content() {
                 date={invoice.date}
                 partyLabel={t('fdoc_client')}
                 partyName={invoice.clientName ?? t('bl_walk_in_client')}
+                partyAddress={clientFacture?.address || undefined}
+                // La fiche client ne porte pas d'ICE : le CIN est la seule
+                // mention d'identification disponible aujourd'hui.
+                partyLegal={clientFacture?.cin ? `CIN : ${clientFacture.cin}` : undefined}
+                contact={
+                  clientFacture?.phone || clientFacture?.email
+                    ? { name: clientFacture.name, phone: clientFacture.phone || undefined, email: clientFacture.email || undefined }
+                    : undefined
+                }
+                infos={[
+                  { label: t('fdoc_date_label'), value: new Date(invoice.date).toLocaleDateString('fr-FR') },
+                  { label: t('fdoc_payment_label'), value: PAYMENT_META[invoice.payment].label },
+                  { label: t('fdoc_client_ref'), value: clientFacture?.code || null },
+                  { label: t('fdoc_seller'), value: invoice.userName || null },
+                ]}
                 lines={invoice.items.map((i) => ({
                   // Le conditionnement fait partie du libelle : une facture qui
                   // indique « 3 » sans « boite de 100 » est invérifiable.
                   label: i.unitFactor && i.unitFactor > 1 ? `${i.name} — ${i.unitName} ×${i.unitFactor}` : i.name,
+                  ref: produitsParId.get(i.productId)?.barcode || undefined,
                   qty: i.qty,
                   puHT: i.price / (1 + settings.tva / 100),
                   tvaPct: settings.tva,

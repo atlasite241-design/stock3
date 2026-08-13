@@ -3814,7 +3814,21 @@ const DICT = {
   fdoc_remaining: { fr: 'Reste dû', ar: 'المتبقي' },
   fdoc_amount_words: { fr: 'Arrêté la présente facture à la somme de :', ar: 'حُررت هذه الفاتورة بمبلغ :' },
   fdoc_signature: { fr: 'Signature', ar: 'التوقيع' },
-  fdoc_thanks: { fr: 'Merci de Votre Confiance', ar: 'شكراً لثقتكم' },
+  fdoc_thanks: { fr: 'Merci pour votre confiance', ar: 'شكراً لثقتكم' },
+  // ---- Nouveau gabarit de facture ----
+  fdoc_contact: { fr: 'Contact', ar: 'جهة الاتصال' },
+  fdoc_phone: { fr: 'Tél', ar: 'الهاتف' },
+  fdoc_email: { fr: 'Email', ar: 'البريد' },
+  fdoc_col_ref: { fr: 'Réf.', ar: 'المرجع' },
+  fdoc_col_remise: { fr: 'Remise', ar: 'الخصم' },
+  fdoc_col_total_ttc: { fr: 'Total TTC', ar: 'المجموع بالضريبة' },
+  fdoc_observations: { fr: 'Observations', ar: 'ملاحظات' },
+  fdoc_conditions: { fr: 'Conditions', ar: 'الشروط' },
+  fdoc_stamp: { fr: 'Cachet & signature', ar: 'الخاتم والتوقيع' },
+  fdoc_date_label: { fr: 'Date', ar: 'التاريخ' },
+  fdoc_payment_label: { fr: 'Mode de règlement', ar: 'طريقة الأداء' },
+  fdoc_client_ref: { fr: 'Référence client', ar: 'مرجع العميل' },
+  fdoc_seller: { fr: 'Commercial', ar: 'البائع' },
   fdoc_supplier_invoice: { fr: 'FACTURE FOURNISSEUR', ar: 'فاتورة المورد' },
 
   // Ventes — Retours clients

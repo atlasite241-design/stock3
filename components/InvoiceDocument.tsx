@@ -1,7 +1,24 @@
 'use client'
 
+import { Briefcase, CalendarDays, CreditCard, Mail, MapPin, Phone, User } from 'lucide-react'
 import { fmtDH, useDroguerie, type Settings } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
+
+/*
+ * DOCUMENT COMMERCIAL (facture, avoir, bon de commande, relevé…).
+ *
+ * Un seul gabarit pour six écrans : ce qui change d'un document à l'autre passe
+ * par les propriétés, jamais par une copie du fichier.
+ *
+ * Les couleurs sont posées en STYLE INLINE et non par classes : la feuille
+ * d'impression du site force le noir sur blanc pour tout `.print-area`, et le
+ * PDF est produit par capture de l'écran — l'inline est ce qui survit aux deux.
+ */
+const ACCENT = '#e8621a'
+const ACCENT_PALE = '#fdece2'
+const ENCRE = '#1f2937'
+const GRIS = '#6b7280'
+const TRAIT = '#e5e7eb'
 
 export interface DocLine {
   label: string
@@ -11,6 +28,10 @@ export interface DocLine {
   tvaPct: number
   /** Code emplacement (WMS) — affiché sur les bons de préparation/livraison. */
   emplacement?: string
+  /** Référence article (code-barres, SKU). La colonne n'apparaît que si au moins une ligne en a une. */
+  ref?: string
+  /** Remise de ligne déjà DÉDUITE de puHT ; affichée pour information. */
+  remisePct?: number
 }
 
 // --- Montant en toutes lettres (français, dirhams + centimes) ---
@@ -72,12 +93,15 @@ export default function InvoiceDocument({
   partyLabel,
   partyName,
   partyAddress,
+  partyLegal,
+  contact,
   lines,
   paid,
   showBalance = false,
   showEmplacement = false,
   settingsOverride,
   infos,
+  observations,
   showAmountInWords = true,
 }: {
   title: string
@@ -87,17 +111,23 @@ export default function InvoiceDocument({
   partyLabel: string
   partyName: string
   partyAddress?: string
+  /** Mentions légales du destinataire (ICE, IF…), sous son adresse. */
+  partyLegal?: string
+  /** Interlocuteur chez le destinataire — la case CONTACT n'apparaît que s'il y en a un. */
+  contact?: { name?: string; phone?: string; email?: string }
   lines: DocLine[]
   paid?: number
   showBalance?: boolean
   showEmplacement?: boolean
   settingsOverride?: Settings
   /**
-   * Bandeau de conditions, sous le bloc destinataire : livraison, échéance,
-   * référence… Les valeurs vides sont ignorées, le bandeau disparaît s'il ne
-   * reste rien — un document commercial ne montre pas de cases à trous.
+   * Bandeau de conditions, sous l'en-tête : échéance, règlement, référence…
+   * Les valeurs vides sont ignorées, le bandeau disparaît s'il ne reste rien —
+   * un document commercial ne montre pas de cases à trous.
    */
   infos?: { label: string; value?: string | null }[]
+  /** Remarques libres, en bas à gauche, à côté des conditions de vente. */
+  observations?: string
   /**
    * « Arrêté la présente facture à la somme de… » — mention légale des
    * documents de VENTE. Un bon de commande n'arrête aucune facture : il
@@ -115,189 +145,220 @@ export default function InvoiceDocument({
   const totalHT = lines.reduce((a, l) => a + l.puHT * l.qty, 0)
   const totalTVA = lines.reduce((a, l) => a + l.puHT * l.qty * (l.tvaPct / 100), 0)
   const totalTTC = totalHT + totalTVA
+  // Remise déjà déduite des prix : on la RESTITUE pour l'afficher, sinon le
+  // client ne voit jamais l'effort consenti.
+  const totalRemise = lines.reduce((a, l) => {
+    const pct = l.remisePct ?? 0
+    if (pct <= 0 || pct >= 100) return a
+    const avant = (l.puHT / (1 - pct / 100)) * l.qty
+    return a + (avant - l.puHT * l.qty)
+  }, 0)
 
-  const city = (settings.address || '').split(',')[0].trim()
-  const dateStr = new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
-
-  // Keep a few filler rows so the bordered table looks complete, without overflowing A4
-  const emptyRows = Math.max(0, 6 - lines.length)
+  const dateStr = new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const avecRef = lines.some((l) => l.ref)
+  const avecRemise = lines.some((l) => (l.remisePct ?? 0) > 0)
 
   const legalBits = [
-    settings.phone && `TÉL : ${settings.phone}`,
-    settings.email && `EMAIL : ${settings.email}`,
-    settings.taxePro && `PATENTE : ${settings.taxePro}`,
-    settings.rcNo && `RC : ${settings.rcNo}`,
-    settings.idFiscal && `IF : ${settings.idFiscal}`,
     settings.ice && `ICE : ${settings.ice}`,
+    settings.idFiscal && `IF : ${settings.idFiscal}`,
+    settings.rcNo && `RC : ${settings.rcNo}`,
+    settings.taxePro && `Patente : ${settings.taxePro}`,
     settings.cnss && `CNSS : ${settings.cnss}`,
   ].filter(Boolean)
 
+  const infosRemplies = (infos ?? []).filter((i) => i.value)
+  const ICONES = [CalendarDays, CreditCard, User, Briefcase]
+
+  const th: React.CSSProperties = { padding: '7px 8px', color: '#fff', fontWeight: 700, fontSize: 10, letterSpacing: '.03em' }
+  const td: React.CSSProperties = { padding: '7px 8px', borderBottom: `1px solid ${TRAIT}`, fontSize: 11.5 }
+
   return (
-    <div className="print-area invoice-print bg-white p-6 text-[13px] text-gray-900" style={{ colorScheme: 'light' }}>
-      {/* Header: company box top-right */}
-      <div className="flex items-start justify-between gap-6">
-        <div className="flex items-center gap-3">
+    <div className="print-area invoice-print bg-white p-7" style={{ colorScheme: 'light', color: ENCRE, fontSize: 12 }}>
+      {/* ---------- En-tête : émetteur à gauche, document à droite ---------- */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0 }}>
           {settings.logoDataUrl ? (
-            <img src={settings.logoDataUrl} alt="logo" className="h-14 w-14 rounded object-cover" />
+            <img src={settings.logoDataUrl} alt="" style={{ height: 58, width: 58, objectFit: 'contain' }} />
           ) : (
-            <div className="flex h-14 w-14 items-center justify-center rounded bg-gray-900 text-lg font-black italic text-white">
+            <div style={{ height: 58, width: 58, borderRadius: 6, background: ACCENT, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 20 }}>
               {(settings.storeName || 'DP').slice(0, 2).toUpperCase()}
             </div>
           )}
-          {settings.slogan && <p className="max-w-[160px] text-[11px] italic leading-snug text-gray-400">{settings.slogan}</p>}
+          <div style={{ minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 21, fontWeight: 900, letterSpacing: '-.02em', color: ACCENT, lineHeight: 1.1 }}>
+              {settings.storeName}
+            </p>
+            {settings.slogan && <p style={{ margin: '2px 0 0', fontSize: 10, color: GRIS }}>{settings.slogan}</p>}
+            <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2, fontSize: 10, color: ENCRE }}>
+              {settings.address && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <MapPin style={{ height: 11, width: 11, color: ACCENT, flexShrink: 0 }} />{settings.address}
+                </span>
+              )}
+              {settings.phone && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Phone style={{ height: 11, width: 11, color: ACCENT, flexShrink: 0 }} />{settings.phone}
+                </span>
+              )}
+              {settings.email && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Mail style={{ height: 11, width: 11, color: ACCENT, flexShrink: 0 }} />{settings.email}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
-        <div className="rounded-md border-2 border-amber-400 px-4 py-3 text-right">
-          <p className="text-sm font-bold uppercase text-gray-900">{settings.storeName}</p>
-          {partyAddress === undefined && <p className="text-[11px] text-gray-600">{settings.address}</p>}
-          {settings.email && <p className="text-[11px] text-gray-600">{settings.email}</p>}
-          <p className="text-[11px] text-gray-600">{settings.phone}</p>
-        </div>
-      </div>
 
-      {/* Title row */}
-      <div className="mt-6 flex items-end justify-between gap-4">
-        <div className="min-w-0">
-          <h2 className="text-3xl font-black leading-none tracking-tight text-gray-900">
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <p style={{ margin: 0, fontSize: 30, fontWeight: 900, letterSpacing: '-.02em', color: ACCENT, lineHeight: 1 }}>
             {title}
-            {docNumber && <span className="align-baseline text-xl font-bold text-gray-500"> {docNumber}</span>}
-          </h2>
-          {number && (
-            <p className="mt-1 text-sm font-semibold text-gray-500">
-              {t('fdoc_number')} <span className="text-gray-800">{number}</span>
+          </p>
+          {(number || docNumber) && (
+            <p style={{ margin: '6px 0 0', fontSize: 12, fontWeight: 700 }}>
+              {t('fdoc_number')} {number ?? docNumber}
             </p>
           )}
-        </div>
-        <div className="shrink-0 whitespace-nowrap text-right text-[11px] italic text-gray-500">
-          <p>
-            {city ? `${city} ` : ''}
-            {t('fdoc_at_le')} {dateStr}
-          </p>
-          <p>{t('fdoc_page')}</p>
+          <p style={{ margin: '2px 0 0', fontSize: 11, color: GRIS }}>{dateStr}</p>
         </div>
       </div>
 
-      {/* Party block */}
-      <div className="mt-4">
-        <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">{partyLabel}</p>
-        <p className="text-sm font-bold text-gray-900">{partyName}</p>
-        {partyAddress && <p className="text-[11px] text-gray-600">{partyAddress}</p>}
-      </div>
+      <div style={{ height: 3, background: ACCENT, margin: '14px 0 0', borderRadius: 2 }} />
 
-      {/* Bandeau des conditions */}
-      {(() => {
-        const remplis = (infos ?? []).filter((i) => i.value)
-        if (remplis.length === 0) return null
-        return (
-          <div className="mt-4 grid overflow-hidden rounded-md border border-amber-400" style={{ gridTemplateColumns: `repeat(${remplis.length}, minmax(0, 1fr))` }}>
-            {remplis.map((i, idx) => (
-              <div key={idx} className={idx > 0 ? 'border-l border-amber-500' : ''}>
-                <p className="bg-amber-400 px-2 py-1 text-center text-[10px] font-bold uppercase tracking-wide text-white">{i.label}</p>
-                <p className="px-2 py-1.5 text-center text-[11px] font-semibold text-gray-800">{i.value}</p>
+      {/* ---------- Bandeau des conditions ---------- */}
+      {infosRemplies.length > 0 && (
+        <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: `repeat(${infosRemplies.length}, minmax(0,1fr))`, gap: 8 }}>
+          {infosRemplies.map((i, idx) => {
+            const Icone = ICONES[idx % ICONES.length]
+            return (
+              <div key={idx} style={{ border: `1px solid ${TRAIT}`, borderRadius: 6, padding: '7px 9px' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 9, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                  <Icone style={{ height: 11, width: 11, flexShrink: 0 }} />{i.label}
+                </span>
+                <p style={{ margin: '3px 0 0', fontSize: 11, fontWeight: 600 }}>{i.value}</p>
               </div>
-            ))}
-          </div>
-        )
-      })()}
+            )
+          })}
+        </div>
+      )}
 
-      {/* Table */}
-      <table className="mt-4 w-full border-collapse text-[12px]">
+      {/* ---------- Destinataire (+ contact s'il existe) ---------- */}
+      <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: contact ? '1fr 1fr' : '1fr', gap: 10 }}>
+        <div style={{ border: `1px solid ${TRAIT}`, borderRadius: 6, padding: '9px 11px' }}>
+          <p style={{ margin: 0, fontSize: 9, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.06em' }}>{partyLabel}</p>
+          <p style={{ margin: '3px 0 0', fontSize: 13, fontWeight: 700 }}>{partyName}</p>
+          {partyAddress && <p style={{ margin: '2px 0 0', fontSize: 10.5, color: GRIS }}>{partyAddress}</p>}
+          {partyLegal && <p style={{ margin: '2px 0 0', fontSize: 10.5, color: GRIS }}>{partyLegal}</p>}
+        </div>
+        {contact && (
+          <div style={{ border: `1px solid ${TRAIT}`, borderRadius: 6, padding: '9px 11px' }}>
+            <p style={{ margin: 0, fontSize: 9, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.06em' }}>{t('fdoc_contact')}</p>
+            {contact.name && <p style={{ margin: '3px 0 0', fontSize: 11.5, fontWeight: 600 }}>{contact.name}</p>}
+            {contact.phone && <p style={{ margin: '2px 0 0', fontSize: 10.5, color: GRIS }}>{t('fdoc_phone')} : {contact.phone}</p>}
+            {contact.email && <p style={{ margin: '2px 0 0', fontSize: 10.5, color: GRIS }}>{t('fdoc_email')} : {contact.email}</p>}
+          </div>
+        )}
+      </div>
+
+      {/* ---------- Lignes ---------- */}
+      <table style={{ marginTop: 12, width: '100%', borderCollapse: 'collapse', overflow: 'hidden', borderRadius: 6 }}>
         <thead>
-          <tr className="bg-amber-400 text-left text-white">
-            <th className="border border-amber-500 px-2 py-1.5 font-bold italic">{t('fdoc_col_products')}</th>
-            {showEmplacement && <th className="border border-amber-500 px-2 py-1.5 font-bold italic">{t('wms_emplacement')}</th>}
-            <th className="border border-amber-500 px-2 py-1.5 text-center font-bold italic">{t('fdoc_col_qty')}</th>
-            <th className="border border-amber-500 px-2 py-1.5 text-center font-bold italic">{t('fdoc_col_unit')}</th>
-            <th className="border border-amber-500 px-2 py-1.5 text-right font-bold italic">{t('fdoc_col_pu_ht')}</th>
-            <th className="border border-amber-500 px-2 py-1.5 text-center font-bold italic">{t('fdoc_col_tva')}</th>
-            <th className="border border-amber-500 px-2 py-1.5 text-right font-bold italic">{t('fdoc_col_total_ht')}</th>
+          <tr style={{ background: ACCENT }}>
+            {avecRef && <th style={{ ...th, textAlign: 'left' }}>{t('fdoc_col_ref')}</th>}
+            <th style={{ ...th, textAlign: 'left' }}>{t('fdoc_col_products')}</th>
+            {showEmplacement && <th style={{ ...th, textAlign: 'left' }}>{t('wms_emplacement')}</th>}
+            <th style={{ ...th, textAlign: 'center' }}>{t('fdoc_col_qty')}</th>
+            <th style={{ ...th, textAlign: 'right' }}>{t('fdoc_col_pu_ht')}</th>
+            {avecRemise && <th style={{ ...th, textAlign: 'center' }}>{t('fdoc_col_remise')}</th>}
+            <th style={{ ...th, textAlign: 'center' }}>{t('fdoc_col_tva')}</th>
+            <th style={{ ...th, textAlign: 'right' }}>{t('fdoc_col_total_ttc')}</th>
           </tr>
         </thead>
         <tbody>
           {lines.map((l, idx) => (
-            <tr key={idx}>
-              <td className="border border-gray-200 px-2 py-1.5">{l.label}</td>
-              {showEmplacement && <td className="border border-gray-200 px-2 py-1.5 font-mono text-[11px] text-gray-700">{l.emplacement || '-'}</td>}
-              <td className="border border-gray-200 px-2 py-1.5 text-center tabular-nums">{l.qty}</td>
-              <td className="border border-gray-200 px-2 py-1.5 text-center text-gray-500">{l.unit || '-'}</td>
-              <td className="border border-gray-200 px-2 py-1.5 text-right tabular-nums">{fmtDH(l.puHT)}</td>
-              <td className="border border-gray-200 px-2 py-1.5 text-center tabular-nums">{l.tvaPct.toFixed(2)} %</td>
-              <td className="border border-gray-200 px-2 py-1.5 text-right font-semibold tabular-nums">{fmtDH(l.puHT * l.qty)}</td>
-            </tr>
-          ))}
-          {Array.from({ length: emptyRows }).map((_, idx) => (
-            <tr key={`e${idx}`}>
-              <td className="border border-gray-200 px-2 py-1.5">&nbsp;</td>
-              {showEmplacement && <td className="border border-gray-200 px-2 py-1.5" />}
-              <td className="border border-gray-200 px-2 py-1.5" />
-              <td className="border border-gray-200 px-2 py-1.5" />
-              <td className="border border-gray-200 px-2 py-1.5" />
-              <td className="border border-gray-200 px-2 py-1.5" />
-              <td className="border border-gray-200 px-2 py-1.5" />
+            <tr key={idx} style={{ background: idx % 2 ? '#fafafa' : '#fff' }}>
+              {avecRef && <td style={{ ...td, fontFamily: 'ui-monospace, monospace', fontSize: 10.5, color: GRIS }}>{l.ref || '—'}</td>}
+              <td style={{ ...td, fontWeight: 600 }}>
+                {l.label}
+                {l.unit && <span style={{ color: GRIS, fontWeight: 400 }}> · {l.unit}</span>}
+              </td>
+              {showEmplacement && <td style={{ ...td, fontFamily: 'ui-monospace, monospace', fontSize: 10.5, color: GRIS }}>{l.emplacement || '—'}</td>}
+              <td style={{ ...td, textAlign: 'center' }}>{l.qty}</td>
+              <td style={{ ...td, textAlign: 'right' }}>{fmtDH(l.puHT)}</td>
+              {avecRemise && <td style={{ ...td, textAlign: 'center' }}>{(l.remisePct ?? 0).toFixed(2).replace('.', ',')} %</td>}
+              <td style={{ ...td, textAlign: 'center' }}>{l.tvaPct.toFixed(0)} %</td>
+              <td style={{ ...td, textAlign: 'right', fontWeight: 700 }}>{fmtDH(l.puHT * l.qty * (1 + l.tvaPct / 100))}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      {/* Totals */}
-      <div className="mt-4 flex items-start justify-between gap-6">
-        <div className="max-w-[50%] pt-1 text-[12px] leading-snug text-gray-700">
-          {showAmountInWords && (
+      {/* ---------- Observations / conditions + totaux ---------- */}
+      <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 260px', gap: 16, alignItems: 'start' }}>
+        <div style={{ fontSize: 10.5, lineHeight: 1.5 }}>
+          {observations && (
             <>
-              <p className="font-semibold">{t('fdoc_amount_words')}</p>
-              <p className="mt-1 font-bold text-gray-900">{montantEnLettres(totalTTC)}.</p>
+              <p style={{ margin: 0, fontSize: 9, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.05em' }}>{t('fdoc_observations')}</p>
+              <p style={{ margin: '3px 0 10px', color: ENCRE, whiteSpace: 'pre-line' }}>{observations}</p>
+            </>
+          )}
+          {settings.invoiceTerms && (
+            <>
+              <p style={{ margin: 0, fontSize: 9, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.05em' }}>{t('fdoc_conditions')}</p>
+              <p style={{ margin: '3px 0 0', color: GRIS, whiteSpace: 'pre-line' }}>{settings.invoiceTerms}</p>
             </>
           )}
         </div>
-        <div className="w-64 space-y-1 text-[12px]">
-          <div className="flex justify-between text-gray-600">
-            <span className="font-semibold">{t('fdoc_total_ht')}</span>
-            <span className="tabular-nums">{fmtDH(totalHT)}</span>
+
+        <div style={{ border: `1px solid ${TRAIT}`, borderRadius: 6, overflow: 'hidden' }}>
+          <Ligne label={t('fdoc_total_ht')} valeur={fmtDH(totalHT)} />
+          {totalRemise > 0 && <Ligne label={t('fdoc_col_remise')} valeur={`− ${fmtDH(totalRemise)}`} />}
+          <Ligne label={`${t('fdoc_total_tva')}`} valeur={fmtDH(totalTVA)} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 11px', background: ACCENT_PALE }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.04em' }}>{t('fdoc_total_ttc')}</span>
+            <span style={{ fontSize: 15, fontWeight: 900, color: ACCENT }}>{fmtDH(totalTTC)}</span>
           </div>
-          <div className="flex justify-between text-gray-600">
-            <span className="font-semibold">{t('fdoc_total_tva')}</span>
-            <span className="tabular-nums">{fmtDH(totalTVA)}</span>
-          </div>
-          <div className="flex justify-between border-t border-gray-300 pt-1 text-base font-black text-gray-900">
-            <span>{t('fdoc_total_ttc')}</span>
-            <span className="tabular-nums">{fmtDH(totalTTC)}</span>
-          </div>
-          {paid !== undefined && (
-            <div className="flex justify-between pt-0.5 text-gray-600">
-              <span className="font-semibold">{t('fdoc_paid')}</span>
-              <span className="tabular-nums">{fmtDH(paid)}</span>
-            </div>
-          )}
+          {paid !== undefined && <Ligne label={t('fdoc_paid')} valeur={fmtDH(paid)} />}
           {showBalance && paid !== undefined && (
-            <div className="flex justify-between text-sm font-bold text-gray-900">
-              <span>{t('fdoc_remaining')}</span>
-              <span className="tabular-nums">{fmtDH(Math.max(0, totalTTC - paid))}</span>
-            </div>
+            <Ligne label={t('fdoc_remaining')} valeur={fmtDH(Math.max(0, totalTTC - paid))} fort />
           )}
         </div>
       </div>
 
-      {/* Signature */}
-      <div className="invoice-signature mt-5 flex justify-end">
-        <div className="text-center">
-          <p className="text-[11px] text-gray-500">{t('fdoc_signature')}</p>
-          {settings.signatureDataUrl ? (
-            <img src={settings.signatureDataUrl} alt="signature" className="mx-auto mt-1 h-16 w-40 object-contain" />
-          ) : (
-            <div className="mt-10 w-40 border-t border-gray-300" />
+      {/* ---------- Montant en lettres + cachet ---------- */}
+      <div className="invoice-signature" style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 200px', gap: 16, alignItems: 'stretch' }}>
+        <div style={{ border: `1px solid ${TRAIT}`, borderRadius: 6, padding: '9px 11px' }}>
+          {showAmountInWords && (
+            <>
+              <p style={{ margin: 0, fontSize: 9, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.05em' }}>{t('fdoc_amount_words')}</p>
+              <p style={{ margin: '3px 0 0', fontSize: 11.5, fontWeight: 700 }}>{montantEnLettres(totalTTC)}.</p>
+            </>
           )}
+        </div>
+        <div style={{ border: `1px solid ${TRAIT}`, borderRadius: 6, padding: '6px 9px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <p style={{ margin: 0, fontSize: 9, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.04em' }}>{t('fdoc_stamp')}</p>
+          {settings.signatureDataUrl
+            ? <img src={settings.signatureDataUrl} alt="" style={{ margin: '2px auto 0', height: 52, objectFit: 'contain' }} />
+            : <div style={{ height: 52 }} />}
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="invoice-footer mt-6 border-t border-gray-200 pt-3 text-center">
-        {settings.invoiceTerms && (
-          <p className="mb-2 whitespace-pre-line text-left text-[8.5px] leading-relaxed text-gray-500">{settings.invoiceTerms}</p>
-        )}
-        {legalBits.length > 0 && (
-          <p className="text-[9px] leading-relaxed text-gray-500">{legalBits.join('  |  ')}</p>
-        )}
-        <p className="mt-1 text-[11px] font-semibold italic text-gray-600">{t('fdoc_thanks')}</p>
+      {/* ---------- Pied ---------- */}
+      <div className="invoice-footer" style={{ marginTop: 14, paddingTop: 8, borderTop: `2px solid ${ACCENT}`, display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 9, color: GRIS }}>
+        <span style={{ minWidth: 0 }}>
+          <b style={{ color: ENCRE }}>{settings.storeName}</b>
+          {legalBits.length > 0 && <> · {legalBits.join(' · ')}</>}
+        </span>
+        <span style={{ flexShrink: 0, fontStyle: 'italic' }}>{t('fdoc_thanks')}</span>
       </div>
+    </div>
+  )
+}
+
+function Ligne({ label, valeur, fort }: { label: string; valeur: string; fort?: boolean }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 11px', borderBottom: `1px solid ${TRAIT}`, fontSize: 11 }}>
+      <span style={{ color: GRIS, fontWeight: 600 }}>{label}</span>
+      <span style={{ fontWeight: fort ? 800 : 600, color: ENCRE }}>{valeur}</span>
     </div>
   )
 }
