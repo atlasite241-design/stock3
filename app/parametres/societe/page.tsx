@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import JsBarcode from 'jsbarcode'
-import { CreditCard, Eye, Gavel, Globe, Info, Mail, Phone, Printer, Receipt, Save, ScrollText, Store, Tag, Truck, UploadCloud } from 'lucide-react'
+import { CreditCard, Eye, FileText, Gavel, Globe, Info, Mail, PackageCheck, Phone, Printer, Receipt, Save, ScrollText, Send, Store, Tag, Truck, UploadCloud } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import InvoiceDocument from '@/components/InvoiceDocument'
 import Barcode128 from '@/components/Barcode128'
@@ -20,7 +20,7 @@ function Content() {
   const { t } = useLanguage()
   const toast = useToast()
   const [form, setForm] = useState(settings)
-  const [previewTab, setPreviewTab] = useState<'facture' | 'bc' | 'etiquette' | 'etiquette_client' | 'ticket'>('facture')
+  const [previewTab, setPreviewTab] = useState<'facture' | 'devis' | 'bc' | 'br' | 'bl' | 'etiquette' | 'etiquette_client' | 'ticket'>('facture')
   const logoInputRef = useRef<HTMLInputElement>(null)
   const signatureInputRef = useRef<HTMLInputElement>(null)
 
@@ -451,8 +451,13 @@ function Content() {
                 pas sur une ligne de quatre dans cette colonne. */}
             <div className="grid grid-cols-2 gap-1 border-b border-gray-100 p-2 dark:border-white/10">
               {([
+                // Les cinq documents commerciaux d'abord, les étiquettes et le
+                // ticket ensuite : on règle un en-tête, puis des formats à part.
                 ['facture', Receipt, t('soc_tab_invoice'), false],
+                ['devis', FileText, t('soc_tab_quote'), false],
                 ['bc', Truck, t('soc_tab_po'), false],
+                ['br', PackageCheck, t('soc_tab_receipt'), false],
+                ['bl', Send, t('soc_tab_delivery'), false],
                 ['etiquette', Tag, t('soc_tab_label'), false],
                 ['etiquette_client', CreditCard, t('soc_tab_label_client'), false],
                 ['ticket', ScrollText, t('soc_tab_ticket'), true],
@@ -484,6 +489,83 @@ function Content() {
                     lines={[{ label: t('soc_preview_sample_item'), qty: 2, puHT: 1200, tvaPct: form.tva }]}
                     paid={2400 * (1 + form.tva / 100)}
                     showBalance
+                  />
+                </div>
+                <p className="mt-3 text-center text-[11px] italic text-gray-400 dark:text-zinc-500">{t('soc_preview_note')}</p>
+              </div>
+            ) : previewTab === 'devis' ? (
+              <div className="p-4">
+                {/* Un devis PROPOSE : il ne « arrête » aucune facture et ne
+                    porte pas de règlement — d'où le montant en lettres retiré. */}
+                <div className="rounded-xl border border-gray-100 shadow-lg" style={{ zoom: 0.55 } as React.CSSProperties}>
+                  <InvoiceDocument
+                    title={t('quote_prefix')}
+                    number="DEV-2026-0031"
+                    date={new Date().toISOString()}
+                    partyLabel={t('fdoc_client')}
+                    partyName={t('soc_preview_client_sample')}
+                    settingsOverride={form}
+                    showAmountInWords={false}
+                    infos={[
+                      { label: t('dvc_validity'), value: new Date(Date.now() + 15 * 86400000).toLocaleDateString('fr-FR') },
+                      { label: t('fdoc_seller'), value: t('soc_preview_seller_sample') },
+                    ]}
+                    lines={[
+                      { label: t('soc_preview_sample_item'), qty: 2, puHT: 1200, tvaPct: form.tva },
+                      { label: t('soc_preview_sample_item2'), qty: 5, puHT: 46.5, tvaPct: form.tva },
+                    ]}
+                  />
+                </div>
+                <p className="mt-3 text-center text-[11px] italic text-gray-400 dark:text-zinc-500">{t('soc_preview_note')}</p>
+              </div>
+            ) : previewTab === 'br' ? (
+              <div className="p-4">
+                {/* Bon de réception : ce qui est ENTRÉ en stock. Les prix y
+                    figurent pour le contrôle facture, pas pour un règlement. */}
+                <div className="rounded-xl border border-gray-100 shadow-lg" style={{ zoom: 0.55 } as React.CSSProperties}>
+                  <InvoiceDocument
+                    title={t('soc_tab_receipt')}
+                    number="BR-2026-0014"
+                    date={new Date().toISOString()}
+                    partyLabel={t('fdoc_supplier')}
+                    partyName={t('soc_preview_supplier_sample')}
+                    partyAddress={t('soc_preview_supplier_address')}
+                    settingsOverride={form}
+                    showAmountInWords={false}
+                    infos={[
+                      { label: t('po_supplier_ref_label'), value: 'BC-2026-0007' },
+                      { label: t('fdoc_date_label'), value: new Date().toLocaleDateString('fr-FR') },
+                    ]}
+                    lines={[
+                      { label: t('soc_preview_sample_item'), qty: 3, unit: 'Carton', puHT: 980, tvaPct: form.tva },
+                      { label: t('soc_preview_sample_item2'), qty: 12, puHT: 46.5, tvaPct: form.tva },
+                    ]}
+                  />
+                </div>
+                <p className="mt-3 text-center text-[11px] italic text-gray-400 dark:text-zinc-500">{t('soc_preview_note')}</p>
+              </div>
+            ) : previewTab === 'bl' ? (
+              <div className="p-4">
+                {/* Bon de livraison : il accompagne la marchandise. L'emplacement
+                    y figure — c'est le document du préparateur. */}
+                <div className="rounded-xl border border-gray-100 shadow-lg" style={{ zoom: 0.55 } as React.CSSProperties}>
+                  <InvoiceDocument
+                    title={t('soc_tab_delivery')}
+                    number="BL-2026-0058"
+                    date={new Date().toISOString()}
+                    partyLabel={t('fdoc_client')}
+                    partyName={t('soc_preview_client_sample')}
+                    settingsOverride={form}
+                    showAmountInWords={false}
+                    showEmplacement
+                    infos={[
+                      { label: t('fdoc_date_label'), value: new Date().toLocaleDateString('fr-FR') },
+                      { label: t('fdoc_seller'), value: t('soc_preview_seller_sample') },
+                    ]}
+                    lines={[
+                      { label: t('soc_preview_sample_item'), qty: 2, puHT: 1200, tvaPct: form.tva, emplacement: 'Z01-A02-R3-E2' },
+                      { label: t('soc_preview_sample_item2'), qty: 5, puHT: 46.5, tvaPct: form.tva, emplacement: 'Z02-A01-R1-E4' },
+                    ]}
                   />
                 </div>
                 <p className="mt-3 text-center text-[11px] italic text-gray-400 dark:text-zinc-500">{t('soc_preview_note')}</p>
