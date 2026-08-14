@@ -134,7 +134,10 @@ function Content() {
       <Modal open={!!invoice} onClose={() => setInvoice(null)} title={t('fac_title')} maxWidth="max-w-2xl">
         {invoice && (
           <>
-            <div ref={printRef} className="max-h-[60vh] overflow-y-auto rounded-xl border border-gray-100 dark:border-white/10">
+            {/* Défilement des DEUX côtés : le document a une largeur fixe d'A4
+                et ne doit pas être comprimé par la fenêtre — sinon l'aperçu ne
+                montre pas ce qui sera imprimé. */}
+            <div ref={printRef} className="max-h-[60vh] overflow-auto rounded-xl border border-gray-100 dark:border-white/10">
               <InvoiceDocument
                 title={t('fdoc_invoice')}
                 docNumber={invoiceNumber(invoice)}

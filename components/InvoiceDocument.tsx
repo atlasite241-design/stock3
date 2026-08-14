@@ -183,7 +183,23 @@ export default function InvoiceDocument({
   const td: React.CSSProperties = { padding: '7px 8px', borderBottom: `1px solid ${TRAIT}`, fontSize: s(11.5) }
 
   return (
-    <div className="print-area invoice-print bg-white p-7" style={{ colorScheme: 'light', color: ENCRE, fontSize: s(12) }}>
+    /*
+     * LARGEUR FIXE — 794 px, soit une A4 à 96 ppp.
+     *
+     * Le document héritait de la largeur de son conteneur : large dans l'aperçu
+     * des réglages, étroit dans une fenêtre modale. Après l'agrandissement du
+     * corps, cette largeur variable a fait déborder le texte — nom de société
+     * coupé en deux, libellés tronqués, montants renvoyés à la ligne — alors
+     * que le même document restait impeccable ailleurs.
+     *
+     * En figeant la largeur, la mise en page ne dépend plus de l'écran qui
+     * l'affiche : l'aperçu, le PDF et l'impression montrent EXACTEMENT la même
+     * chose. Les conteneurs trop étroits font défiler, ils ne compriment plus.
+     */
+    <div
+      className="print-area invoice-print bg-white p-7"
+      style={{ colorScheme: 'light', color: ENCRE, fontSize: s(12), width: 794, boxSizing: 'border-box' }}
+    >
       {/* ---------- En-tête : émetteur à gauche, document à droite ---------- */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0 }}>
@@ -195,7 +211,9 @@ export default function InvoiceDocument({
             </div>
           )}
           <div style={{ minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: s(21), fontWeight: 900, letterSpacing: '-.02em', color: ACCENT, lineHeight: 1.1 }}>
+            {/* Le nom ne se casse pas en deux : « AQAQIR AOULAD AL / BAKALI »
+                est une raison sociale mutilée, pas une mise en page. */}
+            <p style={{ margin: 0, fontSize: s(21), fontWeight: 900, letterSpacing: '-.02em', color: ACCENT, lineHeight: 1.1, whiteSpace: 'nowrap' }}>
               {settings.storeName}
             </p>
             {settings.slogan && <p style={{ margin: '2px 0 0', fontSize: s(10), color: GRIS }}>{settings.slogan}</p>}
@@ -241,12 +259,12 @@ export default function InvoiceDocument({
             const Icone = ICONES[idx % ICONES.length]
             return (
               <div key={idx} style={{ border: `1px solid ${TRAIT}`, borderRadius: 6, padding: '7px 9px', minWidth: 0 }}>
-                {/* Le libellé tient sur UNE ligne : « Mode de règlement » se
-                    cassait en deux et décalait sa valeur d'une case à l'autre.
-                    Il rétrécit plutôt que de passer à la ligne. */}
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: s(8.5), fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.02em', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                {/* Le libellé tient sur une ligne, en entier : la largeur fixe
+                    du document lui garantit la place. Le tronquer donnait
+                    « MODE DE RÈGLEMI » — pire que le passage à la ligne. */}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: s(8.5), fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.02em', whiteSpace: 'nowrap' }}>
                   <Icone style={{ height: 11, width: 11, flexShrink: 0 }} />
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{i.label}</span>
+                  {i.label}
                 </span>
                 <p style={{ margin: '3px 0 0', fontSize: s(11), fontWeight: 600 }}>{i.value}</p>
               </div>

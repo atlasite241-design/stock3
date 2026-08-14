@@ -230,7 +230,9 @@ function Content() {
       <Modal open={!!printTarget} onClose={() => setPrintTarget(null)} title={`${t('inv_invoice_title')} — ${printTarget?.ref ?? ''}`} maxWidth="max-w-2xl">
         {printTarget && (
           <>
-            <div ref={printRef} className="max-h-[60vh] overflow-y-auto rounded-xl border border-gray-100 dark:border-white/10">
+            {/* Même raison que la facture client : largeur fixe, on fait
+                défiler plutôt que de comprimer. */}
+            <div ref={printRef} className="max-h-[60vh] overflow-auto rounded-xl border border-gray-100 dark:border-white/10">
               <InvoiceDocument
                 title={t('fdoc_invoice')}
                 docNumber={invoiceNumberOf(printTarget)}
