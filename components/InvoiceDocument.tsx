@@ -270,17 +270,17 @@ export default function InvoiceDocument({
             <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2, fontSize: s(10), color: ENCRE }}>
               {settings.address && (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <MapPin style={{ height: 11, width: 11, color: ACCENT, flexShrink: 0 }} />{settings.address}
+                  <MapPin style={{ height: s(11), width: s(11), color: ACCENT, flexShrink: 0 }} />{settings.address}
                 </span>
               )}
               {settings.phone && (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <Phone style={{ height: 11, width: 11, color: ACCENT, flexShrink: 0 }} />{settings.phone}
+                  <Phone style={{ height: s(11), width: s(11), color: ACCENT, flexShrink: 0 }} />{settings.phone}
                 </span>
               )}
               {settings.email && (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <Mail style={{ height: 11, width: 11, color: ACCENT, flexShrink: 0 }} />{settings.email}
+                  <Mail style={{ height: s(11), width: s(11), color: ACCENT, flexShrink: 0 }} />{settings.email}
                 </span>
               )}
             </div>
@@ -313,7 +313,7 @@ export default function InvoiceDocument({
                     du document lui garantit la place. Le tronquer donnait
                     « MODE DE RÈGLEMI » — pire que le passage à la ligne. */}
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: s(8.5), fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.02em', whiteSpace: 'nowrap' }}>
-                  <Icone style={{ height: 11, width: 11, flexShrink: 0 }} />
+                  <Icone style={{ height: s(11), width: s(11), flexShrink: 0 }} />
                   {i.label}
                 </span>
                 <p style={{ margin: '3px 0 0', fontSize: s(11), fontWeight: 600 }}>{i.value}</p>
@@ -375,7 +375,7 @@ export default function InvoiceDocument({
       </table>
 
       {/* ---------- Observations / conditions + totaux ---------- */}
-      <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 260px', gap: 16, alignItems: 'start' }}>
+      <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: `1fr ${s(260)}px`, gap: 16, alignItems: 'start' }}>
         <div style={{ fontSize: s(10.5), lineHeight: 1.5 }}>
           {observations && (
             <>
@@ -407,7 +407,9 @@ export default function InvoiceDocument({
       </div>
 
       {/* ---------- Montant en lettres + cachet ---------- */}
-      <div className="invoice-signature" style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 200px', gap: 16, alignItems: 'stretch' }}>
+      {/* Colonnes à l'échelle elles aussi : figées en pixels, elles se seraient
+          rétrécies par rapport au texte à chaque agrandissement du document. */}
+      <div className="invoice-signature" style={{ marginTop: 14, display: 'grid', gridTemplateColumns: `1fr ${s(200)}px`, gap: 16, alignItems: 'stretch' }}>
         <div style={{ border: `1px solid ${TRAIT}`, borderRadius: 6, padding: '9px 11px' }}>
           {showAmountInWords && (
             <>
@@ -418,9 +420,16 @@ export default function InvoiceDocument({
         </div>
         <div style={{ border: `1px solid ${TRAIT}`, borderRadius: 6, padding: '6px 9px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <p style={{ margin: 0, fontSize: s(9), fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.04em' }}>{t('fdoc_stamp')}</p>
+          {/*
+           * Le cachet OCCUPE sa case. Sa hauteur était figée à 52 px quand tout
+           * le document a grandi, et l'image est presque carrée : elle se
+           * retrouvait réduite à un timbre illisible alors que l'original est
+           * net. Il remplit désormais la largeur du cadre, sa hauteur suivant
+           * sa proportion.
+           */}
           {settings.signatureDataUrl
-            ? <img src={settings.signatureDataUrl} alt="" style={{ margin: '2px auto 0', height: 52, objectFit: 'contain' }} />
-            : <div style={{ height: 52 }} />}
+            ? <img src={settings.signatureDataUrl} alt="" style={{ margin: '4px auto 0', width: '100%', maxHeight: s(78), objectFit: 'contain' }} />
+            : <div style={{ height: s(78) }} />}
         </div>
       </div>
 
