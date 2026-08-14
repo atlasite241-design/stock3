@@ -245,6 +245,20 @@ function Content() {
                   <label className="field-label">{t('soc_company_name')}</label>
                   <input type="text" value={form.storeName} onChange={(e) => setForm({ ...form, storeName: e.target.value })} className="input-field" />
                 </div>
+                {/* Le slogan existait dans les réglages et s'imprimait sur les
+                    documents, mais AUCUN écran ne permettait de le saisir : la
+                    ligne d'activités restait donc vide sur toutes les factures. */}
+                <div>
+                  <label className="field-label">{t('soc_slogan')}</label>
+                  <input
+                    type="text"
+                    value={form.slogan}
+                    onChange={(e) => setForm({ ...form, slogan: e.target.value })}
+                    placeholder={t('soc_slogan_placeholder')}
+                    className="input-field"
+                  />
+                  <p className="mt-1 text-[11px] text-gray-400 dark:text-zinc-500">{t('soc_slogan_hint')}</p>
+                </div>
                 <div>
                   <label className="field-label">{t('soc_legal_form')}</label>
                   <Select

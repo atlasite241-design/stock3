@@ -240,9 +240,13 @@ export default function InvoiceDocument({
           {infosRemplies.map((i, idx) => {
             const Icone = ICONES[idx % ICONES.length]
             return (
-              <div key={idx} style={{ border: `1px solid ${TRAIT}`, borderRadius: 6, padding: '7px 9px' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: s(9), fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.04em' }}>
-                  <Icone style={{ height: 11, width: 11, flexShrink: 0 }} />{i.label}
+              <div key={idx} style={{ border: `1px solid ${TRAIT}`, borderRadius: 6, padding: '7px 9px', minWidth: 0 }}>
+                {/* Le libellé tient sur UNE ligne : « Mode de règlement » se
+                    cassait en deux et décalait sa valeur d'une case à l'autre.
+                    Il rétrécit plutôt que de passer à la ligne. */}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: s(8.5), fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.02em', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                  <Icone style={{ height: 11, width: 11, flexShrink: 0 }} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{i.label}</span>
                 </span>
                 <p style={{ margin: '3px 0 0', fontSize: s(11), fontWeight: 600 }}>{i.value}</p>
               </div>
@@ -353,16 +357,20 @@ export default function InvoiceDocument({
       </div>
 
       {/* ---------- Pied ---------- */}
-      <div className="invoice-footer" style={{ marginTop: 14, paddingTop: 8, borderTop: `2px solid ${ACCENT}`, display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: s(9), color: GRIS }}>
-        {/* Chaque mention reste d'un seul tenant : le pied coupait « Patente : »
-            de son numéro, ce qui rend une mention légale illisible. */}
-        <span style={{ minWidth: 0 }}>
+      {/*
+       * Les mentions légales occupent TOUTE la largeur, la formule de courtoisie
+       * passe en dessous. Côte à côte, la courtoisie rognait la place et le pied
+       * cassait « Patente : » de son numéro — une mention légale scindée en deux
+       * ne vaut plus rien. Chaque mention reste en outre d'un seul tenant.
+       */}
+      <div className="invoice-footer" style={{ marginTop: 14, paddingTop: 8, borderTop: `2px solid ${ACCENT}`, fontSize: s(8.5), color: GRIS }}>
+        <p style={{ margin: 0 }}>
           <b style={{ color: ENCRE, whiteSpace: 'nowrap' }}>{settings.storeName}</b>
           {legalBits.map((m) => (
             <span key={String(m)} style={{ whiteSpace: 'nowrap' }}> · {m}</span>
           ))}
-        </span>
-        <span style={{ flexShrink: 0, fontStyle: 'italic' }}>{t('fdoc_thanks')}</span>
+        </p>
+        <p style={{ margin: '3px 0 0', fontStyle: 'italic', textAlign: 'right' }}>{t('fdoc_thanks')}</p>
       </div>
     </div>
   )

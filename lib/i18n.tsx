@@ -4387,8 +4387,9 @@ const DICT = {
   // Paramètres — Société (redesign)
   soc_identity_title: { fr: 'Identité & Logo', ar: 'الهوية والشعار' },
   soc_company_name: { fr: "Nom de l'entreprise", ar: 'اسم الشركة' },
-  soc_slogan: { fr: 'Slogan (optionnel)', ar: 'الشعار النصي (اختياري)' },
-  soc_slogan_placeholder: { fr: "L'excellence du matériel professionnel", ar: 'التميز في العتاد المهني' },
+  soc_slogan_hint: { fr: 'Cette ligne s’imprime sous le nom sur les factures, devis et bons.', ar: 'يُطبع هذا السطر تحت الاسم على الفواتير وعروض الأسعار والسندات.' },
+  soc_slogan: { fr: 'Activités (ligne sous le nom)', ar: 'الأنشطة (سطر تحت الاسم)' },
+  soc_slogan_placeholder: { fr: 'Vente de produits • Quincaillerie • Peinture • Électricité • Plomberie', ar: 'بيع المنتجات • الأدوات • الدهن • الكهرباء • السباكة' },
   soc_logo_click: { fr: 'Cliquer pour changer le logo', ar: 'انقر لتغيير الشعار' },
   soc_logo_hint: { fr: 'PNG, JPG (max. 2 Mo)', ar: 'PNG أو JPG (2 ميغابايت كحد أقصى)' },
   soc_legal_title: { fr: 'Informations légales (Maroc)', ar: 'المعلومات القانونية (المغرب)' },
