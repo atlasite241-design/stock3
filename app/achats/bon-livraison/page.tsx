@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { PackageCheck, Plus, Printer } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
+import InvoiceDocument from '@/components/InvoiceDocument'
+import { printInvoicePdf } from '@/lib/invoicePdf'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
 import { useDroguerie, type Purchase } from '@/lib/store'
@@ -23,6 +25,7 @@ function Content() {
   const [note, setNote] = useState('')
   const [delivered, setDelivered] = useState<Record<string, string>>({})
   const [printTarget, setPrintTarget] = useState<Purchase | null>(null)
+  const printRef = useRef<HTMLDivElement>(null)
 
   if (!ready) {
     return <Loader />
@@ -192,48 +195,41 @@ function Content() {
       </Modal>
 
       {/* Print modal */}
-      <Modal open={!!printTarget} onClose={() => setPrintTarget(null)} title={printTarget?.blRef ?? ''} maxWidth="max-w-md">
+      {/*
+        Le bon de livraison fournisseur devient un document en règle : c'est la
+        pièce qu'on classe en face de la facture du fournisseur. Les quantités
+        LIVRÉES priment sur les commandées — c'est ce qui est entré en stock.
+      */}
+      <Modal open={!!printTarget} onClose={() => setPrintTarget(null)} title={printTarget?.blRef ?? ''} maxWidth="max-w-4xl">
         {printTarget && (
           <>
-            <div className="print-area rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#12121a] p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">{t('pbl_title')}</p>
-                  <p className="text-xs text-gray-500 dark:text-zinc-400">{printTarget.supplierName}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-base font-bold text-amber-600 dark:text-amber-400">{printTarget.blRef}</p>
-                  <p className="text-xs text-gray-500 dark:text-zinc-400">
-                    {printTarget.blDate ? new Date(printTarget.blDate).toLocaleDateString('fr-FR') : ''}
-                  </p>
-                </div>
-              </div>
-              <p className="mt-2 text-xs text-gray-500 dark:text-zinc-400">
-                {t('pbl_order_label')}: {printTarget.ref} — {t('pbl_carrier_label')}: {printTarget.blCarrier || '—'}
-              </p>
-              <table className="mt-3 w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-white/10 text-left text-[11px] font-bold uppercase text-gray-400 dark:text-zinc-500">
-                    <th className="py-2">{t('po_col_designation')}</th>
-                    <th className="py-2">{t('wms_emplacement')}</th>
-                    <th className="py-2 text-right">{t('pbl_col_ordered')}</th>
-                    <th className="py-2 text-right">{t('pbl_col_delivered')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {printTarget.items.map((i) => (
-                    <tr key={i.productId} className="border-b border-gray-100 dark:border-white/10">
-                      <td className="py-2 text-gray-800 dark:text-zinc-100">{i.name}</td>
-                      <td className="py-2 font-mono text-[11px] text-amber-600 dark:text-amber-400">{empOf(i.productId) || '—'}</td>
-                      <td className="py-2 text-right font-semibold tabular-nums">{i.qty}</td>
-                      <td className="py-2 text-right font-semibold tabular-nums">{i.deliveredQty ?? '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {printTarget.blNote && <p className="mt-3 text-xs text-gray-500 dark:text-zinc-400">{printTarget.blNote}</p>}
+            <div ref={printRef} className="max-h-[60vh] overflow-auto rounded-xl border border-gray-100 dark:border-white/10">
+              <InvoiceDocument
+                title={t('pbl_title')}
+                number={printTarget.blRef}
+                date={printTarget.blDate || printTarget.date}
+                partyLabel={t('fdoc_supplier')}
+                partyName={printTarget.supplierName}
+                // Un BL d'achat ne règle rien : il constate une réception.
+                showAmountInWords={false}
+                showEmplacement
+                observations={printTarget.blNote || undefined}
+                infos={[
+                  { label: t('pbl_order_label'), value: printTarget.ref },
+                  { label: t('fdoc_date_label'), value: printTarget.blDate ? new Date(printTarget.blDate).toLocaleDateString('fr-FR') : null },
+                  { label: t('pbl_carrier_label'), value: printTarget.blCarrier || null },
+                ]}
+                lines={printTarget.items.map((i) => ({
+                  label: i.unitName && (i.unitFactor ?? 1) > 1 ? `${i.name} — ${i.unitName} ×${i.unitFactor}` : i.name,
+                  emplacement: empOf(i.productId) || undefined,
+                  // La quantité qui compte est celle REÇUE ; à défaut, la commandée.
+                  qty: i.deliveredQty ?? i.qty,
+                  puHT: i.cost,
+                  tvaPct: i.tva ?? 0,
+                }))}
+              />
             </div>
-            <button onClick={() => window.print()} className="btn-primary mt-4 w-full">
+            <button onClick={() => printInvoicePdf(printRef.current?.querySelector('.print-area') as HTMLElement)} className="btn-primary mt-4 w-full">
               <Printer className="h-4 w-4" />
               {t('pbl_print')}
             </button>

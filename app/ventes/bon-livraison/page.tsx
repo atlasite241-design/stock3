@@ -1,25 +1,31 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { PackageCheck, Printer, Search } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
+import InvoiceDocument from '@/components/InvoiceDocument'
+import { printInvoicePdf } from '@/lib/invoicePdf'
 import { deliveryNoteNumber, useDroguerie, type Sale } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 function Content() {
-  const { ready, sales, settings, products } = useDroguerie()
+  const { ready, sales, settings, products, clients } = useDroguerie()
   const { t } = useLanguage()
   const [query, setQuery] = useState('')
   const [bl, setBl] = useState<Sale | null>(null)
+  const printRef = useRef<HTMLDivElement>(null)
+  const clientBl = bl?.clientId ? clients.find((c) => c.id === bl.clientId) : undefined
 
   if (!ready) {
     return <Loader />
   }
 
-  const empOf = (productId: string) => products.find((x) => x.id === productId)?.emplacementComplet
+  // Index par identifiant : un find() par ligne parcourait tout le catalogue.
+  const parId = new Map(products.map((p) => [p.id, p]))
+  const empOf = (productId: string) => parId.get(productId)?.emplacementComplet
 
   const visible = [...sales]
     .sort((a, b) => b.date.localeCompare(a.date))
@@ -114,58 +120,46 @@ function Content() {
       </motion.div>
 
       {/* Delivery note modal */}
-      <Modal open={!!bl} onClose={() => setBl(null)} title={t('bl_title')} maxWidth="max-w-md">
+      {/*
+        Le bon de livraison accompagne la marchandise chez le client : il porte
+        donc l'en-tête et les mentions de l'enseigne, comme la facture. La
+        colonne emplacement reste — c'est le document du préparateur.
+      */}
+      <Modal open={!!bl} onClose={() => setBl(null)} title={t('bl_title')} maxWidth="max-w-4xl">
         {bl && (
           <>
-            <div className="print-area rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#12121a] p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">{settings.storeName}</p>
-                  <p className="text-xs text-gray-500 dark:text-zinc-400">{settings.address}</p>
-                  <p className="text-xs text-gray-500 dark:text-zinc-400">{settings.phone}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-base font-bold text-amber-600 dark:text-amber-400">{t('bl_title').toUpperCase()}</p>
-                  <p className="text-xs font-semibold text-gray-700 dark:text-zinc-300">{blNumber(bl)}</p>
-                  <p className="text-xs text-gray-500 dark:text-zinc-400">{new Date(bl.date).toLocaleDateString('fr-FR')}</p>
-                </div>
-              </div>
-              <p className="mt-4 text-sm text-gray-700 dark:text-zinc-300">
-                {t('bl_client_prefix')} <span className="font-semibold">{bl.clientName ?? t('bl_walk_in_client')}</span>
-              </p>
-              <table className="mt-3 w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-white/10 text-left text-[11px] font-bold uppercase text-gray-400 dark:text-zinc-500">
-                    <th className="py-2">{t('bl_designation')}</th>
-                    <th className="py-2">{t('wms_emplacement')}</th>
-                    <th className="py-2 text-right">{t('bl_delivered_qty')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bl.items.map((i) => (
-                    <tr key={i.productId} className="border-b border-gray-100 dark:border-white/10">
-                      <td className="py-2 text-gray-800 dark:text-zinc-100">{i.name}</td>
-                      <td className="py-2 font-mono text-[11px] text-amber-600 dark:text-amber-400">{empOf(i.productId) || '—'}</td>
-                      <td className="py-2 text-right font-semibold tabular-nums">{i.qty}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="mt-6 grid grid-cols-2 gap-6 text-xs text-gray-600 dark:text-zinc-400">
-                <div>
-                  <p className="font-semibold text-gray-800 dark:text-zinc-200">{t('bl_delivered_by')}</p>
-                  <div className="mt-8 border-t border-dashed border-gray-300 dark:border-white/20" />
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-800 dark:text-zinc-200">{t('bl_received_by')}</p>
-                  <div className="mt-8 border-t border-dashed border-gray-300 dark:border-white/20" />
-                </div>
-              </div>
-              <p className="mt-4 text-center text-[11px] text-gray-400 dark:text-zinc-500">
-                {t('bl_good_condition')} {settings.storeName}
-              </p>
+            <div ref={printRef} className="max-h-[60vh] overflow-auto rounded-xl border border-gray-100 dark:border-white/10">
+              <InvoiceDocument
+                title={t('bl_title')}
+                number={blNumber(bl)}
+                date={bl.date}
+                partyLabel={t('fdoc_client')}
+                partyName={bl.clientName ?? t('bl_walk_in_client')}
+                partyAddress={clientBl?.address || undefined}
+                contact={
+                  clientBl?.phone || clientBl?.email
+                    ? { name: clientBl.name, phone: clientBl.phone || undefined, email: clientBl.email || undefined }
+                    : undefined
+                }
+                // Un bon de livraison constate une remise de marchandise : il
+                // n'arrête aucune facture et n'appelle pas de règlement.
+                showAmountInWords={false}
+                showEmplacement
+                observations={`${t('bl_good_condition')} ${settings.storeName}\n\n${t('bl_delivered_by')} : ______________     ${t('bl_received_by')} : ______________`}
+                infos={[
+                  { label: t('fdoc_date_label'), value: new Date(bl.date).toLocaleDateString('fr-FR') },
+                  { label: t('fdoc_seller'), value: bl.userName || null },
+                ]}
+                lines={bl.items.map((i) => ({
+                  label: i.unitFactor && i.unitFactor > 1 ? `${i.name} — ${i.unitName} ×${i.unitFactor}` : i.name,
+                  emplacement: empOf(i.productId) || undefined,
+                  qty: i.qty,
+                  puHT: i.price / (1 + settings.tva / 100),
+                  tvaPct: settings.tva,
+                }))}
+              />
             </div>
-            <button onClick={() => window.print()} className="btn-primary mt-4 w-full">
+            <button onClick={() => printInvoicePdf(printRef.current?.querySelector('.print-area') as HTMLElement)} className="btn-primary mt-4 w-full">
               <Printer className="h-4 w-4" />
               {t('bl_print')}
             </button>

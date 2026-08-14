@@ -1,19 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import { FileMinus, Printer, Search, Wallet } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
+import InvoiceDocument from '@/components/InvoiceDocument'
+import { printInvoicePdf } from '@/lib/invoicePdf'
 import { fmtDH, saleReturnNumber, useDroguerie, type SaleReturn } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 function Content() {
-  const { ready, returns, settings } = useDroguerie()
+  const { ready, returns, settings, clients } = useDroguerie()
   const { t } = useLanguage()
   const [query, setQuery] = useState('')
   const [avoir, setAvoir] = useState<SaleReturn | null>(null)
+  const printRef = useRef<HTMLDivElement>(null)
+  // Coordonnées du client, pour la case CONTACT du document.
+  const clientAvoir = avoir ? clients.find((c) => c.name === avoir.clientName) : undefined
 
   if (!ready) {
     return <Loader />
@@ -121,57 +126,43 @@ function Content() {
       </motion.div>
 
       {/* Avoir document */}
-      <Modal open={!!avoir} onClose={() => setAvoir(null)} title={t('av_title')} maxWidth="max-w-md">
+      {/*
+        L'avoir porte le MÊME document que la facture. Il en est le pendant : le
+        client le garde comme preuve du montant qui lui est dû. Il imprimait
+        jusqu'ici un résumé fait main, sans en-tête société ni mentions légales,
+        et sorti en noir et blanc par l'impression du navigateur.
+      */}
+      <Modal open={!!avoir} onClose={() => setAvoir(null)} title={t('av_title')} maxWidth="max-w-4xl">
         {avoir && (
           <>
-            <div className="print-area rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#12121a] p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">{settings.storeName}</p>
-                  <p className="text-xs text-gray-500 dark:text-zinc-400">{settings.address}</p>
-                  <p className="text-xs text-gray-500 dark:text-zinc-400">{settings.phone}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-base font-bold text-sky-600 dark:text-sky-400">{t('av_title').toUpperCase()}</p>
-                  <p className="text-xs font-semibold text-gray-700 dark:text-zinc-300">{avoirNumber(avoir)}</p>
-                  <p className="text-xs text-gray-500 dark:text-zinc-400">{new Date(avoir.date).toLocaleDateString('fr-FR')}</p>
-                </div>
-              </div>
-              <p className="mt-4 text-sm text-gray-700 dark:text-zinc-300">
-                {t('av_client_prefix')} <span className="font-semibold">{avoir.clientName || '—'}</span>
-              </p>
-              <p className="text-xs text-gray-500 dark:text-zinc-400">
-                {t('av_issued_from')} #{avoir.saleId.slice(-5).toUpperCase()}
-              </p>
-              <table className="mt-3 w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-white/10 text-left text-[11px] font-bold uppercase text-gray-400 dark:text-zinc-500">
-                    <th className="py-2">{t('av_designation')}</th>
-                    <th className="py-2 text-center">{t('av_qty_abbr')}</th>
-                    <th className="py-2 text-right">{t('av_col_total')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {avoir.items.map((i) => (
-                    <tr key={i.productId} className="border-b border-gray-100 dark:border-white/10">
-                      <td className="py-2 text-gray-800 dark:text-zinc-100">{i.name}</td>
-                      <td className="py-2 text-center tabular-nums">{i.qty}</td>
-                      <td className="py-2 text-right font-semibold tabular-nums">{fmtDH(i.price * i.qty)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="mt-3 flex justify-end">
-                <div className="w-56 rounded-lg bg-sky-50 dark:bg-sky-500/10 px-3 py-2 text-right">
-                  <p className="text-xs text-gray-500 dark:text-zinc-400">{t('av_amount_label')}</p>
-                  <p className="text-lg font-bold text-sky-600 dark:text-sky-400 tabular-nums">{fmtDH(avoir.total)}</p>
-                </div>
-              </div>
-              <p className="mt-4 text-center text-[11px] text-gray-400 dark:text-zinc-500">
-                {t('av_deducted_note')} {settings.storeName}
-              </p>
+            <div ref={printRef} className="max-h-[60vh] overflow-auto rounded-xl border border-gray-100 dark:border-white/10">
+              <InvoiceDocument
+                title={t('av_title')}
+                number={avoirNumber(avoir)}
+                date={avoir.date}
+                partyLabel={t('fdoc_client')}
+                partyName={avoir.clientName || t('bl_walk_in_client')}
+                partyAddress={clientAvoir?.address || undefined}
+                partyLegal={clientAvoir?.cin ? `CIN : ${clientAvoir.cin}` : undefined}
+                contact={
+                  clientAvoir?.phone || clientAvoir?.email
+                    ? { name: clientAvoir.name, phone: clientAvoir.phone || undefined, email: clientAvoir.email || undefined }
+                    : undefined
+                }
+                infos={[
+                  { label: t('fdoc_date_label'), value: new Date(avoir.date).toLocaleDateString('fr-FR') },
+                  { label: t('av_issued_from'), value: `#${avoir.saleId.slice(-5).toUpperCase()}` },
+                ]}
+                observations={`${t('av_deducted_note')} ${settings.storeName}`}
+                lines={avoir.items.map((i) => ({
+                  label: i.unitFactor && i.unitFactor > 1 ? `${i.name} — ${i.unitName} ×${i.unitFactor}` : i.name,
+                  qty: i.qty,
+                  puHT: i.price / (1 + settings.tva / 100),
+                  tvaPct: settings.tva,
+                }))}
+              />
             </div>
-            <button onClick={() => window.print()} className="btn-primary mt-4 w-full">
+            <button onClick={() => printInvoicePdf(printRef.current?.querySelector('.print-area') as HTMLElement)} className="btn-primary mt-4 w-full">
               <Printer className="h-4 w-4" />
               {t('av_print')}
             </button>
