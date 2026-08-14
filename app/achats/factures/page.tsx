@@ -227,7 +227,8 @@ function Content() {
       </Modal>
 
       {/* Print modal */}
-      <Modal open={!!printTarget} onClose={() => setPrintTarget(null)} title={`${t('inv_invoice_title')} — ${printTarget?.ref ?? ''}`} maxWidth="max-w-2xl">
+      {/* Même largeur que la facture client : un A4 ne se rogne pas. */}
+      <Modal open={!!printTarget} onClose={() => setPrintTarget(null)} title={`${t('inv_invoice_title')} — ${printTarget?.ref ?? ''}`} maxWidth="max-w-4xl">
         {printTarget && (
           <>
             {/* Même raison que la facture client : largeur fixe, on fait

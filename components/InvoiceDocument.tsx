@@ -186,6 +186,33 @@ export default function InvoiceDocument({
   const infosRemplies = (infos ?? []).filter((i) => i.value)
   const ICONES = [CalendarDays, CreditCard, User, Briefcase]
 
+  /*
+   * TAILLES DE L'EN-TÊTE, CALCULÉES SUR LA PLACE DISPONIBLE.
+   *
+   * La raison sociale et le titre se partagent une ligne. Des seuils fixes ne
+   * tiennent pas : « FACTURE » laisse de la marge là où « Bon de livraison »
+   * déborde, et une enseigne au nom long fait basculer les deux. Le titre venait
+   * ainsi recouvrir le nom sur les bons de commande.
+   *
+   * On estime la largeur des deux textes à leur taille idéale ; si l'ensemble
+   * dépasse, les deux sont réduits du MÊME rapport — leur hiérarchie visuelle
+   * est préservée, et l'ensemble tient par construction, quels que soient le
+   * nom de l'enseigne et le type de document.
+   */
+  const placeEntete = 794 - 56 - (s(58) + 12) - 20 // page − marges − logo − écart
+  const largeurTexte = (txt: string, px: number) => txt.length * px * 0.6
+  const besoin = largeurTexte(title, s(30)) + largeurTexte(settings.storeName || '', s(21))
+  const rapport = besoin > placeEntete ? placeEntete / besoin : 1
+  const tailleTitre = Math.max(s(13), s(30) * rapport)
+  /*
+   * Sous ce seuil, la raison sociale deviendrait illisible : une enseigne au
+   * nom très long passe alors sur deux lignes plutôt que d'être réduite à rien.
+   * Deux lignes se lisent ; du texte minuscule, non — et rien ne se chevauche
+   * puisque le nom s'enroule dans sa propre colonne.
+   */
+  const nomSurDeuxLignes = s(21) * rapport < s(13)
+  const tailleNom = nomSurDeuxLignes ? s(13) : s(21) * rapport
+
   const th: React.CSSProperties = { padding: '7px 8px', color: '#fff', fontWeight: 700, fontSize: s(10), letterSpacing: '.03em' }
   const td: React.CSSProperties = { padding: '7px 8px', borderBottom: `1px solid ${TRAIT}`, fontSize: s(11.5) }
 
@@ -207,20 +234,29 @@ export default function InvoiceDocument({
       className="print-area invoice-print bg-white p-7"
       style={{ colorScheme: 'light', color: ENCRE, fontSize: s(12), width: 794, boxSizing: 'border-box' }}
     >
-      {/* ---------- En-tête : émetteur à gauche, document à droite ---------- */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0 }}>
+      {/*
+       * En-tête : émetteur à gauche, document à droite.
+       *
+       * Les deux blocs se disputent la ligne. Un titre long — « Bon de
+       * Commande » face à « FACTURE » — venait recouvrir la raison sociale,
+       * que son `nowrap` empêchait de céder du terrain. Les deux tailles
+       * s'adaptent donc à la longueur du texte : chacun garde une ligne,
+       * personne n'empiète.
+       */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0, flex: 1 }}>
           {settings.logoDataUrl ? (
-            <img src={settings.logoDataUrl} alt="" style={{ height: s(58), width: s(58), objectFit: 'contain' }} />
+            <img src={settings.logoDataUrl} alt="" style={{ height: s(58), width: s(58), objectFit: 'contain', flexShrink: 0 }} />
           ) : (
-            <div style={{ height: s(58), width: s(58), borderRadius: 6, background: ACCENT, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: s(20) }}>
+            <div style={{ height: s(58), width: s(58), flexShrink: 0, borderRadius: 6, background: ACCENT, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: s(20) }}>
               {(settings.storeName || 'DP').slice(0, 2).toUpperCase()}
             </div>
           )}
           <div style={{ minWidth: 0 }}>
-            {/* Le nom ne se casse pas en deux : « AQAQIR AOULAD AL / BAKALI »
-                est une raison sociale mutilée, pas une mise en page. */}
-            <p style={{ margin: 0, fontSize: s(21), fontWeight: 900, letterSpacing: '-.02em', color: ACCENT, lineHeight: 1.1, whiteSpace: 'nowrap' }}>
+            {/* Le nom tient sur une ligne : « AQAQIR AOULAD AL / BAKALI » est
+                une raison sociale mutilée, pas une mise en page. Il rétrécit
+                si l'enseigne porte un nom long. */}
+            <p style={{ margin: 0, fontSize: tailleNom, fontWeight: 900, letterSpacing: '-.02em', color: ACCENT, lineHeight: 1.1, whiteSpace: nomSurDeuxLignes ? 'normal' : 'nowrap' }}>
               {settings.storeName}
             </p>
             {settings.slogan && <p style={{ margin: '2px 0 0', fontSize: s(10), color: GRIS }}>{settings.slogan}</p>}
@@ -245,7 +281,7 @@ export default function InvoiceDocument({
         </div>
 
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <p style={{ margin: 0, fontSize: s(30), fontWeight: 900, letterSpacing: '-.02em', color: ACCENT, lineHeight: 1 }}>
+          <p style={{ margin: 0, fontSize: tailleTitre, fontWeight: 900, letterSpacing: '-.02em', color: ACCENT, lineHeight: 1, whiteSpace: 'nowrap' }}>
             {title}
           </p>
           {(number || docNumber) && (

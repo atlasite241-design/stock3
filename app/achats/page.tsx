@@ -477,7 +477,9 @@ function Content() {
       </Modal>
 
       {/* Print / PDF / Send modal */}
-      <Modal open={!!printTarget} onClose={() => setPrintTarget(null)} title={`${t('po_order_prefix')} ${printTarget?.ref ?? ''}`} maxWidth="max-w-3xl">
+      {/* Assez large pour l'A4 du document : c'est là que le nom de la société
+          et le titre se chevauchaient, faute de place. */}
+      <Modal open={!!printTarget} onClose={() => setPrintTarget(null)} title={`${t('po_order_prefix')} ${printTarget?.ref ?? ''}`} maxWidth="max-w-4xl">
         {printTarget && (
           <>
             {/*

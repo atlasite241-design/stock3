@@ -131,7 +131,9 @@ function Content() {
       </motion.div>
 
       {/* Invoice modal */}
-      <Modal open={!!invoice} onClose={() => setInvoice(null)} title={t('fac_title')} maxWidth="max-w-2xl">
+      {/* Assez large pour un document A4 (794 px) : plus étroite, la fenêtre
+          le rognait et l'aperçu ne montrait pas ce qui serait imprimé. */}
+      <Modal open={!!invoice} onClose={() => setInvoice(null)} title={t('fac_title')} maxWidth="max-w-4xl">
         {invoice && (
           <>
             {/* Défilement des DEUX côtés : le document a une largeur fixe d'A4
