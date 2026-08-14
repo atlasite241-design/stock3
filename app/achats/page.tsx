@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Eye, FileDown, Pencil, Plus, Printer, Search, Send, Trash2, Truck } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import InvoiceDocument from '@/components/InvoiceDocument'
+import { downloadInvoicePdf, printInvoicePdf } from '@/lib/invoicePdf'
 import Modal from '@/components/Modal'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
@@ -48,6 +49,7 @@ function Content() {
   const [lineTva, setLineTva] = useState('20')
   const [detail, setDetail] = useState<Purchase | null>(null)
   const [printTarget, setPrintTarget] = useState<Purchase | null>(null)
+  const printRef = useRef<HTMLDivElement>(null)
   const [deleteTarget, setDeleteTarget] = useState<Purchase | null>(null)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('tous')
@@ -488,6 +490,7 @@ function Content() {
               mentions légales, prix unitaires HT, TVA, montant en lettres)
               plutôt qu'un résumé à trois colonnes.
             */}
+            <div ref={printRef} className="max-h-[60vh] overflow-auto rounded-xl border border-gray-100 dark:border-white/10">
             <InvoiceDocument
               title={t('po_doc_title')}
               number={printTarget.ref}
@@ -521,19 +524,32 @@ function Content() {
                 tvaPct: i.tva ?? 0,
               }))}
             />
+            </div>
+            {/*
+              PDF plutôt qu'impression du navigateur. `window.print()` fait
+              appliquer la feuille d'impression du site, qui force le noir sur
+              blanc pour tout `.print-area` : le bon de commande sortait sans
+              une seule couleur, en-tête et bandeau des totaux compris, et une
+              règle de mise en page y creusait un grand vide avant le cachet.
+              Le générateur de PDF capture le rendu écran — mêmes couleurs,
+              même mise en page, et aucun en-tête de navigateur.
+            */}
             <div className="mt-4 grid grid-cols-3 gap-2">
-              <button onClick={() => window.print()} className="btn-secondary">
+              <button onClick={() => printInvoicePdf(printRef.current?.querySelector('.print-area') as HTMLElement)} className="btn-secondary">
                 <Printer className="h-4 w-4" />
                 {t('po_print')}
               </button>
-              <button onClick={() => window.print()} className="btn-secondary">
+              <button
+                onClick={() => downloadInvoicePdf(printRef.current?.querySelector('.print-area') as HTMLElement, `${printTarget.ref}.pdf`)}
+                className="btn-secondary"
+              >
                 <FileDown className="h-4 w-4" />
                 {t('po_export_pdf')}
               </button>
               <button
                 onClick={() => {
                   toast(t('po_toast_send_ready'))
-                  window.print()
+                  downloadInvoicePdf(printRef.current?.querySelector('.print-area') as HTMLElement, `${printTarget.ref}.pdf`)
                 }}
                 className="btn-primary"
               >

@@ -199,8 +199,15 @@ export default function InvoiceDocument({
    * est préservée, et l'ensemble tient par construction, quels que soient le
    * nom de l'enseigne et le type de document.
    */
-  const placeEntete = 794 - 56 - (s(58) + 12) - 20 // page − marges − logo − écart
-  const largeurTexte = (txt: string, px: number) => txt.length * px * 0.6
+  // 24 px d'écart minimum entre le nom et le titre : collés, ils se lisent
+  // comme un seul mot — « AL BAKALIBon de Commande ».
+  const placeEntete = 794 - 56 - (s(58) + 12) - 24
+  /*
+   * 0,72 em par caractère, et non 0,6 : mesuré sur le rendu réel d'un bon de
+   * commande, où le nom débordait encore sur le titre. Ces deux textes sont en
+   * graisse maximale et en capitales, bien plus larges que du texte courant.
+   */
+  const largeurTexte = (txt: string, px: number) => txt.length * px * 0.72
   const besoin = largeurTexte(title, s(30)) + largeurTexte(settings.storeName || '', s(21))
   const rapport = besoin > placeEntete ? placeEntete / besoin : 1
   const tailleTitre = Math.max(s(13), s(30) * rapport)
