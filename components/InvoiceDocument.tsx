@@ -20,6 +20,16 @@ const ENCRE = '#1f2937'
 const GRIS = '#6b7280'
 const TRAIT = '#e5e7eb'
 
+/*
+ * ÉCHELLE DU DOCUMENT. Les tailles ci-dessous décrivent la maquette d'origine ;
+ * ce facteur les agrandit d'un seul geste. Le premier rendu tenait dans le
+ * tiers supérieur d'une A4 en corps minuscule : lisible à l'écran, étriqué une
+ * fois imprimé. Régler cette valeur suffit à respirer davantage ou à faire
+ * tenir un document très long.
+ */
+const ECHELLE = 1.22
+const s = (n: number) => Math.round(n * ECHELLE * 10) / 10
+
 export interface DocLine {
   label: string
   qty: number
@@ -169,27 +179,27 @@ export default function InvoiceDocument({
   const infosRemplies = (infos ?? []).filter((i) => i.value)
   const ICONES = [CalendarDays, CreditCard, User, Briefcase]
 
-  const th: React.CSSProperties = { padding: '7px 8px', color: '#fff', fontWeight: 700, fontSize: 10, letterSpacing: '.03em' }
-  const td: React.CSSProperties = { padding: '7px 8px', borderBottom: `1px solid ${TRAIT}`, fontSize: 11.5 }
+  const th: React.CSSProperties = { padding: '7px 8px', color: '#fff', fontWeight: 700, fontSize: s(10), letterSpacing: '.03em' }
+  const td: React.CSSProperties = { padding: '7px 8px', borderBottom: `1px solid ${TRAIT}`, fontSize: s(11.5) }
 
   return (
-    <div className="print-area invoice-print bg-white p-7" style={{ colorScheme: 'light', color: ENCRE, fontSize: 12 }}>
+    <div className="print-area invoice-print bg-white p-7" style={{ colorScheme: 'light', color: ENCRE, fontSize: s(12) }}>
       {/* ---------- En-tête : émetteur à gauche, document à droite ---------- */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0 }}>
           {settings.logoDataUrl ? (
-            <img src={settings.logoDataUrl} alt="" style={{ height: 58, width: 58, objectFit: 'contain' }} />
+            <img src={settings.logoDataUrl} alt="" style={{ height: s(58), width: s(58), objectFit: 'contain' }} />
           ) : (
-            <div style={{ height: 58, width: 58, borderRadius: 6, background: ACCENT, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 20 }}>
+            <div style={{ height: s(58), width: s(58), borderRadius: 6, background: ACCENT, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: s(20) }}>
               {(settings.storeName || 'DP').slice(0, 2).toUpperCase()}
             </div>
           )}
           <div style={{ minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 21, fontWeight: 900, letterSpacing: '-.02em', color: ACCENT, lineHeight: 1.1 }}>
+            <p style={{ margin: 0, fontSize: s(21), fontWeight: 900, letterSpacing: '-.02em', color: ACCENT, lineHeight: 1.1 }}>
               {settings.storeName}
             </p>
-            {settings.slogan && <p style={{ margin: '2px 0 0', fontSize: 10, color: GRIS }}>{settings.slogan}</p>}
-            <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2, fontSize: 10, color: ENCRE }}>
+            {settings.slogan && <p style={{ margin: '2px 0 0', fontSize: s(10), color: GRIS }}>{settings.slogan}</p>}
+            <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2, fontSize: s(10), color: ENCRE }}>
               {settings.address && (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                   <MapPin style={{ height: 11, width: 11, color: ACCENT, flexShrink: 0 }} />{settings.address}
@@ -210,15 +220,15 @@ export default function InvoiceDocument({
         </div>
 
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <p style={{ margin: 0, fontSize: 30, fontWeight: 900, letterSpacing: '-.02em', color: ACCENT, lineHeight: 1 }}>
+          <p style={{ margin: 0, fontSize: s(30), fontWeight: 900, letterSpacing: '-.02em', color: ACCENT, lineHeight: 1 }}>
             {title}
           </p>
           {(number || docNumber) && (
-            <p style={{ margin: '6px 0 0', fontSize: 12, fontWeight: 700 }}>
+            <p style={{ margin: '6px 0 0', fontSize: s(12), fontWeight: 700 }}>
               {t('fdoc_number')} {number ?? docNumber}
             </p>
           )}
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: GRIS }}>{dateStr}</p>
+          <p style={{ margin: '2px 0 0', fontSize: s(11), color: GRIS }}>{dateStr}</p>
         </div>
       </div>
 
@@ -231,10 +241,10 @@ export default function InvoiceDocument({
             const Icone = ICONES[idx % ICONES.length]
             return (
               <div key={idx} style={{ border: `1px solid ${TRAIT}`, borderRadius: 6, padding: '7px 9px' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 9, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: s(9), fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.04em' }}>
                   <Icone style={{ height: 11, width: 11, flexShrink: 0 }} />{i.label}
                 </span>
-                <p style={{ margin: '3px 0 0', fontSize: 11, fontWeight: 600 }}>{i.value}</p>
+                <p style={{ margin: '3px 0 0', fontSize: s(11), fontWeight: 600 }}>{i.value}</p>
               </div>
             )
           })}
@@ -244,17 +254,17 @@ export default function InvoiceDocument({
       {/* ---------- Destinataire (+ contact s'il existe) ---------- */}
       <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: contact ? '1fr 1fr' : '1fr', gap: 10 }}>
         <div style={{ border: `1px solid ${TRAIT}`, borderRadius: 6, padding: '9px 11px' }}>
-          <p style={{ margin: 0, fontSize: 9, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.06em' }}>{partyLabel}</p>
-          <p style={{ margin: '3px 0 0', fontSize: 13, fontWeight: 700 }}>{partyName}</p>
-          {partyAddress && <p style={{ margin: '2px 0 0', fontSize: 10.5, color: GRIS }}>{partyAddress}</p>}
-          {partyLegal && <p style={{ margin: '2px 0 0', fontSize: 10.5, color: GRIS }}>{partyLegal}</p>}
+          <p style={{ margin: 0, fontSize: s(9), fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.06em' }}>{partyLabel}</p>
+          <p style={{ margin: '3px 0 0', fontSize: s(13), fontWeight: 700 }}>{partyName}</p>
+          {partyAddress && <p style={{ margin: '2px 0 0', fontSize: s(10.5), color: GRIS }}>{partyAddress}</p>}
+          {partyLegal && <p style={{ margin: '2px 0 0', fontSize: s(10.5), color: GRIS }}>{partyLegal}</p>}
         </div>
         {contact && (
           <div style={{ border: `1px solid ${TRAIT}`, borderRadius: 6, padding: '9px 11px' }}>
-            <p style={{ margin: 0, fontSize: 9, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.06em' }}>{t('fdoc_contact')}</p>
-            {contact.name && <p style={{ margin: '3px 0 0', fontSize: 11.5, fontWeight: 600 }}>{contact.name}</p>}
-            {contact.phone && <p style={{ margin: '2px 0 0', fontSize: 10.5, color: GRIS }}>{t('fdoc_phone')} : {contact.phone}</p>}
-            {contact.email && <p style={{ margin: '2px 0 0', fontSize: 10.5, color: GRIS }}>{t('fdoc_email')} : {contact.email}</p>}
+            <p style={{ margin: 0, fontSize: s(9), fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.06em' }}>{t('fdoc_contact')}</p>
+            {contact.name && <p style={{ margin: '3px 0 0', fontSize: s(11.5), fontWeight: 600 }}>{contact.name}</p>}
+            {contact.phone && <p style={{ margin: '2px 0 0', fontSize: s(10.5), color: GRIS }}>{t('fdoc_phone')} : {contact.phone}</p>}
+            {contact.email && <p style={{ margin: '2px 0 0', fontSize: s(10.5), color: GRIS }}>{t('fdoc_email')} : {contact.email}</p>}
           </div>
         )}
       </div>
@@ -276,12 +286,12 @@ export default function InvoiceDocument({
         <tbody>
           {lines.map((l, idx) => (
             <tr key={idx} style={{ background: idx % 2 ? '#fafafa' : '#fff' }}>
-              {avecRef && <td style={{ ...td, fontFamily: 'ui-monospace, monospace', fontSize: 10.5, color: GRIS }}>{l.ref || '—'}</td>}
+              {avecRef && <td style={{ ...td, fontFamily: 'ui-monospace, monospace', fontSize: s(10.5), color: GRIS }}>{l.ref || '—'}</td>}
               <td style={{ ...td, fontWeight: 600 }}>
                 {l.label}
                 {l.unit && <span style={{ color: GRIS, fontWeight: 400 }}> · {l.unit}</span>}
               </td>
-              {showEmplacement && <td style={{ ...td, fontFamily: 'ui-monospace, monospace', fontSize: 10.5, color: GRIS }}>{l.emplacement || '—'}</td>}
+              {showEmplacement && <td style={{ ...td, fontFamily: 'ui-monospace, monospace', fontSize: s(10.5), color: GRIS }}>{l.emplacement || '—'}</td>}
               <td style={{ ...td, textAlign: 'center' }}>{l.qty}</td>
               <td style={{ ...td, textAlign: 'right' }}>{fmtDH(l.puHT)}</td>
               {avecRemise && <td style={{ ...td, textAlign: 'center' }}>{(l.remisePct ?? 0).toFixed(2).replace('.', ',')} %</td>}
@@ -294,16 +304,16 @@ export default function InvoiceDocument({
 
       {/* ---------- Observations / conditions + totaux ---------- */}
       <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 260px', gap: 16, alignItems: 'start' }}>
-        <div style={{ fontSize: 10.5, lineHeight: 1.5 }}>
+        <div style={{ fontSize: s(10.5), lineHeight: 1.5 }}>
           {observations && (
             <>
-              <p style={{ margin: 0, fontSize: 9, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.05em' }}>{t('fdoc_observations')}</p>
+              <p style={{ margin: 0, fontSize: s(9), fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.05em' }}>{t('fdoc_observations')}</p>
               <p style={{ margin: '3px 0 10px', color: ENCRE, whiteSpace: 'pre-line' }}>{observations}</p>
             </>
           )}
           {settings.invoiceTerms && (
             <>
-              <p style={{ margin: 0, fontSize: 9, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.05em' }}>{t('fdoc_conditions')}</p>
+              <p style={{ margin: 0, fontSize: s(9), fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.05em' }}>{t('fdoc_conditions')}</p>
               <p style={{ margin: '3px 0 0', color: GRIS, whiteSpace: 'pre-line' }}>{settings.invoiceTerms}</p>
             </>
           )}
@@ -314,8 +324,8 @@ export default function InvoiceDocument({
           {totalRemise > 0 && <Ligne label={t('fdoc_col_remise')} valeur={`− ${fmtDH(totalRemise)}`} />}
           <Ligne label={`${t('fdoc_total_tva')}`} valeur={fmtDH(totalTVA)} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 11px', background: ACCENT_PALE }}>
-            <span style={{ fontSize: 11, fontWeight: 800, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.04em' }}>{t('fdoc_total_ttc')}</span>
-            <span style={{ fontSize: 15, fontWeight: 900, color: ACCENT }}>{fmtDH(totalTTC)}</span>
+            <span style={{ fontSize: s(11), fontWeight: 800, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.04em' }}>{t('fdoc_total_ttc')}</span>
+            <span style={{ fontSize: s(15), fontWeight: 900, color: ACCENT }}>{fmtDH(totalTTC)}</span>
           </div>
           {paid !== undefined && <Ligne label={t('fdoc_paid')} valeur={fmtDH(paid)} />}
           {showBalance && paid !== undefined && (
@@ -329,13 +339,13 @@ export default function InvoiceDocument({
         <div style={{ border: `1px solid ${TRAIT}`, borderRadius: 6, padding: '9px 11px' }}>
           {showAmountInWords && (
             <>
-              <p style={{ margin: 0, fontSize: 9, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.05em' }}>{t('fdoc_amount_words')}</p>
-              <p style={{ margin: '3px 0 0', fontSize: 11.5, fontWeight: 700 }}>{montantEnLettres(totalTTC)}.</p>
+              <p style={{ margin: 0, fontSize: s(9), fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.05em' }}>{t('fdoc_amount_words')}</p>
+              <p style={{ margin: '3px 0 0', fontSize: s(11.5), fontWeight: 700 }}>{montantEnLettres(totalTTC)}.</p>
             </>
           )}
         </div>
         <div style={{ border: `1px solid ${TRAIT}`, borderRadius: 6, padding: '6px 9px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <p style={{ margin: 0, fontSize: 9, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.04em' }}>{t('fdoc_stamp')}</p>
+          <p style={{ margin: 0, fontSize: s(9), fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: '.04em' }}>{t('fdoc_stamp')}</p>
           {settings.signatureDataUrl
             ? <img src={settings.signatureDataUrl} alt="" style={{ margin: '2px auto 0', height: 52, objectFit: 'contain' }} />
             : <div style={{ height: 52 }} />}
@@ -343,10 +353,14 @@ export default function InvoiceDocument({
       </div>
 
       {/* ---------- Pied ---------- */}
-      <div className="invoice-footer" style={{ marginTop: 14, paddingTop: 8, borderTop: `2px solid ${ACCENT}`, display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 9, color: GRIS }}>
+      <div className="invoice-footer" style={{ marginTop: 14, paddingTop: 8, borderTop: `2px solid ${ACCENT}`, display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: s(9), color: GRIS }}>
+        {/* Chaque mention reste d'un seul tenant : le pied coupait « Patente : »
+            de son numéro, ce qui rend une mention légale illisible. */}
         <span style={{ minWidth: 0 }}>
-          <b style={{ color: ENCRE }}>{settings.storeName}</b>
-          {legalBits.length > 0 && <> · {legalBits.join(' · ')}</>}
+          <b style={{ color: ENCRE, whiteSpace: 'nowrap' }}>{settings.storeName}</b>
+          {legalBits.map((m) => (
+            <span key={String(m)} style={{ whiteSpace: 'nowrap' }}> · {m}</span>
+          ))}
         </span>
         <span style={{ flexShrink: 0, fontStyle: 'italic' }}>{t('fdoc_thanks')}</span>
       </div>
@@ -356,7 +370,7 @@ export default function InvoiceDocument({
 
 function Ligne({ label, valeur, fort }: { label: string; valeur: string; fort?: boolean }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 11px', borderBottom: `1px solid ${TRAIT}`, fontSize: 11 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 11px', borderBottom: `1px solid ${TRAIT}`, fontSize: s(11) }}>
       <span style={{ color: GRIS, fontWeight: 600 }}>{label}</span>
       <span style={{ fontWeight: fort ? 800 : 600, color: ENCRE }}>{valeur}</span>
     </div>
