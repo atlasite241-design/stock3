@@ -27,7 +27,14 @@ const TRAIT = '#e5e7eb'
  * fois imprimé. Régler cette valeur suffit à respirer davantage ou à faire
  * tenir un document très long.
  */
-const ECHELLE = 1.22
+/*
+ * 1,44 et non 1,22 : en figeant la largeur du document à 794 px, le texte s'est
+ * mécaniquement retrouvé 18 % plus petit par rapport à la page qu'il ne l'était
+ * dans la fenêtre de 672 px où la maquette avait été validée (794/672 = 1,18).
+ * Ce facteur restitue exactement les proportions retenues, cette fois sur une
+ * largeur qui ne dépend plus de l'écran.
+ */
+const ECHELLE = 1.44
 const s = (n: number) => Math.round(n * ECHELLE * 10) / 10
 
 export interface DocLine {
