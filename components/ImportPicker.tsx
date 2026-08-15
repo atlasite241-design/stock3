@@ -91,9 +91,16 @@ export default function ImportPicker<T extends PickerRow>({
   const visibleCats = q ? catList.filter(([c]) => c.toLowerCase().includes(q)) : catList
   const visibleSubs = q ? subList.filter((x) => `${x.cat} ${x.sub}`.toLowerCase().includes(q)) : subList
 
+  /*
+   * Les candidats sont des INDICES dans `rows`. Quand le parent vide le fichier
+   * — ce qu'il fait dès le clic sur Importer —, ces indices ne désignent plus
+   * rien : la liste plantait en lisant le nom d'une ligne disparue. On ne garde
+   * donc que les indices qui existent encore.
+   */
   const visibleProds = useMemo(() => {
-    if (!q) return candidates
-    return candidates.filter((i) => {
+    const existants = candidates.filter((i) => rows[i] !== undefined)
+    if (!q) return existants
+    return existants.filter((i) => {
       const r = rows[i]
       return `${r.name ?? ''} ${r.barcode ?? ''}`.toLowerCase().includes(q)
     })
@@ -154,6 +161,14 @@ export default function ImportPicker<T extends PickerRow>({
   }
 
   const confirm = () => onConfirm(rows.filter((_, i) => chosen.has(i)), replace)
+
+  /*
+   * Fenêtre fermée : on ne construit rien. En JSX, le contenu d'un composant
+   * est évalué AVANT de lui être passé — la liste des produits se calculait
+   * donc même fermée, sur des lignes qui n'existaient plus. Sortir ici évite
+   * le plantage et, accessoirement, de bâtir 2 900 lignes pour rien.
+   */
+  if (!open) return null
 
   const reset = () => {
     setStep('cat'); setCats(new Set()); setSubs(new Set()); setChosen(new Set())
@@ -255,6 +270,8 @@ export default function ImportPicker<T extends PickerRow>({
         {step === 'prod' &&
           affiches.map((i) => {
             const r = rows[i]
+            // Dernier filet : une ligne absente ne fait pas tomber l'écran.
+            if (!r) return null
             return (
               <label key={i} className="flex cursor-pointer items-center gap-3 border-b border-gray-50 px-4 py-2.5 last:border-0 hover:bg-amber-50/40 dark:border-white/5 dark:hover:bg-white/5">
                 <input type="checkbox" checked={chosen.has(i)} onChange={() => toggleIdx(i)} className="h-4 w-4 accent-amber-500" />
