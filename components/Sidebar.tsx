@@ -277,7 +277,7 @@ const NAV_ALL: NavItem[] = [
           { href: '/ventes/devis', labelKey: 'nav_sales_quotes' },
           { href: '/ventes/bon-livraison', labelKey: 'nav_sales_delivery' },
           { href: '/ventes/factures', labelKey: 'nav_sales_invoices' },
-          { href: '/ventes/avoirs', labelKey: 'nav_sales_credits' },
+          { href: '/ventes/avoirs', labelKey: 'nav_sales_credit_notes' },
           { href: '/ventes/retours', labelKey: 'nav_sales_returns' },
           { href: '/ventes', labelKey: 'nav_sales_history' },
         ],
