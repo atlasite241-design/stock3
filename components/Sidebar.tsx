@@ -654,6 +654,7 @@ const NAV_ALL: NavItem[] = [
       { href: '/guide-demarrage', labelKey: 'nav_guide' },
       { href: '/guide-exercice', labelKey: 'nav_guide_exercise' },
       { href: '/guide-exploitation', labelKey: 'nav_guide_ops' },
+      { href: '/guide-avoirs', labelKey: 'nav_guide_credit_notes' },
     ],
   },
 ]
