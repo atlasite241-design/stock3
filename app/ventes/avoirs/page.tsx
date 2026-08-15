@@ -44,7 +44,7 @@ const STATUS_KEY: Record<CreditNoteStatus, TKey> = {
 type Filtre = 'tous' | 'brouillon' | 'valide' | 'non_utilise' | 'partiel' | 'solde' | 'annule'
 
 function Content() {
-  const { ready, creditNotes, clients, validateCreditNote, cancelCreditNote, consumeCreditNote } = useDroguerie()
+  const { ready, creditNotes, clients, validateCreditNote, cancelCreditNote, consumeCreditNote, annulerUtilisationAvoir } = useDroguerie()
   const { can } = usePermissions()
   const { t } = useLanguage()
   const toast = useToast()
@@ -209,24 +209,37 @@ function Content() {
                     <td className="px-4 py-2.5 text-xs text-gray-500">{a.createdBy ?? '—'}</td>
                     <td className="px-4 py-2.5">
                       <div className="flex justify-end gap-1">
+                        {/* QUATRE EMPLACEMENTS FIXES. Les boutons inapplicables sont grisés,
+                            pas retirés : après « Valider », le bouton de remboursement
+                            apparaissait EXACTEMENT sous le curseur — un avoir a été remboursé
+                            en entier 3 secondes après sa validation, par un clic de trop. */}
                         <button onClick={() => setDocTarget(a)} className="rounded-lg p-2 text-gray-400 transition hover:bg-sky-50 hover:text-sky-600 dark:text-zinc-500" title={t('fac_view')}>
                           <Eye className="h-4 w-4" />
                         </button>
-                        {(a.status === 'brouillon' || a.status === 'controle') && can('sale.credit_note_validate') && (
-                          <button onClick={() => valider(a)} className="rounded-lg p-2 text-emerald-500 transition hover:bg-emerald-50 dark:hover:bg-emerald-500/10" title={t('cn_validate')}>
-                            <BadgeCheck className="h-4 w-4" />
-                          </button>
-                        )}
-                        {(a.status === 'valide' || a.status === 'partiel') && reste > 0 && can('sale.credit_note_refund') && (
-                          <button onClick={() => { setRefundTarget(a); setRefundAmount(String(reste)) }} className="rounded-lg p-2 text-amber-500 transition hover:bg-amber-50 dark:hover:bg-amber-500/10" title={t('cn_refund')}>
-                            <Banknote className="h-4 w-4" />
-                          </button>
-                        )}
-                        {a.status !== 'annule' && a.status !== 'solde' && creditNoteUsed(a) === 0 && can('sale.credit_note_validate') && (
-                          <button onClick={() => setCancelTarget(a)} className="rounded-lg p-2 text-rose-400 transition hover:bg-rose-50 dark:hover:bg-rose-500/10" title={t('cn_cancel_action')}>
-                            <XCircle className="h-4 w-4" />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => valider(a)}
+                          disabled={!((a.status === 'brouillon' || a.status === 'controle') && can('sale.credit_note_validate'))}
+                          className="rounded-lg p-2 text-emerald-500 transition hover:bg-emerald-50 disabled:pointer-events-none disabled:opacity-20 dark:hover:bg-emerald-500/10"
+                          title={t('cn_validate')}
+                        >
+                          <BadgeCheck className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => { setRefundTarget(a); setRefundAmount(String(reste)) }}
+                          disabled={!((a.status === 'valide' || a.status === 'partiel') && reste > 0 && can('sale.credit_note_refund'))}
+                          className="rounded-lg p-2 text-amber-500 transition hover:bg-amber-50 disabled:pointer-events-none disabled:opacity-20 dark:hover:bg-amber-500/10"
+                          title={t('cn_refund')}
+                        >
+                          <Banknote className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setCancelTarget(a)}
+                          disabled={!(a.status !== 'annule' && a.status !== 'solde' && creditNoteUsed(a) === 0 && can('sale.credit_note_validate'))}
+                          className="rounded-lg p-2 text-rose-400 transition hover:bg-rose-50 disabled:pointer-events-none disabled:opacity-20 dark:hover:bg-rose-500/10"
+                          title={t('cn_cancel_action')}
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -269,7 +282,21 @@ function Content() {
                   <div key={u.id} className="flex items-center justify-between border-b border-gray-50 py-1.5 last:border-0 dark:border-white/5">
                     <span className="text-xs text-gray-500">{new Date(u.date).toLocaleString('fr-FR')} · {u.user ?? '—'}</span>
                     <span className="text-xs text-gray-600 dark:text-zinc-300">{u.refund ? t('cn_use_refund') : `${t('cn_use_on')} ${u.targetRef ?? '—'}`}</span>
-                    <span className="font-semibold tabular-nums text-gray-900 dark:text-white">{fmtDH(u.amount)}</span>
+                    <span className="flex items-center gap-2 font-semibold tabular-nums text-gray-900 dark:text-white">
+                      {fmtDH(u.amount)}
+                      {u.refund && can('sale.credit_note_validate') && (
+                        <button
+                          onClick={() => {
+                            const r = annulerUtilisationAvoir(docTarget.id, u.id)
+                            if (r.ok) { toast(`✓ ${t('cn_use_undone')}`); setDocTarget(null) }
+                          }}
+                          className="rounded-md border border-rose-200 px-2 py-0.5 text-[10px] font-bold uppercase text-rose-500 transition hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10"
+                          title={t('cn_use_undo')}
+                        >
+                          {t('cn_use_undo')}
+                        </button>
+                      )}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -312,7 +339,7 @@ function Content() {
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3">
           <button onClick={() => setRefundTarget(null)} className="btn-secondary">{t('cli_cancel')}</button>
-          <button onClick={rembourser} className="btn-primary"><Banknote className="h-4 w-4" />{t('cn_refund')}</button>
+          <button onClick={rembourser} className="btn-primary"><Banknote className="h-4 w-4" />{t('cn_refund')} {fmtDH(parseFloat(refundAmount.replace(',', '.')) || 0)}</button>
         </div>
       </Modal>
     </>

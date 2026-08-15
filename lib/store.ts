@@ -3950,6 +3950,38 @@ export function useDroguerieState() {
     return { ok: true, applique }
   }
 
+  /**
+   * ANNULE UN REMBOURSEMENT D'AVOIR enregistré par erreur : l'utilisation
+   * disparaît, l'avoir retrouve son disponible, et la ligne de caisse jumelle
+   * est retirée — le tiroir redevient juste.
+   *
+   * Réservé aux REMBOURSEMENTS : une imputation est liée à une vente encaissée,
+   * la défaire laisserait cette vente payée par un argent redevenu disponible.
+   */
+  const annulerUtilisationAvoir = (
+    avoirId: string,
+    useId: string
+  ): { ok: boolean; raison?: 'introuvable' | 'imputation' } => {
+    const a = creditNotes.find((x) => x.id === avoirId)
+    const u = a?.uses.find((x) => x.id === useId)
+    if (!a || !u) return { ok: false, raison: 'introuvable' }
+    if (!u.refund) return { ok: false, raison: 'imputation' }
+
+    const nextUses = a.uses.filter((x) => x.id !== useId)
+    const used = roundMoney(nextUses.reduce((s, x) => s + x.amount, 0))
+    const status: CreditNoteStatus =
+      a.status === 'annule' ? 'annule' : used <= 0.001 ? 'valide' : a.totalTTC - used > 0.001 ? 'partiel' : 'solde'
+    persistCreditNotes(creditNotes.map((x) => (x.id === avoirId ? { ...x, uses: nextUses, status } : x)))
+
+    // La ligne de caisse créée par CE remboursement : même date exacte, même
+    // libellé, même montant — le triplet qui l'identifie sans ambiguïté.
+    const label = `Remboursement avoir ${a.ref} — ${a.partyName}`
+    persistCash(cash.filter((c) => !(c.date === u.date && c.label === label && c.amount === u.amount)))
+
+    logActivity(`Remboursement de l'avoir ${a.ref} annulé (${fmtDH(u.amount)}) — réparation`, { target: a.ref, oldValue: fmtDH(u.amount) })
+    return { ok: true }
+  }
+
   const annulerRetour = (id: string): boolean => {
     const ret = returns.find((r) => r.id === id)
     if (!ret) return false
@@ -5638,6 +5670,7 @@ export function useDroguerieState() {
     reopenCreditNote,
     cancelCreditNote,
     consumeCreditNote,
+    annulerUtilisationAvoir,
     addQuote,
     setQuoteStatus,
     updateQuote,

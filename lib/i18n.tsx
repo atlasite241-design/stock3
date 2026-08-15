@@ -2555,6 +2555,8 @@ const DICT = {
   cn_toast_cancelled: { fr: 'annulé', ar: 'أُلغي' },
   cn_toast_refunded: { fr: 'remboursé', ar: 'تم استرداده' },
   cn_uses_title: { fr: 'Historique d’utilisation', ar: 'سجل الاستخدام' },
+  cn_use_undo: { fr: 'Annuler ce remboursement', ar: 'إلغاء هذا الاسترداد' },
+  cn_use_undone: { fr: 'Remboursement annulé — avoir et caisse rétablis', ar: 'أُلغي الاسترداد — استُعيد الإشعار والصندوق' },
   cn_use_on: { fr: 'Imputé sur', ar: 'محسوب على' },
   cn_use_refund: { fr: 'Remboursement', ar: 'استرداد' },
   cn_filter_all: { fr: 'Tous', ar: 'الكل' },
