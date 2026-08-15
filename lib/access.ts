@@ -91,6 +91,7 @@ export const ROUTE_PERM: Record<string, string> = {
   '/ventes/bon-livraison': 'sale.create',
   '/ventes/factures': 'sale.print_invoice',
   '/ventes/avoirs': 'sale.credit_note',
+  '/achats/avoirs': 'purch.credit_note',
   '/ventes/retours': 'sale.return',
   // Clients
   '/clients': 'client.view',

@@ -392,6 +392,13 @@ export const uniteDivisible = (unit: string): boolean => UNITES_DIVISIBLES.test(
 /** Arrondi des quantités à trois décimales : coupe le bruit du binaire (0,1 + 0,2). */
 export const roundQty = (n: number): number => Math.round(n * 1000) / 1000
 
+/**
+ * Arrondi au centime. Les avoirs se consomment par soustractions successives :
+ * sans arrondi, un reste de 1e-13 laisse un avoir « presque soldé » qu'aucun
+ * total ne rattrape jamais.
+ */
+export const roundMoney = (n: number): number => Math.round(n * 100) / 100
+
 /** Physical stock minus quantities reserved by pending transfers. */
 export const availableStock = (p: Product) => Math.max(0, p.stock - (p.reserved ?? 0))
 
@@ -815,6 +822,121 @@ export function rfqOfferTotal(rfq: Rfq, offer: RfqOffer): number {
 export function rfqOfferComplete(rfq: Rfq, offer: RfqOffer): boolean {
   return rfq.items.every((it) => typeof offer.prices[it.productId] === 'number' && offer.prices[it.productId] > 0)
 }
+
+/* --------------------------------- AVOIRS --------------------------------- */
+
+/**
+ * AVOIR (note de crédit), client ou fournisseur.
+ *
+ * Une seule entité pour les deux sens : le statut, la consommation partielle,
+ * le remboursement et l'annulation obéissent aux mêmes règles, seul le tiers
+ * change. Deux entités auraient signifié deux fois la même logique d'argent.
+ *
+ * L'avoir est SÉPARÉ du retour, et c'est délibéré : le retour porte le
+ * mouvement de stock, l'avoir porte l'argent. Retourner de la marchandise sans
+ * établir d'avoir (échange) ou établir un avoir sans retour (erreur de
+ * facturation) sont deux cas réels — les lier de force interdirait les deux.
+ */
+export type CreditNoteKind = 'client' | 'fournisseur'
+
+/**
+ * brouillon → controle → valide → (partiel) → solde
+ * `annule` est une sortie possible avant consommation. Un avoir n'est JAMAIS
+ * supprimé : il justifie un mouvement d'argent.
+ */
+export type CreditNoteStatus = 'brouillon' | 'controle' | 'valide' | 'partiel' | 'solde' | 'annule'
+
+export type CreditNoteReason =
+  | 'retour_marchandise'
+  | 'produit_defectueux'
+  | 'erreur_facturation'
+  | 'geste_commercial'
+  | 'autre'
+
+/** Consommation d'un avoir : sur une vente/un achat, ou remboursé en argent. */
+export interface CreditNoteUse {
+  id: string
+  date: string
+  amount: number
+  /** Vente (client) ou achat (fournisseur) sur laquelle l'avoir a été imputé. */
+  targetId?: string
+  targetRef?: string
+  /** Remboursement en argent plutôt qu'imputation. */
+  refund?: { method: 'especes' | 'virement' | 'cheque'; note?: string }
+  user?: string
+}
+
+export interface CreditNoteLine {
+  productId: string
+  name: string
+  ref?: string
+  qty: number
+  /** Prix unitaire HORS TAXE — la remise est déjà déduite en amont. */
+  puHT: number
+  tvaPct: number
+}
+
+export interface CreditNote {
+  id: string
+  ref: string
+  kind: CreditNoteKind
+  status: CreditNoteStatus
+  date: string
+  /** Tiers concerné. `partyId` peut manquer sur une vente au comptoir. */
+  partyId?: string
+  partyName: string
+  /** Document d'origine — un avoir n'existe jamais seul. */
+  originId: string
+  originRef: string
+  originDate?: string
+  /** Retour à l'origine de l'avoir, s'il y en a un (le stock vient de LUI). */
+  returnId?: string
+  /** Références fournisseur : sa facture, son bon de livraison. */
+  supplierInvoiceRef?: string
+  supplierBlRef?: string
+  reason: CreditNoteReason
+  note?: string
+  lines: CreditNoteLine[]
+  totalHT: number
+  totalTVA: number
+  totalTTC: number
+  /** Imputations et remboursements successifs. Le reste s'en déduit. */
+  uses: CreditNoteUse[]
+  createdBy?: string
+  validatedBy?: string
+  validatedAt?: string
+  cancelledBy?: string
+  cancelledAt?: string
+  cancelReason?: string
+  storeId?: string
+}
+
+export const CREDIT_NOTE_META: Record<CreditNoteStatus, { chip: string }> = {
+  brouillon: { chip: 'border-gray-200 bg-gray-50 text-gray-600 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300' },
+  controle: { chip: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-400' },
+  valide: { chip: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400' },
+  partiel: { chip: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400' },
+  solde: { chip: 'border-gray-300 bg-gray-100 text-gray-600 dark:border-white/10 dark:bg-white/10 dark:text-zinc-400' },
+  annule: { chip: 'border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400' },
+}
+
+/** Montant déjà consommé (imputations + remboursements). */
+export const creditNoteUsed = (a: CreditNote) =>
+  roundMoney(a.uses.reduce((s, u) => s + u.amount, 0))
+
+/** Ce qui reste disponible. Un avoir annulé ne vaut plus rien. */
+export const creditNoteRemaining = (a: CreditNote) =>
+  a.status === 'annule' ? 0 : roundMoney(Math.max(0, a.totalTTC - creditNoteUsed(a)))
+
+/** Avoirs réellement mobilisables par un tiers donné. */
+export const usableCreditNotes = (list: CreditNote[], kind: CreditNoteKind, partyId?: string) =>
+  list.filter(
+    (a) =>
+      a.kind === kind &&
+      (a.status === 'valide' || a.status === 'partiel') &&
+      creditNoteRemaining(a) > 0.001 &&
+      (!partyId || a.partyId === partyId)
+  )
 
 export interface SaleReturn {
   /**
@@ -1472,6 +1594,7 @@ const K = {
   budgets: 'dp_budgets',
   investments: 'dp_investments',
   rfqs: 'dp_rfqs',
+  creditNotes: 'dp_credit_notes',
 }
 
 /** Storage keys whose records carry a storeId and must be filtered per active store. */
@@ -1495,6 +1618,7 @@ const SCOPED_KEYS: string[] = [
   K.moneyTransfers,
   K.users,
   K.inventories,
+  K.creditNotes,
   K.budgets,
   K.investments,
   K.rfqs,
@@ -2296,6 +2420,7 @@ export function useDroguerieState() {
   const [purchases, setPurchases] = useState<Purchase[]>([])
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [returns, setReturns] = useState<SaleReturn[]>([])
+  const [creditNotes, setCreditNotes] = useState<CreditNote[]>([])
   const [cash, setCash] = useState<CashEntry[]>([])
   const [sessions, setSessions] = useState<RegisterSession[]>([])
   const [users, setUsers] = useState<AppUser[]>([])
@@ -2390,6 +2515,7 @@ export function useDroguerieState() {
       setEmplacements(load(K.emplacements, []))
       setTransfers(load(K.transfers, []))
       if (wants('inventories')) setInventories(load(K.inventories, []))
+      if (wants('creditNotes')) setCreditNotes(load(K.creditNotes, []))
       setExercices(load(K.exercices, []))
       setBudgets(load(K.budgets, []))
       setInvestments(load(K.investments, []))
@@ -2524,6 +2650,7 @@ export function useDroguerieState() {
   const persistPurchases = useCallback(makeScopedPersist<Purchase>(K.purchases, setPurchases), [])
   const persistQuotes = useCallback(makeScopedPersist<Quote>(K.quotes, setQuotes), [])
   const persistReturns = useCallback(makeScopedPersist<SaleReturn>(K.returns, setReturns), [])
+  const persistCreditNotes = useCallback(makeScopedPersist<CreditNote>(K.creditNotes, setCreditNotes), [])
   const persistCash = useCallback(makeScopedPersist<CashEntry>(K.cash, setCash), [])
   const persistSessions = useCallback(makeScopedPersist<RegisterSession>(K.sessions, setSessions), [])
   const persistUsers = useCallback(makePersist<AppUser[]>(K.users, setUsers), [])
@@ -3633,6 +3760,196 @@ export function useDroguerieState() {
    * repris. Destiné aux retours saisis en double avant que le garde-fou
    * n'existe — pas à l'usage courant.
    */
+  /* ---------------------------------- AVOIRS -------------------------------- */
+
+  /**
+   * Numéro d'avoir : AC-2026-000001 côté client, AF-2026-000001 côté
+   * fournisseur. Séquence propre à chaque sens, au magasin et à l'ANNÉE — un
+   * compteur global aurait fait repartir la facturation d'un magasin au numéro
+   * d'un autre, et un compteur perpétuel n'aurait pas suivi l'exercice.
+   * Le numéro est posé une fois et n'est jamais recalculé : un avoir remis à un
+   * tiers ne change plus de référence.
+   */
+  const nextCreditNoteRef = (kind: CreditNoteKind, dateIso: string) => {
+    const base = kind === 'client' ? 'AC' : 'AF'
+    const annee = new Date(dateIso).getFullYear()
+    const sid = activeStoreRef.current
+    const deja = creditNotes.filter(
+      (a) => a.kind === kind && (a.storeId ?? sid) === sid && new Date(a.date).getFullYear() === annee
+    ).length
+    return `${base}-${annee}-${String(deja + 1).padStart(6, '0')}`
+  }
+
+  /**
+   * Établit un avoir. Le montant est CALCULÉ depuis les lignes, jamais saisi :
+   * un total qui ne correspond pas à son détail est un document invalide.
+   *
+   * Le plafond — ce qui reste à couvrir sur le document d'origine, avoirs déjà
+   * émis déduits — est vérifié ici et pas seulement dans l'écran : c'est le
+   * seul chemin par lequel un avoir naît.
+   */
+  const createCreditNote = (data: {
+    kind: CreditNoteKind
+    partyId?: string
+    partyName: string
+    originId: string
+    originRef: string
+    originDate?: string
+    originTotalTTC: number
+    returnId?: string
+    supplierInvoiceRef?: string
+    supplierBlRef?: string
+    reason: CreditNoteReason
+    note?: string
+    lines: CreditNoteLine[]
+    /** Le gérant peut dépasser le reste à couvrir, en le sachant. */
+    forcer?: boolean
+  }): { ok: true; avoir: CreditNote } | { ok: false; raison: 'sans_ligne' | 'depasse'; plafond?: number } => {
+    if (!data.lines.length) return { ok: false, raison: 'sans_ligne' }
+
+    const totalHT = roundMoney(data.lines.reduce((s, l) => s + l.puHT * l.qty, 0))
+    const totalTVA = roundMoney(data.lines.reduce((s, l) => s + l.puHT * l.qty * (l.tvaPct / 100), 0))
+    const totalTTC = roundMoney(totalHT + totalTVA)
+
+    // Ce que les avoirs déjà émis sur CE document couvrent déjà (les annulés ne
+    // comptent pas : ils ne valent plus rien).
+    const dejaCouvert = roundMoney(
+      creditNotes
+        .filter((a) => a.originId === data.originId && a.status !== 'annule')
+        .reduce((s, a) => s + a.totalTTC, 0)
+    )
+    const plafond = roundMoney(Math.max(0, data.originTotalTTC - dejaCouvert))
+    if (!data.forcer && totalTTC > plafond + 0.001) return { ok: false, raison: 'depasse', plafond }
+
+    const nowIso = new Date().toISOString()
+    const avoir: CreditNote = {
+      id: uid(),
+      ref: nextCreditNoteRef(data.kind, nowIso),
+      kind: data.kind,
+      status: 'brouillon',
+      date: nowIso,
+      partyId: data.partyId,
+      partyName: data.partyName,
+      originId: data.originId,
+      originRef: data.originRef,
+      originDate: data.originDate,
+      returnId: data.returnId,
+      supplierInvoiceRef: data.supplierInvoiceRef,
+      supplierBlRef: data.supplierBlRef,
+      reason: data.reason,
+      note: data.note,
+      lines: data.lines,
+      totalHT,
+      totalTVA,
+      totalTTC,
+      uses: [],
+      createdBy: invUser(),
+    }
+    persistCreditNotes([avoir, ...creditNotes])
+    logActivity(
+      `Avoir ${avoir.ref} créé sur ${data.originRef} (${fmtDH(totalTTC)})${data.forcer && totalTTC > plafond ? ' — plafond dépassé' : ''}`,
+      { target: avoir.ref, newValue: fmtDH(totalTTC) }
+    )
+    return { ok: true, avoir }
+  }
+
+  /** Passe au contrôle, puis valide. Un avoir ne se consomme qu'une fois validé. */
+  const submitCreditNote = (id: string) => {
+    const a = creditNotes.find((x) => x.id === id)
+    if (!a || a.status !== 'brouillon') return
+    persistCreditNotes(creditNotes.map((x) => (x.id === id ? { ...x, status: 'controle' as const } : x)))
+    logActivity(`Avoir ${a.ref} envoyé au contrôle`, { target: a.ref })
+  }
+
+  const validateCreditNote = (id: string) => {
+    const a = creditNotes.find((x) => x.id === id)
+    if (!a || (a.status !== 'controle' && a.status !== 'brouillon')) return { ok: false as const }
+    persistCreditNotes(
+      creditNotes.map((x) =>
+        x.id === id ? { ...x, status: 'valide' as const, validatedBy: invUser(), validatedAt: new Date().toISOString() } : x
+      )
+    )
+    logActivity(`Avoir ${a.ref} validé (${fmtDH(a.totalTTC)})`, { target: a.ref, newValue: fmtDH(a.totalTTC) })
+    return { ok: true as const }
+  }
+
+  const reopenCreditNote = (id: string) => {
+    const a = creditNotes.find((x) => x.id === id)
+    if (!a || a.status !== 'controle') return
+    persistCreditNotes(creditNotes.map((x) => (x.id === id ? { ...x, status: 'brouillon' as const } : x)))
+    logActivity(`Avoir ${a.ref} rouvert`, { target: a.ref })
+  }
+
+  /**
+   * Annulation : l'avoir reste dans l'historique — il a pu être remis au tiers.
+   * REFUSÉE dès qu'il a servi : on ne retire pas un avoir déjà imputé sur une
+   * vente, cela laisserait cette vente payée par de l'argent qui n'existe plus.
+   */
+  const cancelCreditNote = (id: string, motif: string): { ok: boolean; raison?: 'utilise' | 'introuvable' } => {
+    const a = creditNotes.find((x) => x.id === id)
+    if (!a || a.status === 'annule') return { ok: false, raison: 'introuvable' }
+    if (creditNoteUsed(a) > 0.001) return { ok: false, raison: 'utilise' }
+    persistCreditNotes(
+      creditNotes.map((x) =>
+        x.id === id
+          ? { ...x, status: 'annule' as const, cancelledBy: invUser(), cancelledAt: new Date().toISOString(), cancelReason: motif }
+          : x
+      )
+    )
+    logActivity(`Avoir ${a.ref} annulé — ${motif}`, { target: a.ref, oldValue: fmtDH(a.totalTTC) })
+    return { ok: true }
+  }
+
+  /**
+   * Consomme un avoir : imputation sur un document, ou remboursement en argent.
+   * Le montant est ÉCRÊTÉ au disponible — c'est ce qui interdit d'utiliser deux
+   * fois le même avoir, quel que soit l'écran d'où vient la demande.
+   *
+   * Un remboursement en espèces sort de la caisse ; l'imputation, elle, ne
+   * touche pas la caisse : elle réduit ce que le tiers doit payer.
+   */
+  const useCreditNote = (
+    id: string,
+    amount: number,
+    opts?: { targetId?: string; targetRef?: string; refund?: CreditNoteUse['refund'] }
+  ): { ok: boolean; applique: number } => {
+    const a = creditNotes.find((x) => x.id === id)
+    if (!a || (a.status !== 'valide' && a.status !== 'partiel')) return { ok: false, applique: 0 }
+    const applique = roundMoney(Math.min(amount, creditNoteRemaining(a)))
+    if (applique <= 0) return { ok: false, applique: 0 }
+
+    const nowIso = new Date().toISOString()
+    const use: CreditNoteUse = { id: uid(), date: nowIso, amount: applique, ...opts, user: invUser() }
+    const reste = roundMoney(a.totalTTC - creditNoteUsed(a) - applique)
+    persistCreditNotes(
+      creditNotes.map((x) =>
+        x.id === id ? { ...x, uses: [...x.uses, use], status: reste <= 0.001 ? ('solde' as const) : ('partiel' as const) } : x
+      )
+    )
+
+    if (opts?.refund) {
+      // Remboursement d'un avoir CLIENT en espèces : sortie de caisse. Côté
+      // fournisseur, c'est lui qui nous rembourse — donc une entrée.
+      persistCash([
+        {
+          id: uid(),
+          date: nowIso,
+          type: a.kind === 'client' ? ('depense' as const) : ('recette' as const),
+          label: `Remboursement avoir ${a.ref} — ${a.partyName}`,
+          amount: applique,
+        },
+        ...cash,
+      ])
+    }
+    logActivity(
+      opts?.refund
+        ? `Avoir ${a.ref} remboursé : ${fmtDH(applique)}`
+        : `Avoir ${a.ref} imputé sur ${opts?.targetRef ?? '—'} : ${fmtDH(applique)}`,
+      { target: a.ref, newValue: fmtDH(applique) }
+    )
+    return { ok: true, applique }
+  }
+
   const annulerRetour = (id: string): boolean => {
     const ret = returns.find((r) => r.id === id)
     if (!ret) return false
@@ -5151,6 +5468,7 @@ export function useDroguerieState() {
   const scopedSupplierPayments = useScopedList(supplierPayments, activeStoreId)
   const scopedExpenses = useScopedList(expenses, activeStoreId)
   const scopedInventories = useScopedList(inventories, activeStoreId)
+  const scopedCreditNotes = useScopedList(creditNotes, activeStoreId)
   const scopedBudgets = useScopedList(budgets, activeStoreId)
   const scopedInvestments = useScopedList(investments, activeStoreId)
   const scopedRfqs = useScopedList(rfqs, activeStoreId)
@@ -5311,6 +5629,15 @@ export function useDroguerieState() {
     validateReception,
     payPurchase,
     returnPurchase,
+    // Avoirs (clients et fournisseurs) — vue scopee magasin + workflow complet.
+    creditNotes: scopedCreditNotes,
+    allCreditNotes: creditNotes,
+    createCreditNote,
+    submitCreditNote,
+    validateCreditNote,
+    reopenCreditNote,
+    cancelCreditNote,
+    useCreditNote,
     addQuote,
     setQuoteStatus,
     updateQuote,
