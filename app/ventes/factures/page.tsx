@@ -1,12 +1,15 @@
 'use client'
 
 import { useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { FileText, Printer, Search } from 'lucide-react'
+import { FileMinus, FileText, Printer, Search } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
 import InvoiceDocument from '@/components/InvoiceDocument'
+import CreditNoteCreator from '@/components/CreditNoteCreator'
+import { usePermissions } from '@/lib/access'
 import { printInvoicePdf } from '@/lib/invoicePdf'
 import { fmtDH, PAYMENT_META, saleInvoiceNumber, useDroguerie, type Sale } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
@@ -16,6 +19,9 @@ function Content() {
   const { t } = useLanguage()
   const [query, setQuery] = useState('')
   const [invoice, setInvoice] = useState<Sale | null>(null)
+  const [avoirOpen, setAvoirOpen] = useState(false)
+  const { can } = usePermissions()
+  const router = useRouter()
   // Index produit : la facture affiche la référence de chaque article, et le
   // catalogue peut compter des dizaines de milliers de fiches.
   const produitsParId = useMemo(() => new Map(products.map((p) => [p.id, p])), [products])
@@ -172,16 +178,49 @@ function Content() {
                 }))}
               />
             </div>
-            <button
-              onClick={() => printInvoicePdf(printRef.current?.querySelector('.print-area') as HTMLElement)}
-              className="btn-primary mt-4 w-full"
-            >
-              <Printer className="h-4 w-4" />
-              {t('fac_print')}
-            </button>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                onClick={() => printInvoicePdf(printRef.current?.querySelector('.print-area') as HTMLElement)}
+                className="btn-primary"
+              >
+                <Printer className="h-4 w-4" />
+                {t('fac_print')}
+              </button>
+              {can('sale.credit_note') && (
+                <button onClick={() => setAvoirOpen(true)} className="btn-secondary">
+                  <FileMinus className="h-4 w-4" />
+                  {t('cn_generate')}
+                </button>
+              )}
+            </div>
           </>
         )}
       </Modal>
+
+      {/* Génération d'un avoir depuis CETTE facture : quantités ligne à ligne,
+          plafond au reste à couvrir, la facture d'origine reste intacte. */}
+      {invoice && (
+        <CreditNoteCreator
+          open={avoirOpen}
+          onClose={() => setAvoirOpen(false)}
+          kind="client"
+          partyId={invoice.clientId}
+          partyName={invoice.clientName ?? t('bl_walk_in_client')}
+          originId={invoice.id}
+          originRef={invoiceNumber(invoice)}
+          originDate={invoice.date}
+          originTotalTTC={invoice.total}
+          lines={invoice.items.map((i) => ({
+            productId: i.productId,
+            name: i.unitFactor && i.unitFactor > 1 ? `${i.name} — ${i.unitName} ×${i.unitFactor}` : i.name,
+            ref: produitsParId.get(i.productId)?.barcode || undefined,
+            maxQty: i.qty,
+            puHT: i.price / (1 + settings.tva / 100),
+            tvaPct: settings.tva,
+          }))}
+          onCreated={() => router.push('/ventes/avoirs')}
+        />
+      )}
     </>
   )
 }

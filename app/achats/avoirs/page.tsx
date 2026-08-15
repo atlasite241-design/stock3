@@ -1,12 +1,13 @@
 'use client'
 
 /*
- * AVOIRS CLIENTS — gestion complète des notes de crédit.
+ * AVOIRS FOURNISSEURS. Même moteur que les avoirs clients — l'entité et les
+ * règles d'argent sont communes — mais le sens change : c'est le fournisseur
+ * qui NOUS doit. Un remboursement encaissé ENTRE en caisse, et l'imputation se
+ * fait sur un prochain paiement fournisseur.
  *
- * La page gère les avoirs en règle (collection creditNotes) : validation,
- * utilisation, remboursement, annulation motivée, document A4. Les anciens
- * avoirs nés des retours (method 'avoir' sur un SaleReturn) restent lisibles
- * depuis la page Retours — un bandeau le rappelle, rien n'est perdu.
+ * Se crée depuis Achats › Factures (bouton « Générer un avoir ») : jamais sans
+ * document d'origine.
  */
 
 import { useMemo, useRef, useState } from 'react'
@@ -44,7 +45,7 @@ const STATUS_KEY: Record<CreditNoteStatus, TKey> = {
 type Filtre = 'tous' | 'brouillon' | 'valide' | 'non_utilise' | 'partiel' | 'solde' | 'annule'
 
 function Content() {
-  const { ready, creditNotes, clients, validateCreditNote, cancelCreditNote, consumeCreditNote } = useDroguerie()
+  const { ready, creditNotes, validateCreditNote, cancelCreditNote, consumeCreditNote } = useDroguerie()
   const { can } = usePermissions()
   const { t } = useLanguage()
   const toast = useToast()
@@ -62,28 +63,33 @@ function Content() {
   const avoirs = useMemo(
     () =>
       creditNotes
-        .filter((a) => a.kind === 'client')
+        .filter((a) => a.kind === 'fournisseur')
         .filter((a) => {
           if (filtre === 'tous') return true
-          if (filtre === 'non_utilise') return (a.status === 'valide') && creditNoteUsed(a) === 0
+          if (filtre === 'non_utilise') return a.status === 'valide' && creditNoteUsed(a) === 0
           return a.status === filtre
         })
         .filter((a) => {
           const q = query.trim().toLowerCase()
-          return !q || a.ref.toLowerCase().includes(q) || a.partyName.toLowerCase().includes(q) || a.originRef.toLowerCase().includes(q)
+          return (
+            !q ||
+            a.ref.toLowerCase().includes(q) ||
+            a.partyName.toLowerCase().includes(q) ||
+            a.originRef.toLowerCase().includes(q) ||
+            (a.supplierInvoiceRef ?? '').toLowerCase().includes(q) ||
+            (a.supplierBlRef ?? '').toLowerCase().includes(q)
+          )
         })
         .sort((a, b) => b.date.localeCompare(a.date)),
     [creditNotes, filtre, query]
   )
 
   const totalDisponible = useMemo(
-    () => creditNotes.filter((a) => a.kind === 'client').reduce((s, a) => s + creditNoteRemaining(a), 0),
+    () => creditNotes.filter((a) => a.kind === 'fournisseur').reduce((s, a) => s + creditNoteRemaining(a), 0),
     [creditNotes]
   )
 
   if (!ready) return <Loader />
-
-  const clientDe = (a: CreditNote) => (a.partyId ? clients.find((c) => c.id === a.partyId) : clients.find((c) => c.name === a.partyName))
 
   const valider = (a: CreditNote) => {
     validateCreditNote(a.id)
@@ -127,15 +133,13 @@ function Content() {
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
             <FileMinus className="h-6 w-6 text-amber-500" />
-            {t('nav_sales_credit_notes')}
+            {t('nav_purch_credit_notes')}
           </h1>
-          {/* La création se fait DEPUIS une facture (Ventes › Factures) : un
-              avoir n'existe jamais sans document d'origine. */}
-          <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{t('cn_legacy_hint')}</p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{t('cn_supplier_sub')}</p>
         </div>
         <div className="relative min-w-[240px]">
           <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-zinc-500" />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('fac_search_placeholder')} className="input-field pl-10" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('inv_search_placeholder')} className="input-field pl-10" />
         </div>
       </motion.div>
 
@@ -144,8 +148,8 @@ function Content() {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-500 dark:bg-amber-500/10">
             <FileMinus className="h-5 w-5" />
           </div>
-          <p className="mt-4 text-[13px] font-medium text-gray-500 dark:text-zinc-400">{t('nav_sales_credit_notes')}</p>
-          <p className="mt-1 text-[22px] font-bold text-gray-900 dark:text-white">{creditNotes.filter((a) => a.kind === 'client').length}</p>
+          <p className="mt-4 text-[13px] font-medium text-gray-500 dark:text-zinc-400">{t('nav_purch_credit_notes')}</p>
+          <p className="mt-1 text-[22px] font-bold text-gray-900 dark:text-white">{creditNotes.filter((a) => a.kind === 'fournisseur').length}</p>
         </div>
         <div className="glass-card p-5">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10">
@@ -172,16 +176,15 @@ function Content() {
             <p className="text-sm text-gray-500 dark:text-zinc-400">{t('cn_none')}</p>
           </div>
         ) : (
-          <table className="w-full min-w-[980px] text-sm">
+          <table className="w-full min-w-[1020px] text-sm">
             <thead>
               <tr className="border-b border-gray-100 text-left text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:border-white/10 dark:text-zinc-500">
                 <th className="px-4 py-3">{t('cn_col_ref')}</th>
                 <th className="px-4 py-3">{t('cn_col_date')}</th>
-                <th className="px-4 py-3">{t('fdoc_client')}</th>
-                <th className="px-4 py-3">{t('cn_col_origin')}</th>
-                <th className="px-4 py-3">{t('cn_col_reason')}</th>
+                <th className="px-4 py-3">{t('fdoc_supplier')}</th>
+                <th className="px-4 py-3">{t('cn_origin_purchase')}</th>
+                <th className="px-4 py-3">{t('cn_supplier_bl')}</th>
                 <th className="px-4 py-3 text-right">{t('cn_col_ttc')}</th>
-                <th className="px-4 py-3 text-right">{t('cn_col_used')}</th>
                 <th className="px-4 py-3 text-right">{t('cn_col_remaining')}</th>
                 <th className="px-4 py-3">{t('cn_col_status')}</th>
                 <th className="px-4 py-3">{t('cn_col_by')}</th>
@@ -196,10 +199,9 @@ function Content() {
                     <td className="px-4 py-2.5 font-semibold text-amber-600 dark:text-amber-400">{a.ref}</td>
                     <td className="px-4 py-2.5 text-xs text-gray-500">{new Date(a.date).toLocaleDateString('fr-FR')}</td>
                     <td className="px-4 py-2.5 text-gray-700 dark:text-zinc-300">{a.partyName}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs text-gray-500">{a.originRef}</td>
-                    <td className="px-4 py-2.5 text-xs text-gray-500">{t(REASON_KEY[a.reason])}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs text-gray-500">{a.supplierInvoiceRef || a.originRef}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs text-gray-500">{a.supplierBlRef || '—'}</td>
                     <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-gray-900 dark:text-white">{fmtDH(a.totalTTC)}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-gray-600 dark:text-zinc-300">{fmtDH(creditNoteUsed(a))}</td>
                     <td className={`px-4 py-2.5 text-right font-bold tabular-nums ${reste > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>{fmtDH(reste)}</td>
                     <td className="px-4 py-2.5">
                       <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase ${CREDIT_NOTE_META[a.status].chip}`}>
@@ -212,17 +214,17 @@ function Content() {
                         <button onClick={() => setDocTarget(a)} className="rounded-lg p-2 text-gray-400 transition hover:bg-sky-50 hover:text-sky-600 dark:text-zinc-500" title={t('fac_view')}>
                           <Eye className="h-4 w-4" />
                         </button>
-                        {(a.status === 'brouillon' || a.status === 'controle') && can('sale.credit_note_validate') && (
+                        {(a.status === 'brouillon' || a.status === 'controle') && can('purch.credit_note') && (
                           <button onClick={() => valider(a)} className="rounded-lg p-2 text-emerald-500 transition hover:bg-emerald-50 dark:hover:bg-emerald-500/10" title={t('cn_validate')}>
                             <BadgeCheck className="h-4 w-4" />
                           </button>
                         )}
-                        {(a.status === 'valide' || a.status === 'partiel') && reste > 0 && can('sale.credit_note_refund') && (
+                        {(a.status === 'valide' || a.status === 'partiel') && reste > 0 && can('purch.credit_note') && (
                           <button onClick={() => { setRefundTarget(a); setRefundAmount(String(reste)) }} className="rounded-lg p-2 text-amber-500 transition hover:bg-amber-50 dark:hover:bg-amber-500/10" title={t('cn_refund')}>
                             <Banknote className="h-4 w-4" />
                           </button>
                         )}
-                        {a.status !== 'annule' && a.status !== 'solde' && creditNoteUsed(a) === 0 && can('sale.credit_note_validate') && (
+                        {a.status !== 'annule' && a.status !== 'solde' && creditNoteUsed(a) === 0 && can('purch.credit_note') && (
                           <button onClick={() => setCancelTarget(a)} className="rounded-lg p-2 text-rose-400 transition hover:bg-rose-50 dark:hover:bg-rose-500/10" title={t('cn_cancel_action')}>
                             <XCircle className="h-4 w-4" />
                           </button>
@@ -237,31 +239,29 @@ function Content() {
         )}
       </div>
 
-      {/* ---------- Document AVOIR CLIENT ---------- */}
+      {/* ---------- Document AVOIR FOURNISSEUR ---------- */}
       <Modal open={!!docTarget} onClose={() => setDocTarget(null)} title={docTarget?.ref ?? ''} maxWidth="max-w-4xl">
         {docTarget && (
           <>
             <div ref={printRef} className="max-h-[60vh] overflow-auto rounded-xl border border-gray-100 dark:border-white/10">
               <InvoiceDocument
-                title={t('cn_client_doc_title')}
+                title={t('cn_supplier_doc_title')}
                 number={docTarget.ref}
                 date={docTarget.date}
-                partyLabel={t('fdoc_client')}
+                partyLabel={t('fdoc_supplier')}
                 partyName={docTarget.partyName}
-                partyAddress={clientDe(docTarget)?.address || undefined}
-                partyLegal={clientDe(docTarget)?.cin ? `CIN : ${clientDe(docTarget)!.cin}` : undefined}
                 infos={[
-                  { label: t('cn_origin_invoice'), value: docTarget.originRef },
-                  { label: t('fdoc_date_label'), value: docTarget.originDate ? new Date(docTarget.originDate).toLocaleDateString('fr-FR') : null },
+                  { label: t('cn_origin_purchase'), value: docTarget.supplierInvoiceRef || docTarget.originRef },
+                  { label: t('cn_supplier_bl'), value: docTarget.supplierBlRef || null },
+                  { label: t('cn_origin_return_ref'), value: docTarget.returnId ? docTarget.originRef : null },
                   { label: t('cn_reason'), value: t(REASON_KEY[docTarget.reason]) },
-                  { label: t('fdoc_seller'), value: docTarget.createdBy || null },
                 ]}
-                // L'avoir DIMINUE la facture d'origine : la mention le dit en toutes lettres.
-                observations={`${t('cn_origin_invoice')} : ${docTarget.originRef}\n${t('cn_reason')} : ${t(REASON_KEY[docTarget.reason])}${docTarget.note ? `\n${docTarget.note}` : ''}`}
+                // Pas d'« arrêté à la somme » : c'est un document d'achat.
+                showAmountInWords={false}
+                observations={`${t('cn_origin_purchase')} : ${docTarget.supplierInvoiceRef || docTarget.originRef}${docTarget.supplierBlRef ? `\n${t('cn_supplier_bl')} : ${docTarget.supplierBlRef}` : ''}\n${t('cn_reason')} : ${t(REASON_KEY[docTarget.reason])}${docTarget.note ? `\n${docTarget.note}` : ''}`}
                 lines={docTarget.lines.map((l) => ({ label: l.name, ref: l.ref, qty: l.qty, puHT: l.puHT, tvaPct: l.tvaPct }))}
               />
             </div>
-            {/* Historique d'utilisation : chaque imputation et remboursement. */}
             {docTarget.uses.length > 0 && (
               <div className="mt-3 rounded-xl border border-gray-100 p-3 text-sm dark:border-white/10">
                 <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-zinc-500">{t('cn_uses_title')}</p>
@@ -292,7 +292,7 @@ function Content() {
         </div>
       </Modal>
 
-      {/* ---------- Remboursement ---------- */}
+      {/* ---------- Remboursement (le fournisseur NOUS rembourse : entrée en caisse) ---------- */}
       <Modal open={!!refundTarget} onClose={() => setRefundTarget(null)} title={t('cn_refund_title')} maxWidth="max-w-sm">
         <p className="text-sm text-gray-600 dark:text-zinc-300">{t('cn_refund_desc')}</p>
         <div className="mt-3 grid grid-cols-2 gap-3">

@@ -1,13 +1,16 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
-import { Banknote, FileWarning, Printer, Search } from 'lucide-react'
+import { Banknote, FileMinus, FileWarning, Printer, Search } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import Modal from '@/components/Modal'
 import Select from '@/components/Select'
 import InvoiceDocument from '@/components/InvoiceDocument'
+import CreditNoteCreator from '@/components/CreditNoteCreator'
+import { usePermissions } from '@/lib/access'
 import { printInvoicePdf } from '@/lib/invoicePdf'
 import { useToast } from '@/components/Toast'
 import { fmtDH, useDroguerie, type Purchase } from '@/lib/store'
@@ -23,6 +26,9 @@ function Content() {
   const [payAmount, setPayAmount] = useState('')
   const [method, setMethod] = useState<'especes' | 'carte' | 'virement' | 'cheque'>('especes')
   const [printTarget, setPrintTarget] = useState<Purchase | null>(null)
+  const [avoirOpen, setAvoirOpen] = useState(false)
+  const { can } = usePermissions()
+  const router = useRouter()
   const printRef = useRef<HTMLDivElement>(null)
 
   if (!ready) {
@@ -252,16 +258,52 @@ function Content() {
                 showBalance
               />
             </div>
-            <button
-              onClick={() => printInvoicePdf(printRef.current?.querySelector('.print-area') as HTMLElement)}
-              className="btn-primary mt-4 w-full"
-            >
-              <Printer className="h-4 w-4" />
-              {t('inv_print')}
-            </button>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                onClick={() => printInvoicePdf(printRef.current?.querySelector('.print-area') as HTMLElement)}
+                className="btn-primary"
+              >
+                <Printer className="h-4 w-4" />
+                {t('inv_print')}
+              </button>
+              {can('purch.credit_note') && (
+                <button onClick={() => setAvoirOpen(true)} className="btn-secondary">
+                  <FileMinus className="h-4 w-4" />
+                  {t('cn_generate')}
+                </button>
+              )}
+            </div>
           </>
         )}
       </Modal>
+
+      {/* Avoir fournisseur depuis CETTE facture d'achat. Les références du
+          fournisseur — sa facture (supplierRef) et son BL — suivent l'avoir :
+          c'est avec elles qu'on se fait rembourser. */}
+      {printTarget && (
+        <CreditNoteCreator
+          open={avoirOpen}
+          onClose={() => setAvoirOpen(false)}
+          kind="fournisseur"
+          partyId={printTarget.supplierId}
+          partyName={printTarget.supplierName}
+          originId={printTarget.id}
+          originRef={printTarget.ref}
+          originDate={printTarget.date}
+          originTotalTTC={printTarget.total}
+          supplierInvoiceRef={printTarget.supplierRef || undefined}
+          supplierBlRef={printTarget.blRef || undefined}
+          lines={printTarget.items.map((i) => ({
+            productId: i.productId,
+            name: i.name,
+            ref: i.barcode || undefined,
+            maxQty: i.receivedQty ?? i.qty,
+            puHT: i.cost,
+            tvaPct: i.tva ?? 0,
+          }))}
+          onCreated={() => router.push('/achats/avoirs')}
+        />
+      )}
     </>
   )
 }

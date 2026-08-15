@@ -3908,7 +3908,7 @@ export function useDroguerieState() {
    * Un remboursement en espèces sort de la caisse ; l'imputation, elle, ne
    * touche pas la caisse : elle réduit ce que le tiers doit payer.
    */
-  const useCreditNote = (
+  const consumeCreditNote = (
     id: string,
     amount: number,
     opts?: { targetId?: string; targetRef?: string; refund?: CreditNoteUse['refund'] }
@@ -5637,7 +5637,7 @@ export function useDroguerieState() {
     validateCreditNote,
     reopenCreditNote,
     cancelCreditNote,
-    useCreditNote,
+    consumeCreditNote,
     addQuote,
     setQuoteStatus,
     updateQuote,

@@ -43,6 +43,9 @@ import {
   uid,
   baseQty,
   roundQty,
+  roundMoney,
+  usableCreditNotes,
+  creditNoteRemaining,
   type HeldSale,
   type Product,
   type Client,
@@ -103,7 +106,7 @@ const ticketBarcode = (s: Sale) => {
 }
 
 function CaisseContent() {
-  const { ready, products, clients, settings, depots, activeStoreId, recordSale, currentSession, openSession } = useDroguerie()
+  const { ready, products, clients, settings, depots, activeStoreId, recordSale, currentSession, openSession, creditNotes, consumeCreditNote, addCashEntry } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
 
@@ -376,6 +379,19 @@ function CaisseContent() {
 
   const total = cart.reduce((a, i) => a + i.price * i.qty, 0)
 
+  /*
+   * Avoirs mobilisables du client choisi, du plus ancien au plus recent.
+   * L'applique est plafonne au total du panier ET au disponible ; le store
+   * ecrete encore de son cote au moment de consommer.
+   */
+  const [useAvoir, setUseAvoir] = useState(false)
+  const avoirsUtilisables = useMemo(() => {
+    if (!clientId) return []
+    return usableCreditNotes(creditNotes, 'client', clientId).sort((a, b) => a.date.localeCompare(b.date))
+  }, [creditNotes, clientId])
+  const avoirDisponible = useMemo(() => roundMoney(avoirsUtilisables.reduce((s, a) => s + creditNoteRemaining(a), 0)), [avoirsUtilisables])
+  const avoirApplique = useAvoir ? roundMoney(Math.min(avoirDisponible, total)) : 0
+
   const holdSale = () => {
     if (cart.length === 0) return
     const h: HeldSale = {
@@ -430,6 +446,30 @@ function CaisseContent() {
       }
     }
     const sale = recordSale(cart, payment, client, saleDepotId || undefined)
+    /*
+     * AVOIR APPLIQUÉ AU PAIEMENT. La vente garde son montant plein — la
+     * marchandise est bien vendue à ce prix — et l'avoir est consommé en face,
+     * imputé sur cette vente (traçable des deux côtés). Consommation du plus
+     * ancien au plus récent, écrêtée par le store : rejouer l'opération ne
+     * dépense jamais deux fois le même avoir.
+     *
+     * En espèces ou mixte, une sortie de caisse du même montant équilibre le
+     * tiroir : la vente y entre en entier, l'avoir en ressort — le comptage de
+     * fin de journée retombe sur l'argent réellement reçu.
+     */
+    if (avoirApplique > 0 && client) {
+      let reste = avoirApplique
+      for (const a of avoirsUtilisables) {
+        if (reste <= 0) break
+        const r = consumeCreditNote(a.id, reste, { targetId: sale.id, targetRef: sale.invoiceNo ?? sale.id.slice(-6) })
+        reste = roundMoney(reste - r.applique)
+      }
+      if (payment === 'especes' || payment === 'mixte') {
+        addCashEntry('depense', `Avoir imputé — vente ${sale.invoiceNo ?? sale.id.slice(-6)} (${client.name})`, avoirApplique)
+      }
+      toast(`✓ ${t('cn_pos_applied')} : ${fmtDH(avoirApplique)}`)
+    }
+    setUseAvoir(false)
     playSound('cash')
     setReceipt(sale)
     setReceiptReceived(payment === 'especes' ? receivedAmount : undefined)
@@ -647,6 +687,29 @@ function CaisseContent() {
               placeholder={t('pos_depot_none')}
               options={[{ value: '', label: t('pos_depot_none') }, ...storeDepots.map((d) => ({ value: d.id, label: d.name }))]}
             />
+          </div>
+        )}
+
+        {/* Avoir du client : proposé dès qu'il en a un de disponible. Pas sur
+            une vente à crédit — l'avoir viendrait payer une dette qui n'existe
+            pas encore. */}
+        {avoirDisponible > 0 && payment !== 'credit' && (
+          <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-500/20 dark:bg-emerald-500/10">
+            <label className="flex cursor-pointer items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                {t('cn_available')} : {fmtDH(avoirDisponible)}
+              </span>
+              <span className="flex items-center gap-2 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                <input type="checkbox" checked={useAvoir} onChange={(e) => setUseAvoir(e.target.checked)} className="h-4 w-4 accent-emerald-500" />
+                {t('cn_pos_use')}
+              </span>
+            </label>
+            {useAvoir && (
+              <div className="mt-2 flex items-center justify-between text-sm">
+                <span className="text-gray-600 dark:text-zinc-300">{t('cn_pos_applied')} : <b className="tabular-nums">{fmtDH(avoirApplique)}</b></span>
+                <span className="font-bold tabular-nums text-gray-900 dark:text-white">{t('cn_pos_rest')} : {fmtDH(Math.max(0, total - avoirApplique))}</span>
+              </div>
+            )}
           </div>
         )}
 

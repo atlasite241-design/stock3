@@ -249,6 +249,7 @@ const NAV_ALL: NavItem[] = [
         items: [
           { href: '/achats/factures', labelKey: 'nav_purchases_invoices' },
           { href: '/achats/retours', labelKey: 'nav_purchases_returns' },
+          { href: '/achats/avoirs', labelKey: 'nav_purch_credit_notes' },
           { href: '/achats/historique', labelKey: 'nav_purchases_history' },
         ],
       },
