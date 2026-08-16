@@ -1,10 +1,12 @@
 'use client'
 
 import { useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import {
   ChevronRight,
+  ClipboardList,
   FileDown,
   Mail,
   MessageCircle,
@@ -30,9 +32,10 @@ type Line = SaleItem & { discount: number }
 const r2 = (n: number) => Math.round(n * 100) / 100
 
 function Content() {
-  const { ready, products, clients, quotes, settings, activeStore, activeStoreId, addQuote, updateQuote, deleteQuote, convertQuote } = useDroguerie()
+  const { ready, products, clients, quotes, settings, activeStore, activeStoreId, addQuote, updateQuote, deleteQuote, convertQuote, convertQuoteToOrder } = useDroguerie()
   const { t } = useLanguage()
   const toast = useToast()
+  const router = useRouter()
 
   const [clientName, setClientName] = useState('')
   const [validity, setValidity] = useState('')
@@ -439,12 +442,27 @@ function Content() {
                     <button onClick={() => envoyerMail(quote)} className="shrink-0 rounded-lg p-2 text-sky-500 transition hover:bg-sky-500/10" title={t('dvc_send_mail')}>
                       <Mail className="h-4 w-4" />
                     </button>
-                    {/* Converti = bouton retiré : c'est le clic répété sur cette
-                        icône qui créait une vente de plus à chaque fois. */}
+                    {/* Converti = boutons retirés : c'est le clic répété sur ces
+                        icônes qui créait un document de plus à chaque fois. */}
                     {quote.status !== 'converti' && (
-                      <button onClick={() => convertir(quote)} className="shrink-0 rounded-lg bg-amber-500/10 p-2 text-amber-600 transition hover:bg-amber-500/20 dark:text-amber-400" title={t('dvc_convert')}>
-                        <Rocket className="h-4 w-4" />
-                      </button>
+                      <>
+                        {/* Devis → COMMANDE : l'engagement d'abord, la livraison
+                            sortira le stock plus tard, en une ou plusieurs fois. */}
+                        <button
+                          onClick={() => {
+                            const o = convertQuoteToOrder(quote.id)
+                            if (o) { toast(`✓ ${quote.ref} ${t('co_toast_converted')} — ${o.ref}`); router.push('/ventes/commandes') }
+                          }}
+                          className="shrink-0 rounded-lg bg-sky-500/10 p-2 text-sky-600 transition hover:bg-sky-500/20 dark:text-sky-400"
+                          title={t('co_convert_from_quote')}
+                        >
+                          <ClipboardList className="h-4 w-4" />
+                        </button>
+                        {/* Devis → VENTE immédiate : encaissement direct. */}
+                        <button onClick={() => convertir(quote)} className="shrink-0 rounded-lg bg-amber-500/10 p-2 text-amber-600 transition hover:bg-amber-500/20 dark:text-amber-400" title={t('dvc_convert')}>
+                          <Rocket className="h-4 w-4" />
+                        </button>
+                      </>
                     )}
                     <button onClick={() => deleteQuote(quote.id)} className="shrink-0 rounded-lg p-2 text-rose-400 transition hover:bg-rose-500/10 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
                   </div>

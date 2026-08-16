@@ -88,6 +88,7 @@ export const ROUTE_PERM: Record<string, string> = {
   // Ventes
   '/ventes': 'sale.history',
   '/ventes/devis': 'sale.quote_create',
+  '/ventes/commandes': 'sale.order',
   '/ventes/bon-livraison': 'sale.create',
   '/ventes/factures': 'sale.print_invoice',
   '/ventes/avoirs': 'sale.credit_note',

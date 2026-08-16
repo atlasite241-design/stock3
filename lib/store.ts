@@ -694,6 +694,98 @@ export interface Quote {
   storeId?: string
 }
 
+/* ----------------------------- Commandes clients --------------------------- */
+
+/**
+ * COMMANDE CLIENT : l'engagement pris AVANT la livraison. Elle ne touche
+ * jamais au stock — c'est la livraison qui vend, via le moteur existant
+ * (recordSale), en une ou plusieurs fois. La commande suit ce qui reste à
+ * livrer et son statut se déduit des quantités, il ne se décrète pas.
+ *
+ *   brouillon → confirmee → preparation → partielle → livree
+ *                                       ↘ annulee (tant que rien n'est livré)
+ */
+export type CustomerOrderStatus = 'brouillon' | 'confirmee' | 'preparation' | 'partielle' | 'livree' | 'annulee'
+
+export interface CustomerOrderItem {
+  productId: string
+  name: string
+  /** Prix TTC unitaire, remises déjà incorporées — même convention que SaleItem. */
+  price: number
+  qty: number
+  unitName?: string
+  unitFactor?: number
+  /** Quantité mise de côté par le magasinier (indicatif). */
+  preparedQty?: number
+  /** Quantité déjà livrée, cumulée au fil des BL. */
+  deliveredQty: number
+}
+
+/** Livraison effectuée : la vente générée et ce qu'elle emportait. */
+export interface CustomerOrderDelivery {
+  id: string
+  date: string
+  saleId: string
+  saleRef?: string
+  qtys: { productId: string; qty: number }[]
+  user?: string
+}
+
+export interface CustomerOrder {
+  id: string
+  ref: string
+  date: string
+  status: CustomerOrderStatus
+  clientId?: string
+  clientName: string
+  /** Devis d'origine, si la commande en vient — la traçabilité remonte. */
+  quoteId?: string
+  quoteRef?: string
+  items: CustomerOrderItem[]
+  total: number
+  /** Conditions de paiement reprises du client ou saisies. */
+  paymentTerm?: string
+  note?: string
+  /** Ventes générées par les livraisons — la traçabilité descend. */
+  deliveries: CustomerOrderDelivery[]
+  createdBy?: string
+  confirmedBy?: string
+  confirmedAt?: string
+  cancelledBy?: string
+  cancelledAt?: string
+  cancelReason?: string
+  storeId?: string
+}
+
+export const CUSTOMER_ORDER_META: Record<CustomerOrderStatus, { chip: string }> = {
+  brouillon: { chip: 'border-gray-200 bg-gray-50 text-gray-600 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300' },
+  confirmee: { chip: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-400' },
+  preparation: { chip: 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-400' },
+  partielle: { chip: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400' },
+  livree: { chip: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400' },
+  annulee: { chip: 'border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400' },
+}
+
+/** Quantité totale restant à livrer. */
+export const orderRemainingQty = (o: CustomerOrder) =>
+  roundQty(o.items.reduce((s, i) => s + Math.max(0, i.qty - i.deliveredQty), 0))
+
+/** Quantité totale déjà livrée. */
+export const orderDeliveredQty = (o: CustomerOrder) =>
+  roundQty(o.items.reduce((s, i) => s + i.deliveredQty, 0))
+
+/**
+ * Statut déduit des quantités — la règle unique qui fait évoluer la commande :
+ * tout livré → livrée ; une partie → partiellement livrée ; sinon le statut
+ * administratif (brouillon / confirmée / préparation) reste ce qu'il est.
+ */
+export const orderStatusFromQtys = (o: CustomerOrder): CustomerOrderStatus => {
+  if (o.status === 'annulee') return 'annulee'
+  const delivered = orderDeliveredQty(o)
+  if (delivered <= 0) return o.status === 'partielle' || o.status === 'livree' ? 'confirmee' : o.status
+  return orderRemainingQty(o) <= 0 ? 'livree' : 'partielle'
+}
+
 /* ------------------------------ Demandes d'achat --------------------------- */
 
 /**
@@ -1595,6 +1687,7 @@ const K = {
   investments: 'dp_investments',
   rfqs: 'dp_rfqs',
   creditNotes: 'dp_credit_notes',
+  customerOrders: 'dp_customer_orders',
 }
 
 /** Storage keys whose records carry a storeId and must be filtered per active store. */
@@ -1619,6 +1712,7 @@ const SCOPED_KEYS: string[] = [
   K.users,
   K.inventories,
   K.creditNotes,
+  K.customerOrders,
   K.budgets,
   K.investments,
   K.rfqs,
@@ -2421,6 +2515,7 @@ export function useDroguerieState() {
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [returns, setReturns] = useState<SaleReturn[]>([])
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>([])
+  const [customerOrders, setCustomerOrders] = useState<CustomerOrder[]>([])
   const [cash, setCash] = useState<CashEntry[]>([])
   const [sessions, setSessions] = useState<RegisterSession[]>([])
   const [users, setUsers] = useState<AppUser[]>([])
@@ -2516,6 +2611,7 @@ export function useDroguerieState() {
       setTransfers(load(K.transfers, []))
       if (wants('inventories')) setInventories(load(K.inventories, []))
       if (wants('creditNotes')) setCreditNotes(load(K.creditNotes, []))
+      if (wants('customerOrders')) setCustomerOrders(load(K.customerOrders, []))
       setExercices(load(K.exercices, []))
       setBudgets(load(K.budgets, []))
       setInvestments(load(K.investments, []))
@@ -2651,6 +2747,7 @@ export function useDroguerieState() {
   const persistQuotes = useCallback(makeScopedPersist<Quote>(K.quotes, setQuotes), [])
   const persistReturns = useCallback(makeScopedPersist<SaleReturn>(K.returns, setReturns), [])
   const persistCreditNotes = useCallback(makeScopedPersist<CreditNote>(K.creditNotes, setCreditNotes), [])
+  const persistCustomerOrders = useCallback(makeScopedPersist<CustomerOrder>(K.customerOrders, setCustomerOrders), [])
   const persistCash = useCallback(makeScopedPersist<CashEntry>(K.cash, setCash), [])
   const persistSessions = useCallback(makeScopedPersist<RegisterSession>(K.sessions, setSessions), [])
   const persistUsers = useCallback(makePersist<AppUser[]>(K.users, setUsers), [])
@@ -4798,6 +4895,193 @@ export function useDroguerieState() {
     }
   }
 
+  // ---- Commandes clients ----
+
+  /** CC-2026-000001 — même règle de numérotation que les avoirs : par magasin et par année. */
+  const nextOrderRef = (dateIso: string) => {
+    const annee = new Date(dateIso).getFullYear()
+    const sid = activeStoreRef.current
+    const deja = customerOrders.filter(
+      (o) => (o.storeId ?? sid) === sid && new Date(o.date).getFullYear() === annee
+    ).length
+    return `CC-${annee}-${String(deja + 1).padStart(6, '0')}`
+  }
+
+  const addCustomerOrder = (data: {
+    clientId?: string
+    clientName: string
+    items: Omit<CustomerOrderItem, 'deliveredQty'>[]
+    quoteId?: string
+    quoteRef?: string
+    paymentTerm?: string
+    note?: string
+  }): CustomerOrder | { error: 'sans_ligne' } => {
+    if (!data.items.length) return { error: 'sans_ligne' }
+    const nowIso = new Date().toISOString()
+    const items: CustomerOrderItem[] = data.items.map((i) => ({ ...i, deliveredQty: 0 }))
+    const order: CustomerOrder = {
+      id: uid(),
+      ref: nextOrderRef(nowIso),
+      date: nowIso,
+      status: 'brouillon',
+      clientId: data.clientId,
+      clientName: data.clientName,
+      quoteId: data.quoteId,
+      quoteRef: data.quoteRef,
+      items,
+      total: roundMoney(items.reduce((s, i) => s + i.price * i.qty, 0)),
+      paymentTerm: data.paymentTerm,
+      note: data.note,
+      deliveries: [],
+      createdBy: invUser(),
+    }
+    persistCustomerOrders([order, ...customerOrders])
+    logActivity(`Commande client ${order.ref} créée (${fmtDH(order.total)})${data.quoteRef ? ` depuis ${data.quoteRef}` : ''}`, { target: order.ref })
+    return order
+  }
+
+  /**
+   * CONVERSION D'UN DEVIS EN COMMANDE : client, lignes, prix remisés, notes —
+   * tout est repris, rien n'est ressaisi. Le devis passe à « converti » : c'est
+   * la commande qui vit désormais, une seconde conversion est donc refusée.
+   */
+  const convertQuoteToOrder = (quoteId: string): CustomerOrder | undefined => {
+    const q = quotes.find((x) => x.id === quoteId)
+    if (!q || q.status === 'converti') return undefined
+    const client = clients.find((c) => c.name === q.clientName)
+    const order = addCustomerOrder({
+      clientId: client?.id,
+      clientName: q.clientName,
+      quoteId: q.id,
+      quoteRef: q.ref,
+      paymentTerm: client?.paymentTermDays ? `${client.paymentTermDays} j` : undefined,
+      items: q.items.map((i) => ({
+        productId: i.productId,
+        name: i.name,
+        price: i.price,
+        qty: i.qty,
+        unitName: i.unitName,
+        unitFactor: i.unitFactor,
+      })),
+    })
+    if ('error' in order) return undefined
+    persistQuotes(quotes.map((x) => (x.id === quoteId ? { ...x, status: 'converti' as const } : x)))
+    return order
+  }
+
+  /** Modification : tant que rien n'est livré, et jamais sur une annulée. */
+  const updateCustomerOrder = (id: string, patch: Partial<Pick<CustomerOrder, 'items' | 'note' | 'paymentTerm' | 'clientId' | 'clientName'>>) => {
+    persistCustomerOrders(
+      customerOrders.map((o) => {
+        if (o.id !== id || o.status === 'annulee' || o.status === 'livree' || orderDeliveredQty(o) > 0) return o
+        const next = { ...o, ...patch }
+        next.total = roundMoney(next.items.reduce((s, i) => s + i.price * i.qty, 0))
+        return next
+      })
+    )
+  }
+
+  const confirmCustomerOrder = (id: string) => {
+    const o = customerOrders.find((x) => x.id === id)
+    if (!o || o.status !== 'brouillon') return
+    persistCustomerOrders(customerOrders.map((x) => (x.id === id ? { ...x, status: 'confirmee' as const, confirmedBy: invUser(), confirmedAt: new Date().toISOString() } : x)))
+    logActivity(`Commande ${o.ref} confirmée`, { target: o.ref })
+  }
+
+  /** Préparation : quantités mises de côté (indicatif) + statut « en préparation ». */
+  const prepareCustomerOrder = (id: string, prepared: { productId: string; qty: number }[]) => {
+    const o = customerOrders.find((x) => x.id === id)
+    if (!o || (o.status !== 'confirmee' && o.status !== 'preparation')) return
+    const parId = new Map(prepared.map((p) => [p.productId, p.qty]))
+    persistCustomerOrders(
+      customerOrders.map((x) =>
+        x.id === id
+          ? {
+              ...x,
+              status: 'preparation' as const,
+              items: x.items.map((i) => (parId.has(i.productId) ? { ...i, preparedQty: Math.max(0, Math.min(i.qty, parId.get(i.productId)!)) } : i)),
+            }
+          : x
+      )
+    )
+    logActivity(`Commande ${o.ref} en préparation`, { target: o.ref })
+  }
+
+  /**
+   * LIVRAISON — c'est ICI que le stock sort, jamais avant. Les quantités
+   * livrées passent par recordSale : la vente créée EST le bon de livraison et
+   * la facture (numérotée), le stock, les lots, le crédit et la fidélité
+   * suivent le circuit habituel. Écrêtage au restant : livrer deux fois la
+   * même commande ne vend pas deux fois.
+   */
+  const deliverCustomerOrder = (
+    id: string,
+    qtys: { productId: string; qty: number }[],
+    payment: Sale['payment']
+  ): { ok: true; sale: Sale } | { ok: false; raison: 'statut' | 'rien' } => {
+    const o = customerOrders.find((x) => x.id === id)
+    if (!o || o.status === 'annulee' || o.status === 'brouillon' || o.status === 'livree') return { ok: false, raison: 'statut' }
+
+    const demande = new Map(qtys.map((q) => [q.productId, q.qty]))
+    const items: SaleItem[] = []
+    for (const i of o.items) {
+      const restant = roundQty(i.qty - i.deliveredQty)
+      const q = roundQty(Math.min(demande.get(i.productId) ?? 0, Math.max(0, restant)))
+      if (q > 0) items.push({ productId: i.productId, name: i.name, price: i.price, qty: q, unitName: i.unitName, unitFactor: i.unitFactor })
+    }
+    if (!items.length) return { ok: false, raison: 'rien' }
+
+    const client = o.clientId ? clients.find((c) => c.id === o.clientId) ?? null : null
+    const sale = recordSale(items, payment, client)
+
+    const livre = new Map(items.map((i) => [i.productId, i.qty]))
+    persistCustomerOrders(
+      customerOrders.map((x) => {
+        if (x.id !== id) return x
+        const nextItems = x.items.map((i) => (livre.has(i.productId) ? { ...i, deliveredQty: roundQty(i.deliveredQty + livre.get(i.productId)!) } : i))
+        const next: CustomerOrder = {
+          ...x,
+          items: nextItems,
+          deliveries: [
+            ...x.deliveries,
+            { id: uid(), date: sale.date, saleId: sale.id, saleRef: sale.invoiceNo, qtys: items.map((i) => ({ productId: i.productId, qty: i.qty })), user: invUser() },
+          ],
+        }
+        return { ...next, status: orderStatusFromQtys(next) }
+      })
+    )
+    logActivity(`Commande ${o.ref} livrée (${items.reduce((s, i) => s + i.qty, 0)} art. → ${sale.invoiceNo ?? sale.id.slice(-6)})`, { target: o.ref })
+    return { ok: true, sale }
+  }
+
+  /** Annulation : REFUSÉE dès la première livraison — les ventes émises existent. */
+  const cancelCustomerOrder = (id: string, motif: string): { ok: boolean; raison?: 'livree' } => {
+    const o = customerOrders.find((x) => x.id === id)
+    if (!o || o.status === 'annulee') return { ok: false }
+    if (orderDeliveredQty(o) > 0) return { ok: false, raison: 'livree' }
+    persistCustomerOrders(
+      customerOrders.map((x) =>
+        x.id === id ? { ...x, status: 'annulee' as const, cancelledBy: invUser(), cancelledAt: new Date().toISOString(), cancelReason: motif } : x
+      )
+    )
+    logActivity(`Commande ${o.ref} annulée — ${motif}`, { target: o.ref })
+    return { ok: true }
+  }
+
+  /** Duplication : mêmes lignes, nouvelle référence, tout à re-livrer. */
+  const duplicateCustomerOrder = (id: string): CustomerOrder | undefined => {
+    const o = customerOrders.find((x) => x.id === id)
+    if (!o) return undefined
+    const r = addCustomerOrder({
+      clientId: o.clientId,
+      clientName: o.clientName,
+      paymentTerm: o.paymentTerm,
+      note: o.note,
+      items: o.items.map(({ deliveredQty: _d, preparedQty: _p, ...i }) => i),
+    })
+    return 'error' in r ? undefined : r
+  }
+
   // ---- Quotes ----
   const addQuote = (clientName: string, items: SaleItem[]) => {
     const total = items.reduce((a, i) => a + i.price * i.qty, 0)
@@ -5501,6 +5785,7 @@ export function useDroguerieState() {
   const scopedExpenses = useScopedList(expenses, activeStoreId)
   const scopedInventories = useScopedList(inventories, activeStoreId)
   const scopedCreditNotes = useScopedList(creditNotes, activeStoreId)
+  const scopedCustomerOrders = useScopedList(customerOrders, activeStoreId)
   const scopedBudgets = useScopedList(budgets, activeStoreId)
   const scopedInvestments = useScopedList(investments, activeStoreId)
   const scopedRfqs = useScopedList(rfqs, activeStoreId)
@@ -5671,6 +5956,16 @@ export function useDroguerieState() {
     cancelCreditNote,
     consumeCreditNote,
     annulerUtilisationAvoir,
+    // Commandes clients — vue scopee + workflow complet.
+    customerOrders: scopedCustomerOrders,
+    addCustomerOrder,
+    convertQuoteToOrder,
+    updateCustomerOrder,
+    confirmCustomerOrder,
+    prepareCustomerOrder,
+    deliverCustomerOrder,
+    cancelCustomerOrder,
+    duplicateCustomerOrder,
     addQuote,
     setQuoteStatus,
     updateQuote,
