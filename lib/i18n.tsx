@@ -2717,6 +2717,7 @@ const DICT = {
   inv_adjusted: { fr: 'ajustement(s) de stock appliqué(s)', ar: 'تعديل (تعديلات) مخزون مطبقة' },
   inv_cancelled: { fr: 'annulé', ar: 'أُلغي' },
   inv_no_gaps: { fr: 'Aucun écart : le stock compté correspond au théorique', ar: 'لا فروقات: المخزون المعدود مطابق للنظري' },
+  sk_cnt_no_gap_hint: { fr: 'Aucun écart à régulariser — le comptage correspond au stock théorique', ar: 'لا فرق للتسوية — العدّ مطابق للمخزون النظري' },
   inv_validate_title: { fr: 'Valider et ajuster le stock ?', ar: 'اعتماد وتعديل المخزون؟' },
   inv_validate_desc_1: { fr: 'La validation appliquera', ar: 'سيطبق الاعتماد' },
   inv_validate_desc_2: { fr: 'écart(s) au stock (mouvements type « inventaire », lots réconciliés). Cette opération est définitive : l’inventaire devient immuable.', ar: 'فرقًا (فروقات) على المخزون (حركات من نوع «جرد»، مع تسوية الدفعات). هذه العملية نهائية: يصبح الجرد غير قابل للتعديل.' },

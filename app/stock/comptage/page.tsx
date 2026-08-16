@@ -185,7 +185,15 @@ function Content() {
             </table>
           </div>
 
-          <button onClick={validate} className="btn-primary w-full">
+          {/* Sans écart, il n'y a rien à régulariser : valider n'écrirait
+              aucun mouvement. Le bouton se grise au lieu de promettre une
+              action vide — le libellé « (0) » ne suffisait pas à le dire. */}
+          <button
+            onClick={validate}
+            disabled={totals.ecarts === 0}
+            title={totals.ecarts === 0 ? t('sk_cnt_no_gap_hint') : undefined}
+            className="btn-primary w-full disabled:cursor-not-allowed disabled:opacity-40"
+          >
             <Check className="h-4 w-4" />{t('sk_cnt_validate')} ({totals.ecarts})
           </button>
         </>
