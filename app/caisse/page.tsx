@@ -978,7 +978,14 @@ function CaisseContent() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.4 }}
-          className="glass-card hidden p-5 lg:sticky lg:top-20 lg:block"
+          /*
+           * Épinglé sous la barre du haut, le panneau doit tenir dans l'écran :
+           * sans plafond de hauteur, un panier de 4 articles et plus poussait
+           * « Encaisser » sous le bord — le bouton le plus important de la
+           * caisse s'affichait à moitié. Plafonné à la hauteur visible, c'est
+           * le panneau qui défile et le bouton reste atteignable.
+           */
+          className="glass-card hidden p-5 lg:sticky lg:top-20 lg:block lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto"
         >
           <div className="hidden items-center justify-between lg:flex">
             <h2 className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
