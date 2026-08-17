@@ -718,34 +718,43 @@ function CaisseContent() {
         </p>
       </div>
 
-      {/* Total */}
-      <div className="mt-4 rounded-xl bg-gradient-to-r from-amber-50 dark:from-amber-500/10 to-yellow-50 dark:to-yellow-500/5 p-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-gray-600 dark:text-zinc-400">{t('pos_total')}</span>
-          <span className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white tabular-nums">
-            {fmtDH(total)}
-          </span>
+      {/*
+       * Total + Encaisser ÉPINGLÉS au bas du panneau. Le panneau défile quand
+       * son contenu dépasse l'écran — mais le bouton d'encaissement ne doit
+       * jamais exiger un défilement : à 100 % de zoom, il fallait descendre
+       * (ou zoomer à 75 %) pour le trouver. `sticky bottom-0` le colle au bord
+       * du cadre défilant, panneau latéral comme fenêtre mobile, avec un fond
+       * plein pour que les lignes glissent dessous sans transparaître.
+       */}
+      <div className="sticky bottom-0 z-10 -mb-1 bg-white pb-1 pt-3 dark:bg-[#12121a]">
+        <div className="rounded-xl bg-gradient-to-r from-amber-50 dark:from-amber-500/10 to-yellow-50 dark:to-yellow-500/5 p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-gray-600 dark:text-zinc-400">{t('pos_total')}</span>
+            <span className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white tabular-nums">
+              {fmtDH(total)}
+            </span>
+          </div>
         </div>
-      </div>
 
-      <button
-        onClick={() => {
-          if (!currentSession) {
-            toast(t('pos_open_register_required'), 'error')
-            setOpenCaisseModal(true)
-            return
-          }
-          if (payment === 'credit' && !clientId) {
-            toast(t('pos_toast_select_client_credit'), 'error')
-            return
-          }
-          setPaymentSheetOpen(true)
-        }}
-        disabled={cart.length === 0}
-        className="btn-primary mt-4 h-12 w-full text-base"
-      >
-        {t('pos_checkout')} {total > 0 ? fmtDH(total) : ''}
-      </button>
+        <button
+          onClick={() => {
+            if (!currentSession) {
+              toast(t('pos_open_register_required'), 'error')
+              setOpenCaisseModal(true)
+              return
+            }
+            if (payment === 'credit' && !clientId) {
+              toast(t('pos_toast_select_client_credit'), 'error')
+              return
+            }
+            setPaymentSheetOpen(true)
+          }}
+          disabled={cart.length === 0}
+          className="btn-primary mt-3 h-12 w-full text-base"
+        >
+          {t('pos_checkout')} {total > 0 ? fmtDH(total) : ''}
+        </button>
+      </div>
     </>
   )
 
