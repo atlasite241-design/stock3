@@ -1435,7 +1435,7 @@ const DICT = {
   nav_stock_history: { fr: 'Mouvements de stock', ar: 'حركات المخزون' },
   nav_purchases: { fr: 'Achats', ar: 'المشتريات' },
   nav_purchases_orders: { fr: 'Bons de commande', ar: 'أوامر الشراء' },
-  nav_purchases_delivery: { fr: 'Bon de livraison', ar: 'بون التسليم' },
+  nav_purchases_delivery: { fr: 'BL fournisseur', ar: 'سند تسليم المورد' },
   nav_purchases_reception: { fr: 'Bon de réception', ar: 'سند الاستلام' },
   nav_purchases_stock_entries: { fr: 'Entrée en stock', ar: 'إدخال المخزون' },
   nav_purchases_invoices: { fr: 'Factures fournisseurs', ar: 'فواتير الموردين' },
