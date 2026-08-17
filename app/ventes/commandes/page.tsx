@@ -29,6 +29,7 @@ import {
   fmtDH,
   orderDeliveredQty,
   orderRemainingQty,
+  roundMoney,
   roundQty,
   useDroguerie,
   type CustomerOrder,
@@ -61,6 +62,8 @@ function Content() {
   const [detail, setDetail] = useState<CustomerOrder | null>(null)
   const [printTarget, setPrintTarget] = useState<CustomerOrder | null>(null)
   const [cancelTarget, setCancelTarget] = useState<CustomerOrder | null>(null)
+  // Duplication quand les prix du catalogue ont bougé : on demande lesquels garder.
+  const [dupTarget, setDupTarget] = useState<CustomerOrder | null>(null)
   const [cancelReason, setCancelReason] = useState('')
 
   // Création directe
@@ -257,7 +260,17 @@ function Content() {
                           <Truck className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => { const d = duplicateCustomerOrder(o.id); if (d) toast(`✓ ${d.ref} ${t('co_toast_created')}`) }}
+                          onClick={() => {
+                            /* Prix inchangés → un seul clic. Prix différents →
+                               la fenêtre demande lesquels appliquer, totaux
+                               à l'appui — pas de choix silencieux. */
+                            const change = o.items.some((i) => {
+                              const p = prodById.get(i.productId)
+                              return p !== undefined && Math.abs(p.price - i.price) > 0.001
+                            })
+                            if (!change) { const d = duplicateCustomerOrder(o.id); if (d) toast(`✓ ${d.ref} ${t('co_toast_created')}`) }
+                            else setDupTarget(o)
+                          }}
                           disabled={!can('sale.order')}
                           className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 disabled:pointer-events-none disabled:opacity-20 dark:text-zinc-500 dark:hover:bg-white/10"
                           title={t('co_duplicate')}
@@ -516,6 +529,37 @@ function Content() {
             {t('co_create')}
           </button>
         </div>
+      </Modal>
+
+      {/* ---------- Duplication : quels prix ? ---------- */}
+      <Modal open={!!dupTarget} onClose={() => setDupTarget(null)} title={t('co_dup_title')} maxWidth="max-w-sm">
+        {dupTarget && (() => {
+          const totalOrigine = dupTarget.total
+          const totalCatalogue = roundMoney(dupTarget.items.reduce((s2, i) => s2 + (prodById.get(i.productId)?.price ?? i.price) * i.qty, 0))
+          const dupliquer = (refresh: boolean) => {
+            const d = duplicateCustomerOrder(dupTarget.id, { refreshPrices: refresh })
+            if (d) toast(`✓ ${d.ref} ${t('co_toast_created')} — ${fmtDH(d.total)}`)
+            setDupTarget(null)
+          }
+          return (
+            <>
+              <p className="text-sm text-gray-600 dark:text-zinc-300">{t('co_dup_desc')}</p>
+              <div className="mt-4 grid gap-2">
+                <button onClick={() => dupliquer(false)} className="btn-secondary justify-between">
+                  <span>{t('co_dup_keep')}</span>
+                  <span className="font-bold tabular-nums">{fmtDH(totalOrigine)}</span>
+                </button>
+                <button onClick={() => dupliquer(true)} className="btn-primary justify-between">
+                  <span>{t('co_dup_refresh')}</span>
+                  <span className="font-bold tabular-nums">{fmtDH(totalCatalogue)}</span>
+                </button>
+                <button onClick={() => setDupTarget(null)} className="text-xs font-semibold text-gray-400 transition hover:text-amber-500">
+                  {t('cli_cancel')}
+                </button>
+              </div>
+            </>
+          )
+        })()}
       </Modal>
 
       {/* ---------- Annulation motivée ---------- */}

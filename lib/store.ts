@@ -5068,16 +5068,24 @@ export function useDroguerieState() {
     return { ok: true }
   }
 
-  /** Duplication : mêmes lignes, nouvelle référence, tout à re-livrer. */
-  const duplicateCustomerOrder = (id: string): CustomerOrder | undefined => {
+  /**
+   * Duplication : mêmes lignes, nouvelle référence, tout à re-livrer.
+   * `refreshPrices` remplace les prix d'origine par ceux du catalogue au
+   * moment de la copie — un article disparu du catalogue garde son ancien
+   * prix, faute de mieux. Le choix appartient à l'écran, qui ne pose la
+   * question que si les prix ont réellement bougé.
+   */
+  const duplicateCustomerOrder = (id: string, opts?: { refreshPrices?: boolean }): CustomerOrder | undefined => {
     const o = customerOrders.find((x) => x.id === id)
     if (!o) return undefined
+    const prixDe = (i: CustomerOrderItem) =>
+      opts?.refreshPrices ? products.find((p) => p.id === i.productId)?.price ?? i.price : i.price
     const r = addCustomerOrder({
       clientId: o.clientId,
       clientName: o.clientName,
       paymentTerm: o.paymentTerm,
       note: o.note,
-      items: o.items.map(({ deliveredQty: _d, preparedQty: _p, ...i }) => i),
+      items: o.items.map(({ deliveredQty: _d, preparedQty: _p, ...i }) => ({ ...i, price: prixDe(i as CustomerOrderItem) })),
     })
     return 'error' in r ? undefined : r
   }
