@@ -194,7 +194,6 @@ const NAV_ALL: NavItem[] = [
         items: [
           { href: '/stock/transferts/nouveau', labelKey: 'nav_stock_transfer_new' },
           { href: '/stock/transferts', labelKey: 'nav_stock_transfers' },
-          { href: '/stock/transferts/details', labelKey: 'nav_stock_transfers_detail' },
         ],
       },
       {
