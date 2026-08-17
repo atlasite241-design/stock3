@@ -517,7 +517,15 @@ function CaisseContent() {
         </span>
       </div>
 
-      <div className="max-h-[45vh] space-y-2 overflow-y-auto pr-1 lg:max-h-[260px]">
+      {/*
+       * ZONE DÉFILANTE : tout ce qui précède le pied Total + Encaisser.
+       * Sur grand écran, c'est ELLE qui défile (flex-1 dans la colonne
+       * plafonnée) — le pied reste en dehors, donc toujours visible, sans
+       * dépendre d'un sticky dont l'ancrage variait selon la hauteur d'écran.
+       * Sur mobile, la fenêtre du panier défile déjà en entier.
+       */}
+      <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
+      <div className="max-h-[45vh] space-y-2 overflow-y-auto pr-1 lg:max-h-none lg:overflow-visible lg:pr-0">
         {cart.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
             <ShoppingCart className="h-8 w-8 text-gray-300" />
@@ -716,6 +724,8 @@ function CaisseContent() {
         <p className="mt-3 text-xs text-gray-400 dark:text-zinc-500">
           {t('pos_received_hint')}
         </p>
+      </div>
+
       </div>
 
       {/*
@@ -994,7 +1004,7 @@ function CaisseContent() {
            * caisse s'affichait à moitié. Plafonné à la hauteur visible, c'est
            * le panneau qui défile et le bouton reste atteignable.
            */
-          className="glass-card hidden p-5 lg:sticky lg:top-20 lg:block lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto"
+          className="glass-card hidden p-5 lg:sticky lg:top-20 lg:flex lg:max-h-[calc(100vh-6rem)] lg:flex-col"
         >
           <div className="hidden items-center justify-between lg:flex">
             <h2 className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
@@ -1005,7 +1015,7 @@ function CaisseContent() {
               {cartItemCount} {t('pos_article_count')}
             </span>
           </div>
-          <div className="mt-4">{cartPanel}</div>
+          <div className="mt-4 flex min-h-0 flex-1 flex-col">{cartPanel}</div>
         </motion.div>
       </div>
 
