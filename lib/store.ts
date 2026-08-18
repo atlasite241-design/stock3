@@ -2436,7 +2436,12 @@ export function createBackup(label: string): Backup {
   const data: Record<string, unknown> = {}
   Object.entries(K).forEach(([, key]) => {
     if (key === K.backups) return
-    const raw = localStorage.getItem(key)
+    // storageGet, pas localStorage.getItem : le catalogue vit dans IndexedDB
+    // (et son ancienne clé localStorage est EFFACÉE après migration). Lu en
+    // direct du localStorage, il revenait vide — la sauvegarde ne contenait
+    // aucun produit, et la restaurer effaçait le catalogue. storageGet lit le
+    // bon emplacement, comme l'export JSON qui, lui, incluait déjà les produits.
+    const raw = storageGet(key)
     if (raw) data[key] = JSON.parse(raw)
   })
   const backup: Backup = { id: uid(), date: new Date().toISOString(), label, data }
