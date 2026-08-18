@@ -214,7 +214,8 @@ export default function DashboardPage() {
     let total = 0, profit = 0
     for (const r of rs) {
       total += r.total
-      for (const i of r.items) profit += i.price * i.qty - (prodById.get(i.productId)?.cost ?? 0) * baseQty(i)
+      // Marge HT, comme la vente : le retour annule une marge HT, pas TTC.
+      for (const i of r.items) profit += i.price / (1 + settings.tva / 100) * i.qty - (prodById.get(i.productId)?.cost ?? 0) * baseQty(i)
     }
     return { total, profit }
   }

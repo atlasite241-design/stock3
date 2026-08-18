@@ -3570,9 +3570,14 @@ export function useDroguerieState() {
     // La marge se calcule sur la quantité de BASE : le coût est celui de l'unité
     // de stock, alors que le prix est celui du conditionnement vendu. Multiplier
     // le coût par le nombre de cartons donnerait une marge grossièrement fausse.
+    //
+    // Marge HT − HT, pas TTC − HT. Le prix de vente est TTC ; la TVA collectée
+    // n'est pas un gain, elle est due à l'État. La compter dans la marge la
+    // gonflait du montant de la taxe. Le coût d'achat est déjà HT.
     const profit = items.reduce((s, i) => {
       const p = products.find((x) => x.id === i.productId)
-      return s + i.price * i.qty - (p?.cost ?? 0) * baseQty(i)
+      const puHT = i.price / (1 + settings.tva / 100)
+      return s + puHT * i.qty - (p?.cost ?? 0) * baseQty(i)
     }, 0)
     // Le vendeur est repris de la session : sans lui, aucun rapport par
     // vendeur n'est possible — et on ne peut pas le reconstituer après coup.
@@ -4443,18 +4448,27 @@ export function useDroguerieState() {
 
   const paySupplier = (id: string, amount: number, method: SupplierPayment['method'] = 'especes') => {
     const s = suppliers.find((x) => x.id === id)
+    if (!s) return
+    /*
+     * Plafonné au dû et refusé si ≤ 0, comme payCredit côté client. Sans cela,
+     * un montant négatif AUGMENTAIT la dette et créditait la caisse à l'envers,
+     * et un montant supérieur au solde sur-débitait la caisse pendant que la
+     * dette plafonnait à zéro — l'écart disparaissait sans trace.
+     */
+    const applied = roundMoney(Math.min(amount, Math.max(0, s.balance)))
+    if (applied <= 0) return
     persistSuppliers(
-      suppliers.map((x) => (x.id === id ? { ...x, balance: Math.max(0, x.balance - amount) } : x))
+      suppliers.map((x) => (x.id === id ? { ...x, balance: roundMoney(Math.max(0, x.balance - applied)) } : x))
     )
     persistCash([
-      { id: uid(), date: new Date().toISOString(), type: 'depense', label: `Paiement fournisseur — ${s?.name ?? ''}`, amount },
+      { id: uid(), date: new Date().toISOString(), type: 'depense', label: `Paiement fournisseur — ${s.name}`, amount: applied },
       ...cash,
     ])
     persistSupplierPayments([
-      { id: uid(), date: new Date().toISOString(), supplierId: id, supplierName: s?.name ?? '', amount, method, note: 'Règlement solde' },
+      { id: uid(), date: new Date().toISOString(), supplierId: id, supplierName: s.name, amount: applied, method, note: 'Règlement solde' },
       ...supplierPayments,
     ])
-    logActivity(`Paiement fournisseur ${s?.name ?? ''} : ${fmtDH(amount)}`)
+    logActivity(`Paiement fournisseur ${s.name} : ${fmtDH(applied)}`)
   }
 
   // ---- Purchases ----
