@@ -41,9 +41,24 @@ export interface BonLabelOptions {
   copies?: number
   /** Libellés traduits (fr/ar) fournis par l'appelant via t(). */
   labels?: { client?: string; clientNo?: string; bonNo?: string }
+  /** Champs optionnels à imprimer (réglés dans Paramètres › Société). */
+  show?: { date?: boolean; vendeur?: boolean; phone?: boolean }
+  /** Téléphone du client, résolu par l'appelant (absent du bon). */
+  clientPhone?: string
 }
 
-export function printBonLabel(bon: Pick<BonPapier, 'ref' | 'clientName' | 'clientCode'>, opts: BonLabelOptions = {}) {
+const d2 = (n: number) => String(n).padStart(2, '0')
+function fmtDateTime(iso?: string): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return `${d2(d.getDate())}/${d2(d.getMonth() + 1)}/${d.getFullYear()} ${d2(d.getHours())}:${d2(d.getMinutes())}`
+}
+
+export function printBonLabel(
+  bon: Pick<BonPapier, 'ref' | 'clientName' | 'clientCode'> & Partial<Pick<BonPapier, 'date' | 'vendeurName'>>,
+  opts: BonLabelOptions = {}
+) {
   if (typeof window === 'undefined') return
   const w = Math.max(10, opts.widthMm ?? 40)
   const h = Math.max(10, opts.heightMm ?? 30)
@@ -51,12 +66,20 @@ export function printBonLabel(bon: Pick<BonPapier, 'ref' | 'clientName' | 'clien
   const copies = Math.max(1, opts.copies ?? 1)
   const L = { client: 'CLIENT', clientNo: 'N° CLIENT', bonNo: 'BON N°', ...opts.labels }
   const store = escapeHtml(opts.storeName || 'Droguerie Pro')
+  const show = opts.show ?? {}
+
+  const phoneRow = show.phone && opts.clientPhone ? `<div class="sub">${escapeHtml(opts.clientPhone)}</div>` : ''
+  const vendeurRow = show.vendeur && bon.vendeurName ? `<div class="sub">${escapeHtml(bon.vendeurName)}</div>` : ''
+  const dateRow = show.date && bon.date ? `<div class="sub">${escapeHtml(fmtDateTime(bon.date))}</div>` : ''
 
   const cell = `
     <div class="label">
       <div class="store">${store}</div>
       <div class="row"><span class="k">${escapeHtml(L.client!)}</span><span class="v">${escapeHtml(bon.clientName || '—')}</span></div>
+      ${phoneRow}
       <div class="row"><span class="k">${escapeHtml(L.clientNo!)}</span><span class="v">${escapeHtml(bon.clientCode || '—')}</span></div>
+      ${vendeurRow}
+      ${dateRow}
       <div class="bon">${escapeHtml(L.bonNo!)} <b>${escapeHtml(bon.ref)}</b></div>
       <div class="bc">${barcodeSvg(bon.ref, bcH)}</div>
     </div>`
@@ -74,6 +97,7 @@ export function printBonLabel(bon: Pick<BonPapier, 'ref' | 'clientName' | 'clien
     .row { display: flex; gap: 1mm; align-items: baseline; justify-content: center; width: 100%; }
     .k { font-size: 5pt; font-weight: 700; text-transform: uppercase; opacity: .65; }
     .v { font-size: 7pt; font-weight: 600; line-height: 1.05; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .sub { font-size: 5.5pt; line-height: 1.05; opacity: .8; }
     .bon { font-size: 6.5pt; margin-top: 0.3mm; }
     .bon b { font-size: 8pt; letter-spacing: .3px; }
     .bc { margin-top: 0.4mm; }

@@ -2799,6 +2799,14 @@ const DICT = {
   bon_print_label: { fr: "Imprimer l'étiquette", ar: 'طباعة الملصق' },
   bon_reprint_label: { fr: "Réimprimer l'étiquette", ar: 'إعادة طباعة الملصق' },
   bon_label_short: { fr: 'Étiquette', ar: 'ملصق' },
+  // ---- Étiquette du bon : réglages (Paramètres › Société) ----
+  soc_tab_label_bon: { fr: 'Étiquette bon', ar: 'ملصق السند' },
+  soc_bon_fields: { fr: "Champs de l'étiquette du bon", ar: 'حقول ملصق السند' },
+  soc_bon_fields_hint: { fr: 'Activez les champs à imprimer en plus du client, du N° client et du code-barres.', ar: 'فعّل الحقول المراد طباعتها إضافة إلى العميل ورقم العميل والرمز الشريطي.' },
+  soc_bon_note: { fr: "Même support physique que les autres étiquettes : la taille se règle dans l'onglet Étiquette.", ar: 'نفس الوسيط المادي كبقية الملصقات: يُضبط الحجم في تبويب الملصق.' },
+  bon_field_date: { fr: 'Date et heure', ar: 'التاريخ والساعة' },
+  bon_field_vendeur: { fr: 'Nom du vendeur', ar: 'اسم البائع' },
+  bon_field_phone: { fr: 'Téléphone du client', ar: 'هاتف العميل' },
   // ---- Bons papier (scan) ----
   bon_scan_title: { fr: 'Scanner un bon', ar: 'مسح سند' },
   bon_scan_sub: { fr: 'Scannez le code-barres du bon (douchette ou caméra) pour ouvrir directement sa saisie.', ar: 'امسح رمز السند (قارئ أو كاميرا) لفتح إدخاله مباشرة.' },

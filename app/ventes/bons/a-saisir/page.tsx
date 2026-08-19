@@ -15,7 +15,7 @@ import { BON_A_SAISIR, useDroguerie, type BonPapier } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
 function Content() {
-  const { ready, bons, settings, printBon, cancelBon } = useDroguerie()
+  const { ready, bons, clients, settings, printBon, cancelBon } = useDroguerie()
   const { can } = usePermissions()
   const { t } = useLanguage()
   const toast = useToast()
@@ -32,12 +32,14 @@ function Content() {
       .sort((a, b) => (a.date < b.date ? 1 : -1))
   }, [bons, query])
 
-  const printOpts = {
+  const printLabelFor = (b: BonPapier) => { printBon(b.id); printBonLabel(b, {
     storeName: settings.storeName,
     widthMm: settings.labelWidthMm,
     heightMm: settings.labelHeightMm,
     labels: { client: t('bon_label_client'), clientNo: t('bon_label_client_no'), bonNo: t('bon_label_bon_no') },
-  }
+    show: { date: settings.bonLabelDate, vendeur: settings.bonLabelVendeur, phone: settings.bonLabelPhone },
+    clientPhone: clients.find((c) => c.id === b.clientId)?.phone,
+  }) }
 
   const doCancel = () => {
     if (!toCancel) return
@@ -82,7 +84,7 @@ function Content() {
               </button>
             )}
             {can('bons.print') && (
-              <button onClick={() => { printBon(b.id); printBonLabel(b, printOpts) }} title={t('bon_label_short')} className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/10">
+              <button onClick={() => printLabelFor(b)} title={t('bon_label_short')} className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/10">
                 <Printer className="h-4 w-4" />
               </button>
             )}

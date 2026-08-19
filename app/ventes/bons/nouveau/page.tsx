@@ -26,12 +26,14 @@ function Content() {
     [clients]
   )
 
-  const printOpts = {
+  const printFor = (b: BonPapier) => printBonLabel(b, {
     storeName: settings.storeName,
     widthMm: settings.labelWidthMm,
     heightMm: settings.labelHeightMm,
     labels: { client: t('bon_label_client'), clientNo: t('bon_label_client_no'), bonNo: t('bon_label_bon_no') },
-  }
+    show: { date: settings.bonLabelDate, vendeur: settings.bonLabelVendeur, phone: settings.bonLabelPhone },
+    clientPhone: clients.find((c) => c.id === b.clientId)?.phone,
+  })
 
   const generate = () => {
     if (!clientId) { toast(t('bon_new_client_required'), 'error'); return }
@@ -41,14 +43,14 @@ function Content() {
     // Flux réel : on imprime et on colle l'étiquette immédiatement.
     if (can('bons.print')) {
       printBon(r.id)
-      printBonLabel(r, printOpts)
+      printFor(r)
     }
   }
 
   const reprint = () => {
     if (!created) return
     printBon(created.id)
-    printBonLabel(created, printOpts)
+    printFor(created)
   }
 
   if (!ready) return <Loader />

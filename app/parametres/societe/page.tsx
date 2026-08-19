@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import Loader from '@/components/Loader'
 import { motion } from 'framer-motion'
 import JsBarcode from 'jsbarcode'
-import { CreditCard, Eye, FileText, Gavel, Globe, Info, Mail, PackageCheck, Phone, Printer, Receipt, Save, ScrollText, Send, Store, Tag, Truck, UploadCloud } from 'lucide-react'
+import { Barcode, CreditCard, Eye, FileText, Gavel, Globe, Info, Mail, PackageCheck, Phone, Printer, Receipt, Save, ScrollText, Send, Store, Tag, Truck, UploadCloud } from 'lucide-react'
 import AppShell from '@/components/AppShell'
 import InvoiceDocument from '@/components/InvoiceDocument'
 import Barcode128 from '@/components/Barcode128'
@@ -12,6 +12,7 @@ import EAN13 from '@/components/EAN13'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
 import { compresserImage } from '@/lib/image'
+import { printBonLabel } from '@/lib/bonLabel'
 import { fmtDH, useDroguerie, type Settings } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
@@ -20,7 +21,7 @@ function Content() {
   const { t } = useLanguage()
   const toast = useToast()
   const [form, setForm] = useState(settings)
-  const [previewTab, setPreviewTab] = useState<'facture' | 'devis' | 'bc' | 'br' | 'bl' | 'etiquette' | 'etiquette_client' | 'ticket'>('facture')
+  const [previewTab, setPreviewTab] = useState<'facture' | 'devis' | 'bc' | 'br' | 'bl' | 'etiquette' | 'etiquette_client' | 'etiquette_bon' | 'ticket'>('facture')
   const logoInputRef = useRef<HTMLInputElement>(null)
   const signatureInputRef = useRef<HTMLInputElement>(null)
 
@@ -29,8 +30,19 @@ function Content() {
   // Client d'exemple : le code « CLT-… » est alphanumérique, donc CODE128 et
   // non EAN-13. Ces étiquettes se génèrent en série depuis Caisse › Vente rapide.
   const sampleClient = { name: 'Billa', code: 'CLT-00001' }
+  // Bon d'exemple pour prévisualiser l'étiquette des bons papier.
+  const sampleBon = { ref: 'B-2026-000587', clientName: 'Client ABC', clientCode: 'CL-001245', clientPhone: '06 12 34 56 78', vendeurName: 'Youssef', date: '2026-08-19T10:24:00' }
   const labelW = Math.max(10, form.labelWidthMm ?? 40)
   const labelH = Math.max(10, form.labelHeightMm ?? 30)
+
+  const printBonTest = () => printBonLabel(sampleBon, {
+    storeName: form.storeName,
+    widthMm: form.labelWidthMm,
+    heightMm: form.labelHeightMm,
+    labels: { client: t('bon_label_client'), clientNo: t('bon_label_client_no'), bonNo: t('bon_label_bon_no') },
+    show: { date: form.bonLabelDate, vendeur: form.bonLabelVendeur, phone: form.bonLabelPhone },
+    clientPhone: sampleBon.clientPhone,
+  })
 
   // Vente d'exemple pour prévisualiser le ticket de caisse.
   const ticketItems = [
@@ -474,6 +486,7 @@ function Content() {
                 ['bl', Send, t('soc_tab_delivery'), false],
                 ['etiquette', Tag, t('soc_tab_label'), false],
                 ['etiquette_client', CreditCard, t('soc_tab_label_client'), false],
+                ['etiquette_bon', Barcode, t('soc_tab_label_bon'), false],
                 ['ticket', ScrollText, t('soc_tab_ticket'), true],
               ] as const).map(([key, Icon, label, pleineLargeur]) => (
                 <button
@@ -662,6 +675,57 @@ function Content() {
                 </button>
                 <p className="mt-3 text-center text-[11px] italic leading-relaxed text-gray-400 dark:text-zinc-500">
                   {t('soc_label_client_note')}
+                </p>
+              </div>
+            ) : previewTab === 'etiquette_bon' ? (
+              <div className="p-4">
+                {/* Champs optionnels de l'étiquette des bons — le bouton
+                    « Enregistrer » du haut sauve ces réglages avec le reste. */}
+                <div className="mb-4 space-y-1 rounded-xl border border-gray-100 p-3 dark:border-white/10">
+                  <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">{t('soc_bon_fields')}</p>
+                  <p className="mb-1 text-xs text-gray-500 dark:text-zinc-400">{t('soc_bon_fields_hint')}</p>
+                  {([
+                    ['bonLabelDate', t('bon_field_date')],
+                    ['bonLabelVendeur', t('bon_field_vendeur')],
+                    ['bonLabelPhone', t('bon_field_phone')],
+                  ] as const).map(([key, label]) => (
+                    <label key={key} className="flex items-center justify-between gap-3 py-1.5">
+                      <span className="text-sm text-gray-700 dark:text-zinc-300">{label}</span>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={!!form[key]}
+                        onClick={() => setForm({ ...form, [key]: !form[key] })}
+                        className={`relative h-6 w-11 shrink-0 rounded-full transition ${form[key] ? 'bg-amber-500' : 'bg-gray-300 dark:bg-white/15'}`}
+                      >
+                        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${form[key] ? 'left-[22px]' : 'left-0.5'}`} />
+                      </button>
+                    </label>
+                  ))}
+                </div>
+
+                {/* Aperçu de l'étiquette du bon (proportions réelles) */}
+                <div className="flex justify-center rounded-xl bg-gray-100 p-4 dark:bg-white/5">
+                  <div
+                    className="flex flex-col items-center justify-center gap-0.5 overflow-hidden rounded border border-dashed border-gray-400 bg-white p-2 text-center text-black dark:border-white/30"
+                    style={{ width: `${labelW * 3.4}px`, height: `${labelH * 3.4}px` }}
+                  >
+                    <div className="w-full truncate text-[8px] font-bold uppercase leading-none opacity-80">{form.storeName}</div>
+                    <div className="w-full truncate text-[10px] font-bold leading-tight">{sampleBon.clientName}</div>
+                    {form.bonLabelPhone && <div className="text-[7px] leading-none opacity-80">{sampleBon.clientPhone}</div>}
+                    <div className="text-[7px] leading-none"><span className="opacity-60">{t('bon_label_client_no')}</span> {sampleBon.clientCode}</div>
+                    {form.bonLabelVendeur && <div className="text-[7px] leading-none opacity-80">{sampleBon.vendeurName}</div>}
+                    {form.bonLabelDate && <div className="text-[7px] leading-none opacity-80">19/08/2026 10:24</div>}
+                    <div className="font-mono text-[9px] font-extrabold leading-none">{t('bon_label_bon_no')} {sampleBon.ref}</div>
+                    <Barcode128 value={sampleBon.ref} height={Math.min(38, labelH * 1.1)} width={1.1} fontSize={9} />
+                  </div>
+                </div>
+
+                <button onClick={printBonTest} className="btn-secondary mt-4 w-full">
+                  <Printer className="h-4 w-4" />{t('soc_label_print_test')}
+                </button>
+                <p className="mt-3 text-center text-[11px] italic leading-relaxed text-gray-400 dark:text-zinc-500">
+                  {t('soc_bon_note')}
                 </p>
               </div>
             ) : (

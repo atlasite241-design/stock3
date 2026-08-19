@@ -1382,6 +1382,10 @@ export interface Settings {
   /** Dimensions de l'étiquette (mm) pour l'impression Zebra. */
   labelWidthMm?: number
   labelHeightMm?: number
+  /** Étiquette des bons papier : champs optionnels à imprimer (tout faux = minimal). */
+  bonLabelDate?: boolean
+  bonLabelVendeur?: boolean
+  bonLabelPhone?: boolean
   /** Champs enrichis (assistant de configuration). */
   activity?: string
   country?: string
