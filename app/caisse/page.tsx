@@ -445,7 +445,12 @@ function CaisseContent() {
         return
       }
     }
-    const sale = recordSale(cart, payment, client, saleDepotId || undefined)
+    // Paiement mixte : la part espèces est ce que le client a tendu, plafonné
+    // au total (le reste passe en carte). Transmise à la vente pour que la
+    // clôture de caisse ne compte pas la part carte dans le tiroir.
+    const cartTotalNow = cart.reduce((a, i) => a + i.price * i.qty, 0)
+    const cashPart = payment === 'mixte' && receivedAmount !== undefined ? Math.min(receivedAmount, cartTotalNow) : undefined
+    const sale = recordSale(cart, payment, client, saleDepotId || undefined, cashPart)
     /*
      * AVOIR APPLIQUÉ AU PAIEMENT. La vente garde son montant plein — la
      * marchandise est bien vendue à ce prix — et l'avoir est consommé en face,

@@ -457,6 +457,13 @@ export interface Sale {
   total: number
   profit: number
   payment: 'especes' | 'carte' | 'credit' | 'mixte'
+  /**
+   * Part réglée EN ESPÈCES sur un paiement mixte. Sans elle, la clôture de
+   * caisse comptait la vente mixte ENTIÈRE comme espèces (part carte comprise),
+   * gonflant le tiroir attendu et fabriquant de faux écarts. Absente = ancienne
+   * vente (avant le suivi du split) ou paiement non mixte.
+   */
+  cashPart?: number
   clientId?: string
   clientName?: string
   storeId?: string
@@ -1187,10 +1194,15 @@ export function computeSessionSummary(
   const until = session.closedAt ?? new Date().toISOString()
   const inW = (d: string) => d >= since && d <= until
   const modeTotal = (m: Sale['payment']) => sales.filter((s) => inW(s.date) && s.payment === m).reduce((a, s) => a + s.total, 0)
+  // Ventile un paiement mixte : la part espèces (cashPart) va aux espèces, le
+  // reste à la carte. Une vente mixte sans cashPart (ancienne) reste en espèces.
+  const mixtes = sales.filter((s) => inW(s.date) && s.payment === 'mixte')
+  const mixteCash = mixtes.reduce((a, s) => a + (s.cashPart ?? s.total), 0)
+  const mixteCard = mixtes.reduce((a, s) => a + (s.total - (s.cashPart ?? s.total)), 0)
   const sCash = cash.filter((c) => inW(c.date))
   return {
-    salesEspeces: modeTotal('especes') + modeTotal('mixte'),
-    salesCarte: modeTotal('carte'),
+    salesEspeces: modeTotal('especes') + mixteCash,
+    salesCarte: modeTotal('carte') + mixteCard,
     salesVirement: clientPayments.filter((p) => inW(p.date) && p.method === 'virement').reduce((a, p) => a + p.amount, 0),
     salesCredit: modeTotal('credit'),
     otherCashIn: sCash.filter((c) => c.type === 'recette').reduce((a, c) => a + c.amount, 0),
@@ -2838,6 +2850,36 @@ export function useDroguerieState() {
     if (prev && data.price !== undefined && data.price !== prev.price) {
       logActivity('Modification du prix', { target: prev.name, oldValue: fmtDH(prev.price), newValue: fmtDH(data.price) })
     }
+    /*
+     * TOUT CHANGEMENT DE STOCK LAISSE UNE TRACE. Éditer le stock depuis la
+     * fiche produit modifiait `stock` sans écrire le moindre mouvement : le
+     * stock affiché et le journal des mouvements divergeaient, et l'historique
+     * cessait d'être un audit fiable. On écrit désormais un mouvement
+     * d'ajustement pour l'écart (le stock lui-même est déjà posé ci-dessus, on
+     * n'y retouche pas) et les lots suivent, comme un ajustement ordinaire.
+     */
+    if (prev && data.stock !== undefined && data.stock !== prev.stock) {
+      const delta = roundQty(data.stock - prev.stock)
+      const nextLots = delta > 0
+        ? entreeLot(lots, prev, delta, { ref: 'Correction fiche produit' })
+        : sortieLots(lots, prev, -delta)
+      if (nextLots !== lots) persistLots(nextLots)
+      persistMovements([
+        {
+          id: uid(),
+          date: new Date().toISOString(),
+          productId: id,
+          productName: prev.name,
+          type: 'ajustement' as const,
+          qty: delta,
+          note: 'Correction manuelle (fiche produit)',
+          storeId: prev.storeId ?? activeStoreRef.current,
+          user: mvUser(),
+        },
+        ...movements,
+      ])
+      logActivity(`Correction de stock : ${prev.name}`, { target: prev.name, oldValue: String(prev.stock), newValue: String(data.stock) })
+    }
   }
 
   // Déplacement d'emplacement : met à jour la localisation ET journalise le
@@ -3570,7 +3612,7 @@ export function useDroguerieState() {
   }
 
   // ---- Sales ----
-  const recordSale = (items: SaleItem[], payment: Sale['payment'], client?: Client | null, depotId?: string): Sale => {
+  const recordSale = (items: SaleItem[], payment: Sale['payment'], client?: Client | null, depotId?: string, cashPart?: number): Sale => {
     const total = items.reduce((s, i) => s + i.price * i.qty, 0)
     // La marge se calcule sur la quantité de BASE : le coût est celui de l'unité
     // de stock, alors que le prix est celui du conditionnement vendu. Multiplier
@@ -3608,6 +3650,8 @@ export function useDroguerieState() {
       total,
       profit,
       payment,
+      // Part espèces d'un mixte : la clôture s'y réfère au lieu du total.
+      cashPart: payment === 'mixte' ? roundMoney(Math.max(0, Math.min(cashPart ?? total, total))) : undefined,
       clientId: client?.id,
       clientName: client?.name,
       userId: who?.userId,
@@ -5190,7 +5234,9 @@ export function useDroguerieState() {
     const sid = session.storeId ?? activeStoreId
     const cashSales = sales
       .filter((s) => s.storeId === sid && s.date >= since && (s.payment === 'especes' || s.payment === 'mixte'))
-      .reduce((a, s) => a + s.total, 0)
+      // Un mixte ne verse au tiroir que sa part espèces (cashPart) ; la carte
+      // ne s'y trouve pas. Une vente espèces verse son total.
+      .reduce((a, s) => a + (s.payment === 'mixte' ? (s.cashPart ?? s.total) : s.total), 0)
     const dep = cash.filter((c) => c.storeId === sid && c.date >= since && c.type === 'depense').reduce((a, c) => a + c.amount, 0)
     const rec = cash.filter((c) => c.storeId === sid && c.date >= since && c.type === 'recette').reduce((a, c) => a + c.amount, 0)
     return session.openingAmount + cashSales + rec - dep
