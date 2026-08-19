@@ -54,6 +54,20 @@ export const PERMISSION_CATALOG: PermCategory[] = [
     ],
   },
   {
+    key: 'bons', fr: 'Bons papier', ar: 'السندات الورقية', icon: 'Barcode',
+    perms: [
+      { key: 'bons.view', fr: 'Consulter les bons papier', ar: 'الاطلاع على السندات الورقية' },
+      { key: 'bons.create', fr: 'Créer un bon papier', ar: 'إنشاء سند ورقي' },
+      { key: 'bons.print', fr: "Imprimer l'étiquette d'un bon", ar: 'طباعة ملصق سند' },
+      { key: 'bons.scan', fr: 'Scanner un bon', ar: 'مسح سند' },
+      { key: 'bons.enter', fr: 'Saisir les produits d\'un bon', ar: 'إدخال منتجات سند' },
+      { key: 'bons.validate', fr: 'Valider un bon (créer la vente)', ar: 'اعتماد سند (إنشاء البيع)' },
+      { key: 'bons.cancel', fr: 'Annuler un bon', ar: 'إلغاء سند' },
+      { key: 'bons.reopen', fr: 'Rouvrir / corriger un bon', ar: 'إعادة فتح / تصحيح سند' },
+      { key: 'bons.close', fr: 'Clôturer la journée des bons', ar: 'إغلاق يومية السندات' },
+    ],
+  },
+  {
     key: 'cash', fr: 'Caisse', ar: 'الصندوق', icon: 'Wallet',
     perms: [
       { key: 'cash.open', fr: 'Ouvrir la caisse', ar: 'فتح الصندوق' },
@@ -280,6 +294,8 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<RoleName, string[]> = {
     'cash.open', 'cash.close', 'cash.in', 'cash.refund', 'cash.journal', 'cash.balance',
     'stock.view', 'stock.critical',
     'client.view', 'client.add', 'client.credit_view', 'client.loyalty_view',
+    // Bons papier : c'est le caissier/gérant qui scanne et saisit en fin de journée.
+    'bons.view', 'bons.scan', 'bons.enter', 'bons.validate',
     'hr.clock',
   ],
 
@@ -289,6 +305,8 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<RoleName, string[]> = {
     'sale.create', 'sale.quote_create', 'sale.history',
     'client.view',
     'stock.view',
+    // Bons papier : le vendeur crée le bon au comptoir et imprime l'étiquette.
+    'bons.view', 'bons.create', 'bons.print',
     'hr.clock',
   ],
 }

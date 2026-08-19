@@ -280,6 +280,18 @@ const NAV_ALL: NavItem[] = [
           { href: '/ventes', labelKey: 'nav_sales_history' },
         ],
       },
+      {
+        sectionKey: 'nav_sales_sec_bons',
+        items: [
+          { href: '/ventes/bons/nouveau', labelKey: 'nav_bons_new' },
+          { href: '/ventes/bons/scanner', labelKey: 'nav_bons_scan' },
+          { href: '/ventes/bons/a-saisir', labelKey: 'nav_bons_to_enter' },
+          { href: '/ventes/bons/saisis', labelKey: 'nav_bons_entered' },
+          { href: '/ventes/bons/annules', labelKey: 'nav_bons_cancelled' },
+          { href: '/ventes/bons/recherche', labelKey: 'nav_bons_search' },
+          { href: '/ventes/bons/cloture', labelKey: 'nav_bons_close' },
+        ],
+      },
     ],
   },
   {

@@ -22,6 +22,7 @@ const READ_PERM: Record<string, string | string[] | null> = {
   returns: 'sale.return',
   creditNotes: 'sale.credit_note',
   customerOrders: 'sale.order',
+  bons: 'bons.view',
   clients: 'client.view',
   credits: 'client.credit_view',
   loyalty: 'client.loyalty_view',
@@ -76,6 +77,9 @@ const WRITE_PERM: Record<string, string | string[]> = {
   returns: 'sale.return',
   creditNotes: 'sale.credit_note',
   customerOrders: 'sale.order',
+  // Écriture d'un bon = n'importe quelle étape de son cycle de vie (création par
+  // le vendeur, saisie/validation par le caissier, annulation/réouverture gérant).
+  bons: ['bons.create', 'bons.enter', 'bons.validate', 'bons.cancel', 'bons.reopen'],
   clients: 'client.add',
   credits: 'client.credit_collect',
   loyalty: 'client.loyalty_view',

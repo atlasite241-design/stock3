@@ -793,6 +793,68 @@ export const orderStatusFromQtys = (o: CustomerOrder): CustomerOrderStatus => {
   return orderRemainingQty(o) <= 0 ? 'livree' : 'partielle'
 }
 
+/* ------------------------------ Bons papier -------------------------------- */
+
+/**
+ * BON PAPIER (carnet à souche + étiquette code-barres).
+ *
+ * Au comptoir, on identifie le client, on génère un numéro unique (B-AAAA-######)
+ * et on imprime une petite étiquette (client + n° client + n° bon + code-barres)
+ * collée sur un bon papier extrait d'un carnet. La journée, on ne saisit rien.
+ * En fin de journée, le gérant scanne chaque bon : le scan retrouve le bon, on
+ * saisit les produits, puis on encaisse — ce qui crée UNE vente (recordSale) que
+ * le bon référence (saleId). Un bon déjà saisi ne peut pas l'être une 2ᵉ fois.
+ *
+ *   cree -> attente (après impression) -> encours (saisie ouverte) -> saisi
+ *        \-> annule
+ */
+export type BonStatus = 'cree' | 'attente' | 'encours' | 'saisi' | 'annule'
+
+export interface BonPapier {
+  id: string
+  /** Numéro unique du bon, ex. B-2026-000587 — c'est lui qui est encodé dans le code-barres. */
+  ref: string
+  date: string
+  status: BonStatus
+  /** Client rattaché (obligatoire à la création). */
+  clientId: string
+  clientName: string
+  /** N° client affiché sur l'étiquette (CL-######). */
+  clientCode?: string
+  /** Vendeur qui a créé le bon (repris de la session). */
+  vendeurId?: string
+  vendeurName?: string
+  /** Lignes saisies en fin de journée (vides tant que le bon n'est pas saisi). */
+  items: SaleItem[]
+  total: number
+  /** Vente générée à la validation — la traçabilité descend, sans doublon. */
+  saleId?: string
+  invoiceNo?: string
+  payment?: Sale['payment']
+  /** Saisie : qui et quand. */
+  saisiPar?: string
+  saisiAt?: string
+  /** Annulation : qui, quand, pourquoi. */
+  annulePar?: string
+  annuleAt?: string
+  motif?: string
+  /** Horodatage de la dernière impression d'étiquette. */
+  printedAt?: string
+  createdAt: string
+  storeId?: string
+}
+
+/** Un bon reste « à saisir » tant qu'il n'est ni saisi ni annulé. */
+export const BON_A_SAISIR: BonStatus[] = ['cree', 'attente', 'encours']
+
+export const BON_STATUS_META: Record<BonStatus, { chip: string }> = {
+  cree: { chip: 'border-gray-200 bg-gray-50 text-gray-600 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300' },
+  attente: { chip: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400' },
+  encours: { chip: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-400' },
+  saisi: { chip: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400' },
+  annule: { chip: 'border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400' },
+}
+
 /* ------------------------------ Demandes d'achat --------------------------- */
 
 /**
@@ -1700,6 +1762,7 @@ const K = {
   rfqs: 'dp_rfqs',
   creditNotes: 'dp_credit_notes',
   customerOrders: 'dp_customer_orders',
+  bons: 'dp_bons',
 }
 
 /** Storage keys whose records carry a storeId and must be filtered per active store. */
@@ -1725,6 +1788,7 @@ const SCOPED_KEYS: string[] = [
   K.inventories,
   K.creditNotes,
   K.customerOrders,
+  K.bons,
   K.budgets,
   K.investments,
   K.rfqs,
@@ -2533,6 +2597,7 @@ export function useDroguerieState() {
   const [returns, setReturns] = useState<SaleReturn[]>([])
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>([])
   const [customerOrders, setCustomerOrders] = useState<CustomerOrder[]>([])
+  const [bons, setBons] = useState<BonPapier[]>([])
   const [cash, setCash] = useState<CashEntry[]>([])
   const [sessions, setSessions] = useState<RegisterSession[]>([])
   const [users, setUsers] = useState<AppUser[]>([])
@@ -2629,6 +2694,7 @@ export function useDroguerieState() {
       if (wants('inventories')) setInventories(load(K.inventories, []))
       if (wants('creditNotes')) setCreditNotes(load(K.creditNotes, []))
       if (wants('customerOrders')) setCustomerOrders(load(K.customerOrders, []))
+      if (wants('bons')) setBons(load(K.bons, []))
       setExercices(load(K.exercices, []))
       setBudgets(load(K.budgets, []))
       setInvestments(load(K.investments, []))
@@ -2765,6 +2831,7 @@ export function useDroguerieState() {
   const persistReturns = useCallback(makeScopedPersist<SaleReturn>(K.returns, setReturns), [])
   const persistCreditNotes = useCallback(makeScopedPersist<CreditNote>(K.creditNotes, setCreditNotes), [])
   const persistCustomerOrders = useCallback(makeScopedPersist<CustomerOrder>(K.customerOrders, setCustomerOrders), [])
+  const persistBons = useCallback(makeScopedPersist<BonPapier>(K.bons, setBons), [])
   const persistCash = useCallback(makeScopedPersist<CashEntry>(K.cash, setCash), [])
   const persistSessions = useCallback(makeScopedPersist<RegisterSession>(K.sessions, setSessions), [])
   const persistUsers = useCallback(makePersist<AppUser[]>(K.users, setUsers), [])
@@ -5117,6 +5184,174 @@ export function useDroguerieState() {
     return { ok: true, sale }
   }
 
+  // ---- Bons papier ----
+  /**
+   * Numéro unique du bon : préfixe B, année, rang à 6 chiffres — compté sur les
+   * bons du MÊME magasin et de la MÊME année (chaque magasin numérote de son
+   * côté, la suite repart au 1ᵉʳ janvier). Même limite multi-poste que la
+   * numérotation des factures (collision possible hors-ligne, cf. NUM-005).
+   */
+  const nextBonRef = (dateIso: string) => {
+    const annee = new Date(dateIso).getFullYear()
+    const sid = activeStoreRef.current
+    const deja = bons.filter((b) => (b.storeId ?? sid) === sid && new Date(b.date).getFullYear() === annee).length
+    return `B-${annee}-${String(deja + 1).padStart(6, '0')}`
+  }
+
+  /**
+   * N° client (CL-######). Les clients n'en ont pas tous : on en attribue un au
+   * premier bon, une seule fois, et on le fixe sur la fiche pour qu'il reste stable.
+   */
+  const nextClientCode = () => {
+    const codes = [...clients.map((c) => c.code), ...bons.map((b) => b.clientCode)]
+    const max = codes.reduce((m, code) => {
+      const n = /^CL-(\d+)$/.exec(code ?? '')
+      return n ? Math.max(m, parseInt(n[1], 10)) : m
+    }, 0)
+    return `CL-${String(max + 1).padStart(6, '0')}`
+  }
+
+  /**
+   * Crée un bon pour un client (obligatoire). Le numéro est posé une fois pour
+   * toutes ; le client reçoit un N° s'il n'en a pas encore. Statut initial :
+   * « créé » ; l'impression de l'étiquette le fait passer « en attente de saisie ».
+   */
+  const addBon = (clientId: string): BonPapier | { error: 'client' } => {
+    const client = clients.find((c) => c.id === clientId)
+    if (!client) return { error: 'client' }
+    // N° client stable SANS réécrire la fiche client (on évite le couplage de
+    // permissions clients/bons à la synchro) : code de la fiche s'il existe,
+    // sinon celui d'un bon précédent du même client, sinon un neuf.
+    const clientCode = client.code
+      || bons.find((b) => b.clientId === client.id && b.clientCode)?.clientCode
+      || nextClientCode()
+    const nowIso = new Date().toISOString()
+    const who = (() => { try { return getSession() } catch { return null } })()
+    const bon: BonPapier = {
+      id: uid(),
+      ref: nextBonRef(nowIso),
+      date: nowIso,
+      createdAt: nowIso,
+      status: 'cree',
+      clientId: client.id,
+      clientName: client.name,
+      clientCode,
+      vendeurId: who?.userId,
+      vendeurName: who?.name,
+      items: [],
+      total: 0,
+    }
+    persistBons([bon, ...bons])
+    logActivity(`Bon papier ${bon.ref} créé — ${client.name}`, { target: bon.ref })
+    return bon
+  }
+
+  /** Marque le bon imprimé et le fait passer « en attente de saisie ». */
+  const printBon = (id: string) => {
+    const nowIso = new Date().toISOString()
+    const b = bons.find((x) => x.id === id)
+    persistBons(bons.map((x) => (x.id === id
+      ? { ...x, printedAt: nowIso, status: x.status === 'cree' ? 'attente' : x.status }
+      : x)))
+    if (b) logActivity(`Étiquette du bon ${b.ref} imprimée`, { target: b.ref })
+  }
+
+  /** Ouvre la saisie d'un bon (statut « en cours de saisie »). */
+  const startSaisieBon = (id: string) => {
+    persistBons(bons.map((b) => (b.id === id && (b.status === 'cree' || b.status === 'attente') ? { ...b, status: 'encours' } : b)))
+  }
+
+  /** Enregistre les lignes saisies sans encaisser (brouillon de saisie). */
+  const saveBonItems = (id: string, items: SaleItem[]) => {
+    persistBons(bons.map((b) => (b.id === id && b.status !== 'saisi' && b.status !== 'annule'
+      ? { ...b, items, total: roundMoney(items.reduce((s, i) => s + i.price * i.qty, 0)), status: b.status === 'cree' ? 'attente' : b.status }
+      : b)))
+  }
+
+  /**
+   * VALIDATION : la saisie devient une VENTE (recordSale, moteur existant) et le
+   * bon passe « saisi » en la référençant (saleId). Un bon déjà saisi est refusé
+   * — c'est le garde-fou anti-double-saisie exigé, aucune vente en double.
+   */
+  const validateBon = (
+    id: string,
+    items: SaleItem[],
+    payment: Sale['payment'],
+    cashPart?: number
+  ): { ok: true; sale: Sale } | { ok: false; raison: 'introuvable' | 'deja' | 'annule' | 'vide' } => {
+    const bon = bons.find((b) => b.id === id)
+    if (!bon) return { ok: false, raison: 'introuvable' }
+    if (bon.status === 'saisi') return { ok: false, raison: 'deja' }
+    if (bon.status === 'annule') return { ok: false, raison: 'annule' }
+    if (!items.length) return { ok: false, raison: 'vide' }
+    const client = clients.find((c) => c.id === bon.clientId) ?? null
+    const sale = recordSale(items, payment, client, undefined, cashPart)
+    const nowIso = new Date().toISOString()
+    persistBons(bons.map((b) => (b.id === id
+      ? {
+          ...b,
+          status: 'saisi' as const,
+          items,
+          total: roundMoney(items.reduce((s, i) => s + i.price * i.qty, 0)),
+          saleId: sale.id,
+          invoiceNo: sale.invoiceNo,
+          payment,
+          saisiPar: invUser(),
+          saisiAt: nowIso,
+        }
+      : b)))
+    logActivity(`Bon ${bon.ref} saisi → vente ${sale.invoiceNo ?? sale.id.slice(-6)} (${fmtDH(sale.total)})`, { target: bon.ref })
+    return { ok: true, sale }
+  }
+
+  /** Annule un bon non encore saisi (motif consigné). */
+  const cancelBon = (id: string, motif?: string): { ok: boolean; raison?: 'saisi' } => {
+    const bon = bons.find((b) => b.id === id)
+    if (!bon) return { ok: false }
+    if (bon.status === 'saisi') return { ok: false, raison: 'saisi' }
+    persistBons(bons.map((b) => (b.id === id
+      ? { ...b, status: 'annule' as const, annulePar: invUser(), annuleAt: new Date().toISOString(), motif }
+      : b)))
+    logActivity(`Bon ${bon.ref} annulé${motif ? ` — ${motif}` : ''}`, { target: bon.ref })
+    return { ok: true }
+  }
+
+  /**
+   * Rouvre un bon. Un bon annulé revient « en attente ». Un bon SAISI est corrigé :
+   * la vente liée est annulée (stock, lots, points, crédit restitués via
+   * annulerVente) et le bon repasse « en cours de saisie » — jamais deux ventes
+   * pour un même bon. Refusé si la vente porte déjà des retours.
+   */
+  const reopenBon = (id: string): { ok: boolean; raison?: 'retours' } => {
+    const bon = bons.find((b) => b.id === id)
+    if (!bon) return { ok: false }
+    if (bon.status === 'saisi' && bon.saleId) {
+      const r = annulerVente(bon.saleId)
+      if (!r.ok && r.raison === 'retours') return { ok: false, raison: 'retours' }
+      // 'introuvable' : la vente n'existe plus, on détache simplement le bon.
+    }
+    persistBons(bons.map((b) => (b.id === id
+      ? { ...b, status: (b.status === 'annule' ? 'attente' : 'encours') as BonStatus, saleId: undefined, invoiceNo: undefined, payment: undefined, saisiPar: undefined, saisiAt: undefined }
+      : b)))
+    logActivity(`Bon ${bon.ref} rouvert${bon.status === 'saisi' ? ' (vente annulée pour correction)' : ''}`, { target: bon.ref })
+    return { ok: true }
+  }
+
+  /**
+   * Clôture de la journée des bons : contrôle de fin de journée. On ne fige aucun
+   * état (les bons gardent leur statut), on CONSIGNE la clôture dans le journal —
+   * en marquant si elle a été forcée alors que des bons restaient en attente.
+   */
+  const closeBonsDay = (
+    jour: string,
+    resume: { total: number; saisis: number; attente: number; annules: number; ca: number },
+    force: boolean
+  ) => {
+    logActivity(
+      `Clôture des bons du ${jour} — ${resume.saisis}/${resume.total} saisis, ${resume.attente} en attente${force ? ' (FORCÉE)' : ''}, CA ${fmtDH(resume.ca)}`
+    )
+  }
+
   /** Annulation : REFUSÉE dès la première livraison — les ventes émises existent. */
   const cancelCustomerOrder = (id: string, motif: string): { ok: boolean; raison?: 'livree' } => {
     const o = customerOrders.find((x) => x.id === id)
@@ -5859,6 +6094,7 @@ export function useDroguerieState() {
   const scopedInventories = useScopedList(inventories, activeStoreId)
   const scopedCreditNotes = useScopedList(creditNotes, activeStoreId)
   const scopedCustomerOrders = useScopedList(customerOrders, activeStoreId)
+  const scopedBons = useScopedList(bons, activeStoreId)
   const scopedBudgets = useScopedList(budgets, activeStoreId)
   const scopedInvestments = useScopedList(investments, activeStoreId)
   const scopedRfqs = useScopedList(rfqs, activeStoreId)
@@ -6039,6 +6275,17 @@ export function useDroguerieState() {
     deliverCustomerOrder,
     cancelCustomerOrder,
     duplicateCustomerOrder,
+    // Bons papier — vue scopée magasin + cycle de vie complet.
+    bons: scopedBons,
+    allBons: bons,
+    addBon,
+    printBon,
+    startSaisieBon,
+    saveBonItems,
+    validateBon,
+    cancelBon,
+    reopenBon,
+    closeBonsDay,
     addQuote,
     setQuoteStatus,
     updateQuote,

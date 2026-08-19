@@ -94,6 +94,17 @@ export const ROUTE_PERM: Record<string, string> = {
   '/ventes/avoirs': 'sale.credit_note',
   '/achats/avoirs': 'purch.credit_note',
   '/ventes/retours': 'sale.return',
+  // Bons papier (les listes sont visibles avec bons.view ; les actions sont
+  // gardées finement dans chaque écran). La saisie utilise ?id= : basePath
+  // retire la query, donc '/ventes/bons/saisie' est bien le chemin gardé.
+  '/ventes/bons/nouveau': 'bons.create',
+  '/ventes/bons/scanner': 'bons.scan',
+  '/ventes/bons/saisie': 'bons.enter',
+  '/ventes/bons/a-saisir': 'bons.view',
+  '/ventes/bons/saisis': 'bons.view',
+  '/ventes/bons/annules': 'bons.view',
+  '/ventes/bons/recherche': 'bons.view',
+  '/ventes/bons/cloture': 'bons.close',
   // Clients
   '/clients': 'client.view',
   '/clients/nouveau': 'client.add',
