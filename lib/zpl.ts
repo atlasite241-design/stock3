@@ -41,62 +41,70 @@ function fmtDateTime(iso?: string): string {
   return `${d2(d.getDate())}/${d2(d.getMonth() + 1)}/${d.getFullYear()} ${d2(d.getHours())}:${d2(d.getMinutes())}`
 }
 
-/** Construit le ZPL d'une étiquette de bon, calibré à la taille (mm) et au dpi donnés. */
+/**
+ * Construit le ZPL d'une étiquette de bon, ADAPTÉ à la taille (mm) et au dpi donnés.
+ *
+ * Mode CONTINU (^MNN) : la détection d'écart (^MNY) sur-avance sur certaines
+ * étiquettes (capteur qui ne verrouille pas les gaps, même après calibration
+ * officielle). En continu, l'imprimante avance un pas FIXE (^LL = hauteur + écart)
+ * et s'arrête net. La mise en page se calcule à partir de la hauteur pour ne
+ * jamais déborder, même sur une petite étiquette (ex. 50 × 24 mm).
+ */
 export function buildBonZpl(bon: ZplBon, opts: ZplOptions = {}): string {
   const dpi = opts.dpi && opts.dpi > 0 ? opts.dpi : 203
   const dpmm = dpi / 25.4
-  const wmm = Math.max(15, opts.widthMm ?? 40)
-  const hmm = Math.max(15, opts.heightMm ?? 30)
+  const wmm = Math.max(15, opts.widthMm ?? 50)
+  const hmm = Math.max(12, opts.heightMm ?? 24)
   const PW = Math.round(wmm * dpmm)
-  const LL = Math.round(hmm * dpmm)
+  const LL = Math.round(hmm * dpmm) // hauteur de la zone d'impression (contenu)
   // Pas physique = hauteur + écart entre étiquettes. En mode continu l'imprimante
-  // avance ce pas ; s'il est trop court, chaque étiquette dérive vers le haut.
-  const feed = Math.round((hmm + (opts.gapMm ?? 4)) * dpmm)
-  const m = Math.max(8, Math.round(1.4 * dpmm)) // marge gauche
+  // avance ce pas ; trop court → dérive vers le haut ; trop long → vers le bas.
+  const feed = Math.round((hmm + (opts.gapMm ?? 2)) * dpmm)
+  const m = Math.max(6, Math.round(1.2 * dpmm)) // marge gauche
+  const marginB = Math.round(0.8 * dpmm)
   const show = opts.show ?? {}
   const clientNoLabel = opts.labels?.clientNo ?? 'N CLIENT'
 
-  // Tailles de police proportionnelles à la hauteur d'étiquette.
-  const fStore = Math.round(3.2 * dpmm)
-  const fName = Math.round(2.7 * dpmm)
-  const fSmall = Math.round(2.1 * dpmm)
+  // Lignes de texte au-dessus du code-barres.
+  const textLines: string[] = [clean(opts.storeName || 'Droguerie Pro')]
+  const codePart = bon.clientCode ? `  ${clientNoLabel}: ${bon.clientCode}` : ''
+  textLines.push((clean(bon.clientName) + codePart).trim())
+  if (show.phone && bon.clientPhone) textLines.push(clean(bon.clientPhone))
+  if (show.vendeur && bon.vendeurName) textLines.push(clean(bon.vendeurName))
+  if (show.date && bon.date) textLines.push(fmtDateTime(bon.date))
+
+  // Texte compact en haut (~42 % de la hauteur), code-barres qui remplit le reste.
+  const textZone = Math.max(Math.round(3 * dpmm), Math.round(LL * 0.42))
+  const n = Math.max(1, textLines.length)
+  const font = Math.max(
+    Math.round(1.5 * dpmm),
+    Math.min(Math.round(2.4 * dpmm), Math.floor(textZone / n) - Math.round(0.4 * dpmm))
+  )
+  const lineH = font + Math.round(0.5 * dpmm)
 
   const lines: string[] = []
-  // Marge haute : en mode continu le contenu tombait un peu trop haut ; on descend d'environ 2 mm.
-  let y = Math.round(4 * dpmm)
-  const push = (font: number, text: string) => {
-    const t = clean(text)
-    if (!t) return
-    lines.push(`^FO${m},${y}^A0N,${font},${font}^FD${t}^FS`)
-    y += font + Math.round(0.6 * dpmm)
+  let y = Math.round(0.6 * dpmm)
+  for (const t of textLines) {
+    if (t) lines.push(`^FO${m},${y}^A0N,${font},${font}^FD${t}^FS`)
+    y += lineH
   }
 
-  push(fStore, opts.storeName || 'Droguerie Pro')
-  push(fName, bon.clientName)
-  if (show.phone && bon.clientPhone) push(fSmall, bon.clientPhone)
-  push(fSmall, `${clientNoLabel}: ${bon.clientCode || '-'}`)
-  if (show.vendeur && bon.vendeurName) push(fSmall, bon.vendeurName)
-  if (show.date && bon.date) push(fSmall, fmtDateTime(bon.date))
-
-  // Code-barres Code128 : largeur de module calculée pour tenir dans l'étiquette.
+  // Code-barres Code128 juste sous le texte, remplissant la hauteur restante.
+  // Sur 50 mm de large on obtient ^BY2 (bien plus lisible que sur 40 mm).
   const modules = 11 * bon.ref.length + 35
   const moduleW = Math.min(4, Math.max(1, Math.floor((PW - 2 * m) / modules)))
-  // Hauteur du code-barres : ce qui reste sous le texte, borné.
-  const restant = LL - y - Math.round(3 * dpmm)
-  const bcH = Math.max(Math.round(6 * dpmm), Math.min(Math.round(7.5 * dpmm), restant))
-  const yb = Math.min(y + Math.round(0.5 * dpmm), LL - bcH - Math.round(3 * dpmm))
-  lines.push(`^FO${m},${Math.max(y, yb)}^BY${moduleW}^BCN,${bcH},Y,N,N^FD${clean(bon.ref)}^FS`)
+  const yb = y + Math.round(0.5 * dpmm)
+  const avail = Math.max(Math.round(5 * dpmm), LL - yb - marginB)
+  const barH = Math.round(avail * 0.7) // laisse la place à la ligne de chiffres sous le code
+  lines.push(`^FO${m},${yb}^BY${moduleW}^BCN,${barH},Y,N,N^FD${clean(bon.ref)}^FS`)
 
   const copies = Math.max(1, opts.copies ?? 1)
   return [
     '^XA',
     '^CI28',
     '^MTD', // thermique direct (GK420d)
-    // Mode CONTINU : la détection d'écart (^MNY) sur-avance sur ces étiquettes
-    // (capteur qui ne verrouille pas les gaps, même après calibration officielle).
-    // En continu l'imprimante avance une longueur FIXE (^LL) et s'arrête net.
-    '^MNN',
-    '^MMT', // tear-off : recul auto avant impression (meilleur positionnement)
+    '^MNN', // mode continu : pas de détection d'écart (capteur non fiable ici)
+    '^MMT', // tear-off : recul auto avant impression
     `^PW${PW}`,
     `^LL${feed}`,
     '^LH0,0',
