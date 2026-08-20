@@ -62,7 +62,7 @@ export function buildBonZpl(bon: ZplBon, opts: ZplOptions = {}): string {
   // Pas physique = hauteur + écart entre étiquettes. En mode continu l'imprimante
   // avance ce pas ; trop court → dérive vers le haut ; trop long → vers le bas.
   const feed = Math.round((hmm + (opts.gapMm ?? 2)) * dpmm)
-  const darkness = Math.max(0, Math.min(30, Math.round(opts.darkness ?? 22)))
+  const darkness = Math.max(0, Math.min(30, Math.round(opts.darkness ?? 24)))
   const m = Math.max(6, Math.round(1.5 * dpmm)) // marge gauche
   const marginB = Math.round(0.8 * dpmm)
   const show = opts.show ?? {}
@@ -105,6 +105,7 @@ export function buildBonZpl(bon: ZplBon, opts: ZplOptions = {}): string {
     '^XA',
     '^CI28',
     '^MTD', // thermique direct (GK420d)
+    '^PR3', // vitesse modérée : bon compromis noir / netteté
     `^MD${darkness}`, // densité de chauffe : plus élevé = plus noir
     '^MNN', // mode continu : pas de détection d'écart (capteur non fiable ici)
     '^MMT', // tear-off : recul auto avant impression
