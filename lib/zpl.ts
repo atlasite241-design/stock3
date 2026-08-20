@@ -58,7 +58,7 @@ export function buildBonZpl(bon: ZplBon, opts: ZplOptions = {}): string {
 
   const lines: string[] = []
   // Marge haute : en mode continu le contenu tombait un peu trop haut ; on descend d'environ 2 mm.
-  let y = Math.round(5 * dpmm)
+  let y = Math.round(4 * dpmm)
   const push = (font: number, text: string) => {
     const t = clean(text)
     if (!t) return
