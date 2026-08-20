@@ -51,7 +51,7 @@ export function buildBonZpl(bon: ZplBon, opts: ZplOptions = {}): string {
   const LL = Math.round(hmm * dpmm)
   // Pas physique = hauteur + écart entre étiquettes. En mode continu l'imprimante
   // avance ce pas ; s'il est trop court, chaque étiquette dérive vers le haut.
-  const feed = Math.round((hmm + (opts.gapMm ?? 3)) * dpmm)
+  const feed = Math.round((hmm + (opts.gapMm ?? 4)) * dpmm)
   const m = Math.max(8, Math.round(1.4 * dpmm)) // marge gauche
   const show = opts.show ?? {}
   const clientNoLabel = opts.labels?.clientNo ?? 'N CLIENT'
