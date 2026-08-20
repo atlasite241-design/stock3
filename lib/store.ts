@@ -1386,6 +1386,10 @@ export interface Settings {
   bonLabelDate?: boolean
   bonLabelVendeur?: boolean
   bonLabelPhone?: boolean
+  /** Impression directe des étiquettes de bons en ZPL vers une Zebra (poste local). */
+  bonLabelZpl?: boolean
+  /** Nom exact de l'imprimante Zebra (file Windows) pour l'impression ZPL directe. */
+  zebraPrinterName?: string
   /** Champs enrichis (assistant de configuration). */
   activity?: string
   country?: string

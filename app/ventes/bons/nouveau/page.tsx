@@ -9,7 +9,7 @@ import Select from '@/components/Select'
 import Barcode128 from '@/components/Barcode128'
 import { useToast } from '@/components/Toast'
 import { usePermissions } from '@/lib/access'
-import { printBonLabel } from '@/lib/bonLabel'
+import { printBonLabel, printBonLabelZpl } from '@/lib/bonLabel'
 import { useDroguerie, type BonPapier } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
@@ -26,14 +26,28 @@ function Content() {
     [clients]
   )
 
-  const printFor = (b: BonPapier) => printBonLabel(b, {
-    storeName: settings.storeName,
-    widthMm: settings.labelWidthMm,
-    heightMm: settings.labelHeightMm,
-    labels: { client: t('bon_label_client'), clientNo: t('bon_label_client_no'), bonNo: t('bon_label_bon_no') },
-    show: { date: settings.bonLabelDate, vendeur: settings.bonLabelVendeur, phone: settings.bonLabelPhone },
-    clientPhone: clients.find((c) => c.id === b.clientId)?.phone,
-  })
+  const printFor = async (b: BonPapier) => {
+    const clientPhone = clients.find((c) => c.id === b.clientId)?.phone
+    const show = { date: settings.bonLabelDate, vendeur: settings.bonLabelVendeur, phone: settings.bonLabelPhone }
+    // Impression directe ZPL (Zebra) si activee ; sinon (ou en cas d'echec) navigateur.
+    if (settings.bonLabelZpl && settings.zebraPrinterName) {
+      const r = await printBonLabelZpl(
+        { ref: b.ref, clientName: b.clientName, clientCode: b.clientCode, vendeurName: b.vendeurName, date: b.date, clientPhone },
+        settings.zebraPrinterName,
+        { widthMm: settings.labelWidthMm, heightMm: settings.labelHeightMm, storeName: settings.storeName, show, labels: { clientNo: t('bon_label_client_no') } }
+      )
+      if (r.ok) { toast(t('bon_zpl_sent')); return }
+      toast(`${t('bon_zpl_failed')} ${r.message ?? ''}`.trim(), 'error')
+    }
+    printBonLabel(b, {
+      storeName: settings.storeName,
+      widthMm: settings.labelWidthMm,
+      heightMm: settings.labelHeightMm,
+      labels: { client: t('bon_label_client'), clientNo: t('bon_label_client_no'), bonNo: t('bon_label_bon_no') },
+      show,
+      clientPhone,
+    })
+  }
 
   const generate = () => {
     if (!clientId) { toast(t('bon_new_client_required'), 'error'); return }

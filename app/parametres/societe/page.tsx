@@ -12,7 +12,7 @@ import EAN13 from '@/components/EAN13'
 import Select from '@/components/Select'
 import { useToast } from '@/components/Toast'
 import { compresserImage } from '@/lib/image'
-import { printBonLabel } from '@/lib/bonLabel'
+import { printBonLabel, printBonLabelZpl } from '@/lib/bonLabel'
 import { fmtDH, useDroguerie, type Settings } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
@@ -43,6 +43,15 @@ function Content() {
     show: { date: form.bonLabelDate, vendeur: form.bonLabelVendeur, phone: form.bonLabelPhone },
     clientPhone: sampleBon.clientPhone,
   })
+
+  const printBonZplTest = async () => {
+    const r = await printBonLabelZpl(
+      { ref: sampleBon.ref, clientName: sampleBon.clientName, clientCode: sampleBon.clientCode, vendeurName: sampleBon.vendeurName, date: sampleBon.date, clientPhone: sampleBon.clientPhone },
+      form.zebraPrinterName || 'Zebra GK420d - ZPL',
+      { widthMm: form.labelWidthMm, heightMm: form.labelHeightMm, storeName: form.storeName, show: { date: form.bonLabelDate, vendeur: form.bonLabelVendeur, phone: form.bonLabelPhone }, labels: { clientNo: t('bon_label_client_no') } }
+    )
+    toast(r.ok ? t('soc_bon_zpl_ok') : `${t('bon_zpl_failed')} ${r.message ?? ''}`.trim(), r.ok ? 'success' : 'error')
+  }
 
   // Vente d'exemple pour prévisualiser le ticket de caisse.
   const ticketItems = [
@@ -702,6 +711,28 @@ function Content() {
                       </button>
                     </label>
                   ))}
+                </div>
+
+                {/* Impression directe Zebra (ZPL) : le bouton Enregistrer du haut sauve ces reglages. */}
+                <div className="mb-4 space-y-2 rounded-xl border border-gray-100 p-3 dark:border-white/10">
+                  <label className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-semibold text-gray-700 dark:text-zinc-300">{t('soc_bon_zpl')}</span>
+                    <button type="button" role="switch" aria-checked={!!form.bonLabelZpl} onClick={() => setForm({ ...form, bonLabelZpl: !form.bonLabelZpl })} className={`relative h-6 w-11 shrink-0 rounded-full transition ${form.bonLabelZpl ? 'bg-amber-500' : 'bg-gray-300 dark:bg-white/15'}`}>
+                      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${form.bonLabelZpl ? 'left-[22px]' : 'left-0.5'}`} />
+                    </button>
+                  </label>
+                  <p className="text-xs text-gray-500 dark:text-zinc-400">{t('soc_bon_zpl_hint')}</p>
+                  {form.bonLabelZpl && (
+                    <div className="space-y-2 pt-1">
+                      <div>
+                        <span className="mb-1 block text-[11px] font-semibold text-gray-500 dark:text-zinc-400">{t('soc_bon_printer')}</span>
+                        <input value={form.zebraPrinterName ?? ''} onChange={(e) => setForm({ ...form, zebraPrinterName: e.target.value })} placeholder="Zebra GK420d - ZPL" className="input-field !h-9" />
+                      </div>
+                      <button onClick={printBonZplTest} className="btn-secondary w-full">
+                        <Barcode className="h-4 w-4" />{t('soc_bon_zpl_test')}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Aperçu de l'étiquette du bon (proportions réelles) */}

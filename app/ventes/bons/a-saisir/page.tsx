@@ -10,7 +10,7 @@ import Modal from '@/components/Modal'
 import BonsTable from '@/components/BonsTable'
 import { useToast } from '@/components/Toast'
 import { usePermissions } from '@/lib/access'
-import { printBonLabel } from '@/lib/bonLabel'
+import { printBonLabel, printBonLabelZpl } from '@/lib/bonLabel'
 import { BON_A_SAISIR, useDroguerie, type BonPapier } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
@@ -32,14 +32,28 @@ function Content() {
       .sort((a, b) => (a.date < b.date ? 1 : -1))
   }, [bons, query])
 
-  const printLabelFor = (b: BonPapier) => { printBon(b.id); printBonLabel(b, {
-    storeName: settings.storeName,
-    widthMm: settings.labelWidthMm,
-    heightMm: settings.labelHeightMm,
-    labels: { client: t('bon_label_client'), clientNo: t('bon_label_client_no'), bonNo: t('bon_label_bon_no') },
-    show: { date: settings.bonLabelDate, vendeur: settings.bonLabelVendeur, phone: settings.bonLabelPhone },
-    clientPhone: clients.find((c) => c.id === b.clientId)?.phone,
-  }) }
+  const printLabelFor = async (b: BonPapier) => {
+    printBon(b.id)
+    const clientPhone = clients.find((c) => c.id === b.clientId)?.phone
+    const show = { date: settings.bonLabelDate, vendeur: settings.bonLabelVendeur, phone: settings.bonLabelPhone }
+    if (settings.bonLabelZpl && settings.zebraPrinterName) {
+      const r = await printBonLabelZpl(
+        { ref: b.ref, clientName: b.clientName, clientCode: b.clientCode, vendeurName: b.vendeurName, date: b.date, clientPhone },
+        settings.zebraPrinterName,
+        { widthMm: settings.labelWidthMm, heightMm: settings.labelHeightMm, storeName: settings.storeName, show, labels: { clientNo: t('bon_label_client_no') } }
+      )
+      if (r.ok) { toast(t('bon_zpl_sent')); return }
+      toast(`${t('bon_zpl_failed')} ${r.message ?? ''}`.trim(), 'error')
+    }
+    printBonLabel(b, {
+      storeName: settings.storeName,
+      widthMm: settings.labelWidthMm,
+      heightMm: settings.labelHeightMm,
+      labels: { client: t('bon_label_client'), clientNo: t('bon_label_client_no'), bonNo: t('bon_label_bon_no') },
+      show,
+      clientPhone,
+    })
+  }
 
   const doCancel = () => {
     if (!toCancel) return

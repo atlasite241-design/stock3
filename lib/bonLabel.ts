@@ -2,6 +2,7 @@
 
 import JsBarcode from 'jsbarcode'
 import type { BonPapier } from './store'
+import { buildBonZpl, type ZplBon, type ZplOptions } from './zpl'
 
 /**
  * Impression de l'étiquette d'un BON PAPIER.
@@ -115,4 +116,32 @@ export function printBonLabel(
     try { iframe.contentWindow?.focus(); iframe.contentWindow?.print() } catch {}
     setTimeout(() => { try { document.body.removeChild(iframe) } catch {} }, 1000)
   }, 300)
+}
+
+/**
+ * Impression DIRECTE en ZPL vers la Zebra (via l'API locale /api/print-zebra).
+ *
+ * Contourne le navigateur ET le pilote : le ZPL est calibré exactement à la taille
+ * de l'étiquette, donc une seule étiquette nette, sans réglage de pilote. Ne marche
+ * que si l'app tourne sur le poste où est branchée la Zebra. Renvoie un message
+ * d'erreur en cas d'échec (l'appelant peut alors retomber sur l'impression navigateur).
+ */
+export async function printBonLabelZpl(
+  bon: ZplBon,
+  printer: string,
+  opts: ZplOptions = {}
+): Promise<{ ok: boolean; message?: string }> {
+  try {
+    const zpl = buildBonZpl(bon, opts)
+    const res = await fetch('/api/print-zebra', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ zpl, printer }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok || !data?.ok) return { ok: false, message: data?.message || `Erreur ${res.status}` }
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : String(e) }
+  }
 }

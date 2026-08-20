@@ -2807,6 +2807,13 @@ const DICT = {
   bon_field_date: { fr: 'Date et heure', ar: 'التاريخ والساعة' },
   bon_field_vendeur: { fr: 'Nom du vendeur', ar: 'اسم البائع' },
   bon_field_phone: { fr: 'Téléphone du client', ar: 'هاتف العميل' },
+  bon_zpl_sent: { fr: 'Étiquette envoyée à la Zebra', ar: 'أُرسل الملصق إلى Zebra' },
+  bon_zpl_failed: { fr: 'Échec impression Zebra :', ar: 'فشل طباعة Zebra:' },
+  soc_bon_zpl: { fr: 'Impression directe Zebra (ZPL)', ar: 'طباعة مباشرة Zebra (ZPL)' },
+  soc_bon_zpl_hint: { fr: "Envoie l'étiquette directement à la Zebra, sans navigateur ni réglage de pilote. Nécessite que l'app tourne sur ce poste.", ar: 'يرسل الملصق مباشرة إلى Zebra دون متصفح أو ضبط. يتطلب تشغيل التطبيق على هذا الجهاز.' },
+  soc_bon_printer: { fr: "Nom de l'imprimante Zebra", ar: 'اسم طابعة Zebra' },
+  soc_bon_zpl_test: { fr: 'Test Zebra (ZPL)', ar: 'اختبار Zebra (ZPL)' },
+  soc_bon_zpl_ok: { fr: 'Test envoyé à la Zebra', ar: 'أُرسل الاختبار إلى Zebra' },
   // ---- Bons papier (scan) ----
   bon_scan_title: { fr: 'Scanner un bon', ar: 'مسح سند' },
   bon_scan_sub: { fr: 'Scannez le code-barres du bon (douchette ou caméra) pour ouvrir directement sa saisie.', ar: 'امسح رمز السند (قارئ أو كاميرا) لفتح إدخاله مباشرة.' },
