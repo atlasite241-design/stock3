@@ -86,7 +86,11 @@ export function buildBonZpl(bon: ZplBon, opts: ZplOptions = {}): string {
     '^XA',
     '^CI28',
     '^MTD', // thermique direct (GK420d)
-    '^MNY', // détection d'écart entre étiquettes
+    // Mode CONTINU : la détection d'écart (^MNY) sur-avance sur ces étiquettes
+    // (capteur qui ne verrouille pas les gaps, même après calibration officielle).
+    // En continu l'imprimante avance une longueur FIXE (^LL) et s'arrête net.
+    '^MNN',
+    '^MMT', // tear-off : recul auto avant impression (meilleur positionnement)
     `^PW${PW}`,
     `^LL${LL}`,
     '^LH0,0',
