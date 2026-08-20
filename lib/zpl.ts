@@ -58,7 +58,7 @@ export function buildBonZpl(bon: ZplBon, opts: ZplOptions = {}): string {
 
   const lines: string[] = []
   // Marge haute : en mode continu le contenu tombait un peu trop haut ; on descend d'environ 2 mm.
-  let y = Math.round(3.2 * dpmm)
+  let y = Math.round(5 * dpmm)
   const push = (font: number, text: string) => {
     const t = clean(text)
     if (!t) return
@@ -78,7 +78,7 @@ export function buildBonZpl(bon: ZplBon, opts: ZplOptions = {}): string {
   const moduleW = Math.min(4, Math.max(1, Math.floor((PW - 2 * m) / modules)))
   // Hauteur du code-barres : ce qui reste sous le texte, borné.
   const restant = LL - y - Math.round(3 * dpmm)
-  const bcH = Math.max(Math.round(6 * dpmm), Math.min(Math.round(11 * dpmm), restant))
+  const bcH = Math.max(Math.round(6 * dpmm), Math.min(Math.round(7.5 * dpmm), restant))
   const yb = Math.min(y + Math.round(0.5 * dpmm), LL - bcH - Math.round(3 * dpmm))
   lines.push(`^FO${m},${Math.max(y, yb)}^BY${moduleW}^BCN,${bcH},Y,N,N^FD${clean(bon.ref)}^FS`)
 
