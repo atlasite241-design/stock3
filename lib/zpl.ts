@@ -23,6 +23,8 @@ export interface ZplOptions {
   storeName?: string
   dpi?: number
   copies?: number
+  /** Écart entre étiquettes (mm). En mode continu, le pas d'avance = hauteur + écart. */
+  gapMm?: number
   show?: { date?: boolean; vendeur?: boolean; phone?: boolean }
   labels?: { clientNo?: string }
 }
@@ -47,6 +49,9 @@ export function buildBonZpl(bon: ZplBon, opts: ZplOptions = {}): string {
   const hmm = Math.max(15, opts.heightMm ?? 30)
   const PW = Math.round(wmm * dpmm)
   const LL = Math.round(hmm * dpmm)
+  // Pas physique = hauteur + écart entre étiquettes. En mode continu l'imprimante
+  // avance ce pas ; s'il est trop court, chaque étiquette dérive vers le haut.
+  const feed = Math.round((hmm + (opts.gapMm ?? 2)) * dpmm)
   const m = Math.max(8, Math.round(1.4 * dpmm)) // marge gauche
   const show = opts.show ?? {}
   const clientNoLabel = opts.labels?.clientNo ?? 'N CLIENT'
@@ -93,7 +98,7 @@ export function buildBonZpl(bon: ZplBon, opts: ZplOptions = {}): string {
     '^MNN',
     '^MMT', // tear-off : recul auto avant impression (meilleur positionnement)
     `^PW${PW}`,
-    `^LL${LL}`,
+    `^LL${feed}`,
     '^LH0,0',
     ...lines,
     `^PQ${copies}`,
