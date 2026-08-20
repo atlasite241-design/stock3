@@ -11,6 +11,11 @@ import { useToast } from '@/components/Toast'
 import { useDroguerie } from '@/lib/store'
 import { useLanguage } from '@/lib/i18n'
 
+// Normalisation d'une réf de bon pour la recherche au scan : minuscules et sans
+// séparateurs. Une douchette sur clavier français peut rendre les « - » autrement
+// (ex. « ß »), donc on compare en ignorant tout ce qui n'est pas alphanumérique.
+const normRef = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+
 function Content() {
   const { ready, bons } = useDroguerie()
   const { t } = useLanguage()
@@ -23,14 +28,14 @@ function Content() {
   // Index réf → bon (recherche indexée, pas de scan linéaire).
   const byRef = useMemo(() => {
     const m = new Map<string, string>()
-    for (const b of bons) m.set(b.ref.toLowerCase(), b.id)
+    for (const b of bons) m.set(normRef(b.ref), b.id)
     return m
   }, [bons])
 
   useEffect(() => { if (ready) inputRef.current?.focus() }, [ready])
 
   const resolve = (raw: string) => {
-    const c = raw.trim().toLowerCase()
+    const c = normRef(raw)
     if (!c) return
     const id = byRef.get(c)
     if (!id) { toast(`${t('bon_scan_not_found')} : ${raw.trim()}`, 'error'); setCode(''); return }
