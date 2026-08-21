@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { clearSession, getSession, makeSession, setSession, verifySecret, type Session } from './auth'
 import { useDroguerie, type AppUser } from './store'
 import { AUTH_EXPIRED, serverLogin, serverLogout } from './sync-api'
@@ -36,6 +36,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { ready: dataReady, users, logActivity } = useDroguerie()
   const [session, setSessionState] = useState<Session | null>(null)
   const [checked, setChecked] = useState(false)
+  // Fenêtre de grâce après une connexion : la session serveur (cookie signé) se
+  // pose de façon asynchrone. Sur un réseau lent (prod), une requête /api/sync
+  // peut partir AVANT que le cookie soit posé et renvoyer 401 → sans ce garde,
+  // l'utilisateur était déconnecté aussitôt connecté. On ignore les 401
+  // transitoires pendant cette fenêtre ; un échec réel finit par déconnecter.
+  const loginGraceRef = useRef(0)
 
   useEffect(() => {
     setSessionState(getSession())
@@ -48,6 +54,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // sur un appareil qui ne se synchronise plus.
   useEffect(() => {
     const onExpired = () => {
+      // Pendant la fenêtre de grâce (juste après connexion), on ignore le 401 :
+      // c'est le cookie serveur qui n'est pas encore posé, pas une vraie expiration.
+      if (Date.now() < loginGraceRef.current) return
       clearSession()
       setSessionState(null)
     }
@@ -60,6 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const s = makeSession(u)
     setSession(s)
     setSessionState(s)
+    loginGraceRef.current = Date.now() + 20000 // fenêtre de grâce : le cookie serveur se pose en asynchrone
     // Journalise la connexion APRÈS setSession : logActivity lit le nom dans la
     // session courante. C'est la seule source du rapport « Connexions ».
     try { logActivity('Connexion', { kind: 'login', target: u.name }) } catch {}
@@ -113,6 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const s = makeSession(u)
     setSession(s)
     setSessionState(s)
+    loginGraceRef.current = Date.now() + 20000 // fenêtre de grâce : le cookie serveur se pose en asynchrone
     try { logActivity('Connexion', { kind: 'login', target: u.name }) } catch {}
     return { ok: true }
   }
@@ -127,6 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const s = makeSession(u)
     setSession(s)
     setSessionState(s)
+    loginGraceRef.current = Date.now() + 20000 // fenêtre de grâce : le cookie serveur se pose en asynchrone
     try { logActivity('Connexion', { kind: 'login', target: u.name }) } catch {}
     // Marque une connexion ACTIVE (par ce clic) → le splash ne s'affiche qu'ici,
     // pas à chaque rechargement où la session est déjà valide.
