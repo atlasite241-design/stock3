@@ -27,6 +27,8 @@ export interface ZplOptions {
   gapMm?: number
   /** Densité de chauffe (0-30). Plus élevé = plus noir. */
   darkness?: number
+  /** Mode continu (longueur fixe) au lieu de la détection d'écart (défaut). */
+  continuous?: boolean
   show?: { date?: boolean; vendeur?: boolean; phone?: boolean }
   labels?: { clientNo?: string }
 }
@@ -107,7 +109,7 @@ export function buildBonZpl(bon: ZplBon, opts: ZplOptions = {}): string {
     '^MTD', // thermique direct (GK420d)
     '^PR3', // vitesse modérée : bon compromis noir / netteté
     `^MD${darkness}`, // densité de chauffe : plus élevé = plus noir
-    '^MNN', // mode continu : pas de détection d'écart (capteur non fiable ici)
+    opts.continuous ? '^MNN' : '^MNY', // détection d'écart (défaut, auto-aligné) ou continu (longueur fixe)
     '^MMT', // tear-off : recul auto avant impression
     `^PW${PW}`,
     `^LL${feed}`,
