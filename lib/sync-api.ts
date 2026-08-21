@@ -24,6 +24,11 @@ export const UPSERT_LIMIT = 200
 /** Événement émis quand le serveur refuse la session (cookie absent/expiré). */
 export const AUTH_EXPIRED = 'droguerie-auth-expired'
 
+// Nombre de 401 CONSÉCUTIFS avant de conclure à une vraie expiration de session.
+// Un 401 isolé (hoquet réseau, cold start serverless, cookie pas encore posé) ne
+// doit pas déconnecter ; le compteur se remet à 0 dès qu'une requête aboutit.
+let unauthorizedStreak = 0
+
 async function call<T>(payload: Record<string, unknown>): Promise<T> {
   const res = await fetch('/api/sync', {
     method: 'POST',
@@ -39,9 +44,15 @@ async function call<T>(payload: Record<string, unknown>): Promise<T> {
   // aucun cookie n'a jamais été posé. Sans ce signal, la synchro échouait en
   // silence et l'appareil divergeait sans que personne ne le sache.
   if (res.status === 401) {
-    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(AUTH_EXPIRED))
+    // On ne signale une vraie expiration (→ déconnexion) qu'après plusieurs 401
+    // CONSÉCUTIFS : un 401 isolé est transitoire et ne doit pas déconnecter.
+    unauthorizedStreak++
+    if (unauthorizedStreak >= 3 && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(AUTH_EXPIRED))
+    }
     throw new Error('unauthorized')
   }
+  unauthorizedStreak = 0 // toute réponse non-401 prouve que la session est vivante
 
   const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string } & T
   if (!res.ok || !json.ok) throw new Error(json.error || `http_${res.status}`)
