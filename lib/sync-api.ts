@@ -28,6 +28,11 @@ export const AUTH_EXPIRED = 'droguerie-auth-expired'
 // Un 401 isolé (hoquet réseau, cold start serverless, cookie pas encore posé) ne
 // doit pas déconnecter ; le compteur se remet à 0 dès qu'une requête aboutit.
 let unauthorizedStreak = 0
+// Vrai dès qu'une requête /api/sync a été AUTORISÉE au moins une fois : preuve que
+// la session serveur fonctionne. Tant que c'est faux (login serveur rejeté, mauvaise
+// config d'env en prod), on NE déconnecte PAS sur 401 — l'utilisateur reste connecté
+// en local et la synchro reprendra une fois la configuration corrigée.
+let everAuthorized = false
 
 async function call<T>(payload: Record<string, unknown>): Promise<T> {
   const res = await fetch('/api/sync', {
@@ -44,15 +49,18 @@ async function call<T>(payload: Record<string, unknown>): Promise<T> {
   // aucun cookie n'a jamais été posé. Sans ce signal, la synchro échouait en
   // silence et l'appareil divergeait sans que personne ne le sache.
   if (res.status === 401) {
-    // On ne signale une vraie expiration (→ déconnexion) qu'après plusieurs 401
-    // CONSÉCUTIFS : un 401 isolé est transitoire et ne doit pas déconnecter.
+    // Déconnexion SEULEMENT si la session a DÉJÀ fonctionné (vraie expiration) ET
+    // après plusieurs 401 consécutifs. Si elle n'a jamais été autorisée (login
+    // serveur rejeté / mauvaise config), on ne déconnecte pas : la connexion locale
+    // reste valable, la synchro reprendra une fois la config corrigée.
     unauthorizedStreak++
-    if (unauthorizedStreak >= 3 && typeof window !== 'undefined') {
+    if (everAuthorized && unauthorizedStreak >= 3 && typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent(AUTH_EXPIRED))
     }
     throw new Error('unauthorized')
   }
-  unauthorizedStreak = 0 // toute réponse non-401 prouve que la session est vivante
+  unauthorizedStreak = 0
+  everAuthorized = true // une réponse non-401 prouve que la session serveur fonctionne
 
   const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string } & T
   if (!res.ok || !json.ok) throw new Error(json.error || `http_${res.status}`)
