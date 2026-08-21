@@ -36,14 +36,16 @@ function Content() {
     printBon(b.id)
     const clientPhone = clients.find((c) => c.id === b.clientId)?.phone
     const show = { date: settings.bonLabelDate, vendeur: settings.bonLabelVendeur, phone: settings.bonLabelPhone }
-    if (settings.bonLabelZpl && settings.zebraPrinterName) {
+    if (settings.bonLabelZpl) {
       const r = await printBonLabelZpl(
         { ref: b.ref, clientName: b.clientName, clientCode: b.clientCode, vendeurName: b.vendeurName, date: b.date, clientPhone },
-        settings.zebraPrinterName,
+        settings.zebraPrinterName || 'Zebra GK420d - ZPL',
         { widthMm: settings.labelWidthMm, heightMm: settings.labelHeightMm, storeName: settings.storeName, show, labels: { clientNo: t('bon_label_client_no') } }
       )
       if (r.ok) { toast(t('bon_zpl_sent')); return }
       toast(`${t('bon_zpl_failed')} ${r.message ?? ''}`.trim(), 'error')
+      // Pas de repli navigateur quand le ZPL est activé : éviter d'imprimer des pages vides.
+      return
     }
     printBonLabel(b, {
       storeName: settings.storeName,
